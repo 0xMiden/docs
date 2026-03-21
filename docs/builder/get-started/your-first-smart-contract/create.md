@@ -53,7 +53,7 @@ cd ../increment-note
 miden build
 ```
 
-This compiles the Rust contract code into Miden assembly, making it ready for deployment and interaction.
+This compiles the Rust contract code into a `.masp` package file, making it ready for deployment and interaction.
 
 ## Understanding the Counter Account Contract
 
@@ -127,6 +127,10 @@ These imports provide:
 - **`StorageMap`**: Key-value storage within account storage slots
 - **`StorageMapAccess`**: Needed for reading storage values (`get_count` function)
 
+:::note[`felt` vs `Felt`]
+`Felt` is the field element type representing values in the Goldilocks prime field (p = 2^64 - 2^32 + 1). `felt!(1)` is a compile-time macro that creates `Felt` values from integer literals with compile-time range validation. Currently `felt!` only accepts values up to 2^32 (compiler limitation); for larger values use `Felt::from_u64_unchecked()`.
+:::
+
 #### Contract Structure Definition
 
 ```rust
@@ -138,7 +142,7 @@ struct CounterContract {
 }
 ```
 
-The `#[component]` attribute marks this as a Miden component. The `count_map` field is a `StorageMap` stored in a named storage slot of the account. In v0.13, storage slots are identified by name rather than explicit index numbers — the slot name is derived automatically from the component's package name and field name (e.g., `miden::component::miden_counter_account::count_map`).
+The `#[component]` attribute marks this as a Miden account component. The `count_map` field is a `StorageMap` stored in a named storage slot of the account. In v0.13, storage slots are identified by name rather than explicit index numbers — the slot name is derived automatically from the component's package name and field name (e.g., `miden::component::miden_counter_account::count_map`).
 
 **Important**: Storage slots in Miden hold `Word` values, which are composed of four field elements (`Felt`). Each `Felt` is a 64-bit unsigned integer (u64). The `StorageMap` provides a key-value interface within a single storage slot, allowing you to store multiple key-value pairs within the four-element word structure.
 
@@ -158,7 +162,7 @@ The `CounterContract` implementation defines the external interface that other c
 let key = Word::from_u64_unchecked(0, 0, 0, 1);
 ```
 
-Both functions use the same fixed key `[0, 0, 0, 1]` to store and retrieve the counter value within the storage map. The `Word::from_u64_unchecked` constructor creates a `Word` from four `u64` values. This demonstrates a simple but effective storage pattern.
+Both functions in the counter contract use the same fixed key `[0, 0, 0, 1]` to store and retrieve the counter value within the storage map. The `Word::from_u64_unchecked` constructor creates a `Word` from four `u64` values. This demonstrates a simple but effective storage pattern.
 
 ## Understanding the Increment Note Script
 

@@ -86,14 +86,21 @@ cargo run --bin increment_count --release
 Account ID: V0(AccountIdV0 { prefix: 14134910893364381952, suffix: 3644349760121494784 })
 Sender account ID: "0xd85b347218c5a80052dbd47b2f36ad"
 Counter note hash: "0xf0e821396a896eb9983e682bc056021d57ddcaa43082f34597bf9e026421e566"
-Note publish transaction ID: "0xc6f080855724402cadf26650ffe993fe97a127a8f6c9c82ec621960e936e6d732
+Note publish transaction ID: "0xc6f080855724402cadf26650ffe993fe97a127a8f6c9c82ec621960e936e6d732"
+Trace with id 240 emitted at step 2679 in context 2666
+Trace with id 252 emitted at step 2689 in context 2666
+... (trace output omitted)
 Consume transaction ID: "0x2d1d8510e546ce0fbc22fa7d1a82322259d73cd1d7e0ca86622d0be70fab0548"
-Account delta: AccountDelta { account_id: V0(AccountIdV0 { prefix: 7255964780328958976, suffix: 2724050564200846336 }), storage: AccountStorageDelta { values: {}, maps: {0: StorageMapDelta({LexicographicWord(Word([0, 0, 0, 1])): Word([0, 0, 0, 1])})} }, vault: AccountVaultDelta { fungible: FungibleAssetDelta({}), non_fungible: NonFungibleAssetDelta({}) }, nonce_delta: 1 }
+Account delta: AccountDelta { ... storage: AccountStorageDelta { ... maps: {0: StorageMapDelta({...: Word([0, 0, 0, 1])})} }, ... nonce_delta: 1 }
 ```
+
+:::note
+The `Trace with id ... emitted at step ...` lines are debug output from the Miden VM and can be safely ignored. Your actual account IDs and transaction IDs will differ from this example.
+:::
 
 </details>
 
-Congratulations, you have successfully deployed the Counter Contract to the Miden Testnet, and incremented its count by one!
+Congratulations, you have successfully deployed the Counter Contract to the Miden Testnet, and incremented its count by one! You can verify your transaction on [MidenScan](https://testnet.midenscan.com) by searching for your transaction ID.
 
 ### What Happens During Execution
 
@@ -149,7 +156,7 @@ let note_package = Arc::new(
 The `build_project_in_dir()` function:
 
 - Takes the path to your contract's Rust source code
-- Compiles the Rust code into Miden assembly
+- Compiles the Rust code into a Miden package (`.masp` file)
 - Generates a package containing the compiled contract bytecode and metadata
 - This is equivalent to manually running `miden build` in each contract directory
 
