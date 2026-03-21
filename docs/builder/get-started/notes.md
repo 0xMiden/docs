@@ -32,6 +32,10 @@ Traditional blockchains move tokens directly between account balances. Miden use
 
 Miden uses a **two-transaction model** for asset transfers that provides enhanced privacy and scalability:
 
+:::info[Core Design Principle]
+In Miden, a transaction is the state transition of a single account. This means an asset transfer requires two transactions — one where the sender's state changes (creating the note), and one where the recipient's state changes (consuming the note). These transactions happen asynchronously and independently.
+:::
+
 ### Transaction 1: Sender Creates Note
 
 - **Alice's account** creates a P2ID (Pay-To-ID) note containing 100 tokens
@@ -41,7 +45,7 @@ Miden uses a **two-transaction model** for asset transfers that provides enhance
 
 ### Transaction 2: Recipient Consumes Note
 
-- **Bob's account** discovers the note (addressed to his ID)
+- **Bob's client** discovers the note (addressed to his ID)
 - Bob creates a transaction to consume the note
 - Tokens move from the note into Bob's vault
 - Bob's balance increases, note is nullified
@@ -58,6 +62,10 @@ This approach provides several advantages over direct transfers:
 ## Set Up Development Environment
 
 To run the code examples in this guide, you'll need to set up a development environment. If you haven't already, follow the setup instructions in the [Accounts](./accounts#set-up-development-environment) guide.
+
+:::note
+Each code example below is self-contained and can be run independently. This means account and faucet creation is repeated in each example for clarity and standalone usability.
+:::
 
 ## Minting Tokens
 
@@ -935,8 +943,9 @@ Alice's account ID: 0xd6b8bb0ed10b1610282c513501778a
 Faucet account ID: 0xe48c43d6ad6496201bcfa585a5a4b6
 Minting 1000 tokens to Alice...
 Mint transaction submitted successfully, ID: 0x948a0eef754068b3126dd3261b6b54214fa5608fb13c5e5953faf59bad79c75f
+Waiting for P2ID note to be comitted...
 Consume transaction submitted successfully, ID: 0xc69ab84b784120abe858bb536aebda90bd2067695f11d5da93ab0b704f39ad78
-Alice's TEST token balance: 100
+Alice's TEST token balance: Ok(1000)
 Send 100 tokens to Bob note transaction ID: "0x51ac27474ade3a54adadd50db6c2b9a2ede254c5f9137f93d7a970f0bc7d66d5"
 ```
 
@@ -946,7 +955,7 @@ Send 100 tokens to Bob note transaction ID: "0x51ac27474ade3a54adadd50db6c2b9a2e
 
 **Miden's Note-Based Transaction Model:**
 
-- **Notes** enable private asset transfers between accounts
+- **Notes** enable asset transfers between accounts, with support for both public and private notes
 - **Two-transaction model** provides privacy and parallelization benefits
 - **Zero-knowledge proofs** validate transaction execution without revealing details
 - **P2ID notes** target specific recipients using their account IDs
