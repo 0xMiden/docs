@@ -4,7 +4,7 @@ title: CLI Basics
 description: Learn essential Miden CLI commands to create your wallet and mint your first tokens.
 ---
 
-This guide covers essential Miden CLI commands for creating accounts, minting and managing tokens. Make sure to have [installed Miden development tools](./installation.md) using the `midenup` toollchain.
+This guide covers essential Miden CLI commands for creating accounts, minting and managing tokens. Make sure you have installed [installed Miden development tools](./installation.md) using the `midenup` toolchain.
 
 ## Create Your First Account
 
