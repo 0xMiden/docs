@@ -16,12 +16,11 @@ Assets are now represented as two words (`ASSET_KEY` + `ASSET_VALUE`) instead of
 
 ### Summary
 
-The single 4-felt `ASSET` word has been split into two words:
+The single 4-felt `ASSET` word has been split into two words: `ASSET_KEY` (identity + faucet + callback flag) and `ASSET_VALUE` (amount or data hash). Every kernel procedure and standard-library helper that previously accepted or returned `ASSET` now works with the `ASSET_KEY, ASSET_VALUE` pair.
 
-- **`ASSET_KEY`** = `[asset_id_suffix, asset_id_prefix, (faucet_id_suffix << 8) | callbacks_enabled, faucet_id_prefix]`
-- **`ASSET_VALUE`** = `[amount, 0, 0, 0]` for fungible assets, or `DATA_HASH` for non-fungible assets.
-
-Every kernel procedure and standard-library helper that previously accepted or returned `ASSET` now works with the `ASSET_KEY, ASSET_VALUE` pair.
+:::note Canonical layout
+The full field-by-field layout — including how the per-asset callback flag is packed into the reserved low byte of `faucet_id_suffix` — is documented in [Asset encoding](../../core-concepts/protocol/asset.md#encoding). This page covers the v0.13 → v0.14 delta only.
+:::
 
 ### Affected Code
 
