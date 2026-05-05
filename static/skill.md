@@ -1,76 +1,103 @@
 ---
 name: miden-architecture
 description: >
-  Miden protocol architecture and ecosystem knowledge. Use when working on any
-  Miden repository (protocol, miden-client, node, miden-vm, compiler,
-  docs). Covers the stack machine, transaction model, note system, state
-  management, and Rust SDK programming model.
-compatibility: Designed for Claude Code and similar AI coding assistants.
+  Miden protocol, SDK, and documentation knowledge. Use when working on Miden
+  docs or source repositories, especially protocol, miden-client, node,
+  miden-vm, compiler, tutorials, and application templates.
+compatibility: Designed for AI coding assistants.
 metadata:
   author: 0xMiden
-  version: "0.13"
+  docs_current: "0.15 (unstable)"
+  latest_stable: "0.14"
 ---
 
 # Miden Protocol Skill
 
-## What is Miden
+## Version Awareness
 
-Miden is a zero-knowledge rollup for Ethereum using an actor model where
-accounts are independent smart contracts communicating via asynchronous
-notes. Users execute and prove transactions locally (client-side proving).
-Privacy is the default.
+- The default docs at `https://docs.miden.xyz/` track the next release and are currently labeled **0.15 unstable**.
+- The latest stable versioned docs are at `https://docs.miden.xyz/0.14/`.
+- If a user asks about released behavior, check the matching versioned docs and release tag before answering.
+- If a user asks about current development, use the default docs and the relevant source repository branch.
+
+## What Is Miden
+
+Miden is a privacy-preserving blockchain where accounts are programmable smart contracts and users execute and prove transactions locally. Accounts communicate asynchronously through programmable notes. Private account and note data stays with the client unless a developer deliberately chooses public or network-visible state.
 
 ## Key Mental Model Shifts
 
-- **Transactions involve ONE account** — not sender+receiver. Sending assets requires two transactions: one to create a note, one to consume it.
-- **Privacy is default** — accounts and notes are private. Only commitments stored on-chain. Public is opt-in.
-- **Users prove transactions** — client-side proving via Miden VM. Network verifies proofs, never sees state.
-- **No gas limit** — proof size doesn't scale with computation complexity.
-- **Actor model** — accounts update independently and in parallel. No global lock on state.
+- **Transactions involve one account.** Sending assets usually means one transaction creates a note and another transaction consumes it.
+- **Notes are programmable messages.** A note carries assets plus script logic that controls how it can be consumed.
+- **Privacy is the default.** Private accounts and notes reveal commitments on-chain, not full state.
+- **Users prove transactions.** Clients execute transactions, produce proofs, and submit proven state transitions to the network.
+- **State is account-centric.** Accounts own storage, vault assets, code, and nonce; account updates can be processed independently.
+- **MASM is still relevant.** Rust smart contracts compile down to Miden Assembly, and some low-level account, note, and transaction logic is still authored or debugged in MASM.
 
 ## Core Concepts
 
-- **Accounts**: Smart contracts with ID, code, storage (255 slots), vault, nonce. Types: Basic (mutable/immutable), Faucets (fungible/non-fungible). Storage modes: Private, Public, Network.
-- **Notes**: UTXO-like messages carrying assets + scripts between accounts. Max 256 assets, 128 inputs. Lifecycle: create -> validate -> discover -> consume.
-- **Transactions**: Single-account state transitions producing ZK proofs. 4 phases: prologue, note processing, tx script, epilogue. Max 1000 notes in/out, 2^30 VM cycles.
-- **Assets**: Fungible (amount + faucet_id) and non-fungible (hash + faucet_id). Only faucet accounts can mint.
-- **State**: Account DB (sparse Merkle tree), Note DB (Merkle Mountain Range), Nullifier DB (sparse Merkle tree).
+- **Accounts**: Smart contracts with ID, code, storage, vault, and nonce. Storage modes include private, public, and network account modes.
+- **Components**: Reusable account modules for storage, methods, authentication, wallet behavior, and application-specific logic.
+- **Notes**: Programmable asset containers. They can be private or public and are consumed by account transactions.
+- **Transactions**: Single-account state transitions with note processing, optional transaction scripts, and proof generation.
+- **Assets**: Fungible and non-fungible assets. Faucets define and mint assets.
+- **Client state**: Local account state, note data, nullifiers, and synchronized network data are required for proving and debugging.
+- **Node services**: RPC, block producer, store, and related services handle synchronization, transaction submission, and network note execution.
 
-## Standard Note Scripts
+## Builder Documentation Map
 
-- **P2ID**: Pay to specific account ID. Inputs: target account ID. Requires `receive_asset`.
-- **P2IDE**: Pay with time-lock + reclaim. Inputs: target ID, reclaim height, time-lock height. Requires `receive_asset`.
-- **SWAP**: Atomic asset exchange. Inputs: requested asset details, payback note info. Requires `receive_asset` + `move_asset_to_note`.
+- Get started: https://docs.miden.xyz/builder/get-started/
+- Install tools with midenup: https://docs.miden.xyz/builder/get-started/setup/installation
+- CLI basics: https://docs.miden.xyz/builder/get-started/setup/cli-basics
+- Smart contracts: https://docs.miden.xyz/builder/smart-contracts/
+- Accounts: https://docs.miden.xyz/builder/smart-contracts/accounts/introduction
+- Notes: https://docs.miden.xyz/builder/smart-contracts/notes/introduction
+- Transactions: https://docs.miden.xyz/builder/smart-contracts/transactions/introduction
+- Client SDKs: https://docs.miden.xyz/builder/tools/clients/
+- Web SDK: https://docs.miden.xyz/builder/tools/clients/web-client/
+- React SDK: https://docs.miden.xyz/builder/tools/clients/react-sdk/
+- Tutorials: https://docs.miden.xyz/builder/tutorials/
+- Migration guide: https://docs.miden.xyz/builder/migration/
+- Guardian docs: https://docs.miden.xyz/builder/miden-guardian/
 
-## Programming Model
+## Core Concepts Map
 
-- Write smart contracts in Rust using `#[component]` macro
-- Compile to MASM via `miden build`
-- Storage types: `Value`, `StorageMap`
-- Built-in components: BasicWallet, RpoFalcon512 auth
-- Component templates defined via TOML
-- Test with MockChain (local blockchain simulation)
-- Tools: `midenup` (installer), `miden new` (create project), `miden build` (compile)
+- Core concepts: https://docs.miden.xyz/core-concepts/
+- Protocol: https://docs.miden.xyz/core-concepts/protocol/
+- Protocol account model: https://docs.miden.xyz/core-concepts/protocol/account/
+- Protocol notes: https://docs.miden.xyz/core-concepts/protocol/note
+- Protocol transactions: https://docs.miden.xyz/core-concepts/protocol/transaction
+- Protocol MASM library: https://docs.miden.xyz/core-concepts/protocol/protocol_library
+- Miden VM: https://docs.miden.xyz/core-concepts/miden-vm/
+- Compiler: https://docs.miden.xyz/core-concepts/compiler/
+- Node: https://docs.miden.xyz/core-concepts/node/
+- Node RPC: https://docs.miden.xyz/core-concepts/node/rpc
 
-## Miden VM
+## Source Repositories
 
-- Stack-based VM, field elements in 64-bit prime field (p = 2^64 - 2^32 + 1)
-- Stack (top 16 accessible), Memory (element-addressable, [0, 2^32)), Chiplets (RPO hash, bitwise, range checks)
-- Data types: Felt (field element), Word (4 elements)
-- Advice provider: stack, map, Merkle store (nondeterministic inputs)
+- Docs: https://github.com/0xMiden/docs
+- Protocol: https://github.com/0xMiden/protocol
+- Miden VM and assembler: https://github.com/0xMiden/miden-vm
+- Client SDKs: https://github.com/0xMiden/miden-client
+- Node: https://github.com/0xMiden/node
+- Compiler: https://github.com/0xMiden/compiler
+- Tutorials: https://github.com/0xMiden/tutorials
+- Frontend template: https://github.com/0xMiden/frontend-template
+- Agentic template: https://github.com/0xMiden/agentic-template
+- Rust templates: https://github.com/0xMiden/rust-templates
 
 ## Common Pitfalls
 
-- Forgetting auth procedures (required for state-changing transactions)
-- Not incrementing nonce on state changes (must increment exactly once)
-- Assuming global synchronicity (async message passing via notes)
-- Losing private account state (irreversible fund loss)
-- Not fully consuming note assets (must transfer all to vault or new notes)
+- Do not treat old `miden-base` paths as current source. Current protocol source lives in `0xMiden/protocol`.
+- Do not assume old `builder/develop` docs paths still exist. Current builder docs use `builder/get-started`, `builder/smart-contracts`, `builder/tutorials`, and `builder/tools`.
+- Do not cite a GitHub blob URL unless the referenced file still exists at that branch or tag.
+- Do not assume the default docs describe a released version. Use `/0.14/` for latest stable documentation.
+- For Web SDK and React SDK code, verify names against the shipped npm types when possible.
+- For network account and network note behavior, verify against the node version being discussed; `next` RPC names may differ from v0.14.
+- For MASM import and assembler behavior, check `miden-vm` and protocol library docs together.
 
-## References
+## Answering Guidance
 
-- Docs: https://docs.miden.xyz
-- Full docs for LLMs: https://docs.miden.xyz/llms.txt
-- SDK API: https://docs.rs/miden/latest/miden/
-- GitHub: https://github.com/0xMiden
-- Core repos: protocol (protocol), miden-vm (VM), miden-client (client), compiler (Rust->MASM)
+1. Start from `llms.txt` for high-level routing: https://docs.miden.xyz/llms.txt
+2. Use the route maps above to find the right current or versioned docs section.
+3. Cross-check API names against source repositories for precise code examples.
+4. Mention the version or branch you relied on when behavior may differ across releases.
