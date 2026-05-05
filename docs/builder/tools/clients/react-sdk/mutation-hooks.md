@@ -52,7 +52,7 @@ function NewWalletButton() {
     const account = await createWallet({
       storageMode: "private",        // "private" | "public" | "network" (default private)
       mutable: true,                 // default true — updatable code
-      authScheme: AuthScheme.AuthRpoFalcon512, // default
+      authScheme: AuthScheme.Falcon, // default
     });
     console.log("Created:", account.bech32id());
   };
@@ -69,7 +69,7 @@ function NewWalletButton() {
 | --- | --- | --- |
 | `storageMode` | `"private"` | `"private"` / `"public"` / `"network"` |
 | `mutable` | `true` | Whether code can be updated after deployment |
-| `authScheme` | `AuthScheme.AuthRpoFalcon512` | Signing scheme |
+| `authScheme` | `AuthScheme.Falcon` | Signing scheme |
 | `initSeed` | random | 32-byte seed for deterministic account-ID derivation |
 
 ## `useCreateFaucet`
@@ -106,7 +106,7 @@ function NewFaucetButton() {
 | `maxSupply` | required | `bigint \| number` |
 | `decimals` | `8` | Token decimals |
 | `storageMode` | `"private"` | Public faucets are discoverable/readable on-chain |
-| `authScheme` | `AuthScheme.AuthRpoFalcon512` | Signing scheme |
+| `authScheme` | `AuthScheme.Falcon` | Signing scheme |
 
 ## `useSend`
 
@@ -275,7 +275,7 @@ await importAccount({
   type: "seed",
   seed: initSeed,        // Uint8Array
   mutable: true,         // default true
-  authScheme: AuthScheme.AuthRpoFalcon512,
+  authScheme: AuthScheme.Falcon,
 });
 
 // By file — works for both public and private accounts
