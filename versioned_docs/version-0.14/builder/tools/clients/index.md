@@ -43,6 +43,9 @@ The Miden client manages accounts, builds and executes transactions, produces ze
 ## Shared topics
 
 <CardGrid cols={2}>
+  <Card title="Local node testing" href="./local-node-testing" eyebrow="Dev loop">
+    Run a local node, point Rust and web clients at localhost, import genesis accounts, and debug local transaction state.
+  </Card>
   <Card title="Common errors" href="./common-errors" eyebrow="Diagnostics">
     Errors, diagnostic output, and recovery patterns shared across all surfaces.
   </Card>
