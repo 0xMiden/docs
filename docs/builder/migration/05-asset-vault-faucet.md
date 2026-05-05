@@ -73,14 +73,22 @@ The `asset::build_fungible_asset` and `asset::build_non_fungible_asset` procedur
 
 ### Affected Code
 
-**MASM (fungible asset creation):**
+**MASM (asset creation):**
 ```masm
-# Before (0.13): stack = [faucet_id_prefix, faucet_id_suffix, amount, ...]
+# Before (0.13): fungible stack = [faucet_id_prefix, faucet_id_suffix, amount, ...]
 exec.asset::build_fungible_asset
 # -> [ASSET, ...]
 
-# After (0.14): stack = [enable_callbacks, faucet_id_suffix, faucet_id_prefix, amount, ...]
+# Before (0.13): non-fungible stack = [faucet_id_prefix, faucet_id_suffix, DATA_HASH, ...]
+exec.asset::build_non_fungible_asset
+# -> [ASSET, ...]
+
+# After (0.14): fungible stack = [enable_callbacks, faucet_id_suffix, faucet_id_prefix, amount, ...]
 exec.asset::create_fungible_asset
+# -> [ASSET_KEY, ASSET_VALUE, ...]
+
+# After (0.14): non-fungible stack = [enable_callbacks, faucet_id_suffix, faucet_id_prefix, DATA_HASH, ...]
+exec.asset::create_non_fungible_asset
 # -> [ASSET_KEY, ASSET_VALUE, ...]
 ```
 
@@ -100,7 +108,7 @@ let asset = FungibleAsset::new(faucet_id, amount)?;
 1. Rename all `exec.asset::build_fungible_asset` calls to `exec.asset::create_fungible_asset`.
 2. Rename all `exec.asset::build_non_fungible_asset` calls to `exec.asset::create_non_fungible_asset`.
 3. Add the `enable_callbacks` flag as the new top-of-stack element.
-4. Note the changed argument order: `[enable_callbacks, faucet_id_suffix, faucet_id_prefix, amount]`.
+4. Note the changed argument order: `[enable_callbacks, faucet_id_suffix, faucet_id_prefix, amount]` for fungible assets and `[enable_callbacks, faucet_id_suffix, faucet_id_prefix, DATA_HASH]` for non-fungible assets.
 5. Update consumers to expect `[ASSET_KEY, ASSET_VALUE]` on the stack instead of a single `[ASSET]`.
 
 ### Common Errors
@@ -109,7 +117,7 @@ let asset = FungibleAsset::new(faucet_id, amount)?;
 | --- | --- | --- |
 | `unknown procedure asset::build_fungible_asset` | Procedure renamed | Use `asset::create_fungible_asset`. |
 | `unknown procedure asset::build_non_fungible_asset` | Procedure renamed | Use `asset::create_non_fungible_asset`. |
-| `FailedAssertion` in `create_fungible_asset` | Missing `enable_callbacks` flag or wrong argument order | Push `[enable_callbacks, faucet_id_suffix, faucet_id_prefix, amount]`. |
+| `FailedAssertion` in `create_*_asset` | Missing `enable_callbacks` flag or wrong argument order | Push `[enable_callbacks, faucet_id_suffix, faucet_id_prefix, amount]` for fungible assets, or `[enable_callbacks, faucet_id_suffix, faucet_id_prefix, DATA_HASH]` for non-fungible assets. |
 
 ---
 
