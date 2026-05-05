@@ -66,3 +66,8 @@ number of failures, preventing resource exhaustion. The threshold can be set wit
 The builder also exposes an internal gRPC server that the RPC component uses to proxy debugging endpoints such as
 `GetNoteError`. In bundled mode this is wired automatically; in distributed mode operators must set
 `--ntx-builder.url` (or `MIDEN_NODE_NTX_BUILDER_URL`) on the RPC component.
+
+Network transactions can read public foreign account state through foreign procedure invocation (FPI) while consuming a
+network note. The foreign account must be public and retrievable from the store at the transaction's reference block. If
+the foreign account is missing, private, or otherwise unavailable, the note execution can fail and the latest failure is
+reported through [`GetNoteError`](../rpc#getnoteerror).

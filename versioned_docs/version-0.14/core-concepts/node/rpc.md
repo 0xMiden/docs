@@ -234,9 +234,14 @@ Request the status of the node components. The response contains the current ver
 
 ### GetNoteError
 
-Returns the latest execution error for a network note, if any. This is useful for debugging notes that are failing to be consumed by the network transaction builder.
+Returns the latest execution error for a network note, if any. This is the v0.14 endpoint for debugging notes that are
+failing to be consumed by the network transaction builder.
 
 This endpoint is only available when the network transaction builder is enabled and connected. If it is not configured, the endpoint returns `UNAVAILABLE`.
+
+Use this endpoint when a network note appears stuck or is repeatedly failing. For example, if a network account consumes
+a note whose script performs FPI into another account, missing or unavailable foreign account data can surface here as
+the latest execution error.
 
 #### Request
 
