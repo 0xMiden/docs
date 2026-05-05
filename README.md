@@ -16,15 +16,14 @@ flowchart TD
         subgraph DocsDir["docs/ (authored here)"]
             BuilderDir["builder/"]
             BuilderQS["builder/get-started/"]
-            BuilderCore["builder/core-concepts/"]
             BuilderSC["builder/smart-contracts/"]
-            BuilderDev["builder/develop/"]
+            BuilderTutorials["builder/tutorials/"]
             BuilderTools["builder/tools/"]
-            BuilderRef["builder/reference/"]
+            BuilderGuardian["builder/miden-guardian/"]
+            BuilderMigration["builder/migration/"]
             BuilderFAQ["builder/faq.md"]
             BuilderGlossary["builder/glossary.md"]
-            DesignLanding["core-concepts/index.md"]
-            Intro["intro.md"]
+            CoreConceptsLanding["core-concepts/index.md"]
         end
 
         subgraph VersionedDocs["versioned_docs/ (snapshots)"]
@@ -40,7 +39,7 @@ flowchart TD
             subgraph V011["version-0.11/"]
                 V011Content["(same structure)"]
             end
-            subgraph VFuture["version-0.13+ (future)"]
+            subgraph VCurrent["version-0.13+ / version-0.14"]
                 VFutureBuilder["builder/get-started/"]
                 VFutureExternal["(external content)"]
             end
@@ -98,7 +97,7 @@ flowchart TD
 - Get Started guides (`docs/builder/get-started/`)
 - Core Concepts, Smart Contracts, Reference (placeholders)
 - FAQ and Glossary
-- Landing pages for Builder and Design
+- Landing pages for Builder and Core Concepts
 
 **`versioned_docs/` (frozen releases)**
 - Snapshots of `docs/` at release time
@@ -139,15 +138,15 @@ Cut a new documentation version when:
 Edit `.release/release-manifest.yml`:
 
 ```yaml
-version: "0.13"  # New version label
+version: "0.14"  # New version label
 
 refs:
-  protocol: v0.13.0       # Pin to release tag
-  miden-vm: v0.20.0
-  node: v0.13.0
-  compiler: 0.6.0
-  miden-client: v0.13.0
-  tutorials: main          # Or specific commit/tag
+  protocol: refs/tags/v0.14.4       # Pin to release tag
+  miden-vm: refs/tags/v0.22.1
+  node: refs/tags/v0.14.9
+  compiler: refs/tags/v0.8.1
+  miden-client: refs/tags/v0.14.4
+  tutorials: refs/heads/main        # Or specific commit/tag
 ```
 
 #### 2. Run the Version Cut Workflow
@@ -247,12 +246,14 @@ The site uses **Simple Analytics** for privacy-first, cookie-less metrics.
 | File | URL | Purpose |
 |------|-----|---------|
 | `static/llms.txt` | `/llms.txt` | LLM-friendly entry points |
+| `static/skill.md` | `/skill.md` | Compact assistant skill and route map |
 | `static/robots.txt` | `/robots.txt` | Crawler directives |
 | (auto-generated) | `/sitemap.xml` | Search engine sitemap |
 
-### Updating llms.txt
+### Updating LLM-facing files
 
-Edit `static/llms.txt` directly. Content should:
-- List canonical entry points (Get Started, Builder, Design)
-- Use relative paths (`/builder/get-started/`)
+Edit `static/llms.txt` and `static/skill.md` directly. Content should:
+- List canonical current entry points for Builder, clients, tutorials, Guardian, and Core Concepts
+- Call out the default docs as current/unstable and the latest stable version as `/0.14/`
+- Avoid stale paths such as `builder/develop/` or old `miden-base` source links
 - Avoid "Polygon Miden" branding (use "Miden" only)

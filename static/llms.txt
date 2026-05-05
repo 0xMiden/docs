@@ -1,80 +1,73 @@
 # Miden Documentation
 
-> Miden is a zero-knowledge rollup for Ethereum that enables private, scalable smart contracts using STARK proofs. Users execute and prove transactions locally (client-side proving). Privacy is the default.
+> Miden is a privacy-preserving blockchain where users execute and prove transactions locally. Accounts are programmable smart contracts, notes are programmable messages, and private state stays client-side unless a developer opts into public or network-visible state.
 
-- [Docs](https://docs.miden.xyz): Full documentation site
-- [GitHub](https://github.com/0xMiden): Source code and repositories
-- [Skills](https://docs.miden.xyz/skill.md): Agent skill file for AI assistants
+- [Docs home](https://docs.miden.xyz/): Current docs for the next release, labeled 0.15 unstable.
+- [Latest stable docs](https://docs.miden.xyz/0.14/): Versioned 0.14 documentation.
+- [Agent skill](https://docs.miden.xyz/skill.md): Compact Miden context for AI coding assistants.
+- [GitHub organization](https://github.com/0xMiden): Source repositories.
 
-## Getting Started
+## Builder Documentation
 
-- [Get Started](https://docs.miden.xyz/builder/get-started/): Installation, CLI basics, and first steps
-- [Installation](https://docs.miden.xyz/builder/get-started/setup/installation): Install the Miden toolchain with midenup
-- [CLI Basics](https://docs.miden.xyz/builder/get-started/setup/cli-basics): Core CLI commands for accounts, notes, and transactions
-- [Your First Smart Contract](https://docs.miden.xyz/builder/get-started/your-first-smart-contract/): Create, deploy, and test a counter contract
-- [Accounts](https://docs.miden.xyz/builder/get-started/accounts): Create and manage accounts
-- [Notes](https://docs.miden.xyz/builder/get-started/notes): Send and receive assets with notes
+- [Get Started](https://docs.miden.xyz/builder/get-started/): Install the toolchain, create accounts, work with notes, read storage, and build a first smart contract.
+- [Installation](https://docs.miden.xyz/builder/get-started/setup/installation): Install Miden tools with `midenup`.
+- [CLI Basics](https://docs.miden.xyz/builder/get-started/setup/cli-basics): Common account, note, sync, and transaction commands.
+- [Accounts](https://docs.miden.xyz/builder/get-started/accounts): Account types, storage modes, and creation patterns.
+- [Notes](https://docs.miden.xyz/builder/get-started/notes): Note concepts and asset transfer flow.
+- [Read Storage](https://docs.miden.xyz/builder/get-started/read-storage): Query account storage and inspect on-chain state.
+- [Your First Smart Contract](https://docs.miden.xyz/builder/get-started/your-first-smart-contract/): Build, test, and deploy a Rust smart contract.
 
-## Smart Contracts (Rust SDK)
+## Smart Contracts
 
-- [Overview](https://docs.miden.xyz/builder/smart-contracts/): Index page for the Miden SDK (v0.10) reference
-- [What is a Miden Smart Contract](https://docs.miden.xyz/builder/smart-contracts/overview): Execution model, accounts, notes, and the transaction lifecycle
-- [Toolchain & Project Structure](https://docs.miden.xyz/builder/smart-contracts/getting-started): The Miden toolchain, project layout, and how Rust source becomes a deployable .masp file
+- [Smart Contracts](https://docs.miden.xyz/builder/smart-contracts/): Rust SDK reference for Miden smart contracts.
+- [Overview](https://docs.miden.xyz/builder/smart-contracts/overview): Execution model, account logic, notes, and transactions.
+- [Accounts](https://docs.miden.xyz/builder/smart-contracts/accounts/introduction): Components, storage, custom types, operations, cryptography, and authentication.
+- [Notes](https://docs.miden.xyz/builder/smart-contracts/notes/introduction): Note scripts, note types, output notes, and note data access.
+- [Transactions](https://docs.miden.xyz/builder/smart-contracts/transactions/introduction): Transaction context, scripts, and advice provider usage.
+- [Cross-component Calls](https://docs.miden.xyz/builder/smart-contracts/cross-component-calls): Calling account component methods from other components or note scripts.
+- [Types](https://docs.miden.xyz/builder/smart-contracts/types): Felt, Word, AccountId, NoteId, Asset, and other core Rust SDK types.
 
-### Accounts
+## Client SDKs and Tools
 
-- [Components](https://docs.miden.xyz/builder/smart-contracts/accounts/components): Define account components with #[component] macro — storage, methods, and bindings
-- [Storage](https://docs.miden.xyz/builder/smart-contracts/accounts/storage): Persistent state with Value slots and StorageMaps
-- [Custom Types](https://docs.miden.xyz/builder/smart-contracts/accounts/custom-types): Export custom structs and enums with #[export_type]
-- [Account Operations](https://docs.miden.xyz/builder/smart-contracts/accounts/account-operations): Query state and mutate the vault using self methods
-- [Cryptography](https://docs.miden.xyz/builder/smart-contracts/accounts/cryptography): RPO256 hashing, Falcon512 signatures, BLAKE3, SHA256
-- [Authentication](https://docs.miden.xyz/builder/smart-contracts/accounts/authentication): RPO-Falcon512 auth components and nonce management
+- [Clients](https://docs.miden.xyz/builder/tools/clients/): Rust, TypeScript, and React client SDK overview.
+- [Rust Client](https://docs.miden.xyz/builder/tools/clients/rust-client/): Native client library and CLI documentation.
+- [Web SDK](https://docs.miden.xyz/builder/tools/clients/web-client/): `@miden-sdk/miden-sdk` browser and TypeScript API.
+- [React SDK](https://docs.miden.xyz/builder/tools/clients/react-sdk/): `@miden-sdk/react` provider, hooks, signers, and recipes.
+- [Common Client Errors](https://docs.miden.xyz/builder/tools/clients/common-errors): Shared diagnostics and recovery patterns.
+- [midenup](https://docs.miden.xyz/builder/tools/midenup): Miden toolchain installer.
+- [Network](https://docs.miden.xyz/builder/tools/network): Public network and endpoint information.
+- [Playground](https://docs.miden.xyz/builder/tools/playground): Browser-based contract playground.
 
-### Notes
+## Tutorials and Guides
 
-- [What are Notes](https://docs.miden.xyz/builder/smart-contracts/notes/): Programmable UTXOs for asset transfers
-- [Note Scripts](https://docs.miden.xyz/builder/smart-contracts/notes/note-scripts): Write note scripts with #[note] and #[note_script] macros
-- [Output Notes](https://docs.miden.xyz/builder/smart-contracts/notes/output-notes): Create output notes, attach assets, compute recipients
-- [Reading Notes](https://docs.miden.xyz/builder/smart-contracts/notes/reading-notes): Read note data with active_note and input_note modules
+- [Tutorials](https://docs.miden.xyz/builder/tutorials/): Hands-on tutorials and reusable development helpers.
+- [Miden Bank Tutorial](https://docs.miden.xyz/builder/tutorials/miden-bank/): End-to-end smart contract tutorial.
+- [Testing Helpers](https://docs.miden.xyz/builder/tutorials/helpers/testing): Testing patterns for Miden applications.
+- [Debugging Helpers](https://docs.miden.xyz/builder/tutorials/helpers/debugging): Debugging transaction and MASM failures.
+- [Common Pitfalls](https://docs.miden.xyz/builder/tutorials/helpers/pitfalls): Practical issues developers hit while building.
+- [Migration Guide](https://docs.miden.xyz/builder/migration/): Current migration notes across protocol, SDK, client, VM, and assembler changes.
 
-### Transactions
+## Guardian and Application Patterns
 
-- [Transaction Context](https://docs.miden.xyz/builder/smart-contracts/transactions/transaction-context): The tx module — block info, note commitments, expiration
-- [Transaction Scripts](https://docs.miden.xyz/builder/smart-contracts/transactions/transaction-scripts): Write transaction scripts with #[tx_script]
-- [Advice Provider](https://docs.miden.xyz/builder/smart-contracts/transactions/advice-provider): Non-deterministic data, preimages, and Falcon signatures
+- [Miden Guardian](https://docs.miden.xyz/builder/miden-guardian/): Assisted self-custody architecture and operator documentation.
+- [Guardian Running Guide](https://docs.miden.xyz/builder/miden-guardian/operator-guide/running): How to get and run the Guardian service.
+- [Guardian Deployment Guide](https://docs.miden.xyz/builder/miden-guardian/operator-guide/deployment): Production deployment configuration.
+- [Private Multisig](https://docs.miden.xyz/builder/private-multisig/): Private multisig concepts and SDK usage.
 
-### Reference
+## Core Concepts
 
-- [Types](https://docs.miden.xyz/builder/smart-contracts/types): Felt, Word, Asset, AccountId, and type conversions
-- [Cross-Component Calls](https://docs.miden.xyz/builder/smart-contracts/cross-component-calls): Call methods across account components and from note scripts
-- [API Reference (docs.rs)](https://docs.rs/miden/latest/miden/): Full Rust SDK API documentation
+- [Core Concepts](https://docs.miden.xyz/core-concepts/): Protocol, VM, compiler, and node architecture.
+- [Protocol](https://docs.miden.xyz/core-concepts/protocol/): Accounts, assets, blockchain state, notes, transactions, and protocol MASM library.
+- [Miden VM](https://docs.miden.xyz/core-concepts/miden-vm/): VM architecture, programs, user docs, tooling, and performance.
+- [Compiler](https://docs.miden.xyz/core-concepts/compiler/): Rust-to-MASM compiler usage and guides.
+- [Node](https://docs.miden.xyz/core-concepts/node/): Node services, operator guide, and RPC reference.
 
-## Develop
+## Source Repositories
 
-- [Standard Note Types](https://docs.miden.xyz/builder/develop/note-types): P2ID, P2IDE (with expiration), and SWAP (atomic exchange)
-- [Tutorials](https://docs.miden.xyz/builder/develop/tutorials/rust-compiler/): Rust compiler tutorials
-- [Miden Bank Tutorial](https://docs.miden.xyz/builder/develop/tutorials/rust-compiler/miden-bank/): Step-by-step tutorial building a bank contract
-
-## Tools
-
-- [Tools](https://docs.miden.xyz/builder/tools/): Miden client and development tools
-
-## Migration
-
-- [Migration Guide](https://docs.miden.xyz/builder/migration/): Guide for migrating between Miden versions
-
-## Core Concepts & Architecture
-
-- [Core Concepts](https://docs.miden.xyz/core-concepts/): Protocol internals and architecture documentation
-
-## Resources
-
-- [FAQ](https://docs.miden.xyz/builder/faq): Frequently asked questions
-- [Glossary](https://docs.miden.xyz/builder/glossary): Terminology reference
-
-## Optional
-
-- [Miden Base (GitHub)](https://github.com/0xMiden/miden-base): Protocol implementation
-- [Miden VM (GitHub)](https://github.com/0xMiden/miden-vm): Virtual machine
-- [Miden Client (GitHub)](https://github.com/0xMiden/miden-client): Client library
-- [Compiler (GitHub)](https://github.com/0xMiden/compiler): Rust-to-MASM compiler
+- [docs](https://github.com/0xMiden/docs): Docusaurus documentation site.
+- [protocol](https://github.com/0xMiden/protocol): Protocol types, account model, notes, assets, transactions, and MASM protocol library.
+- [miden-vm](https://github.com/0xMiden/miden-vm): Virtual machine and assembler.
+- [miden-client](https://github.com/0xMiden/miden-client): Rust client, Web SDK, and React SDK.
+- [node](https://github.com/0xMiden/node): Miden node implementation.
+- [compiler](https://github.com/0xMiden/compiler): Rust-to-MASM compiler.
+- [tutorials](https://github.com/0xMiden/tutorials): Tutorial source content.

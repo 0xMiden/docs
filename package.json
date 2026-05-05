@@ -16,7 +16,6 @@
   },
   "dependencies": {
     "@cmfcmf/docusaurus-search-local": "^2.0.0",
-    "@cookbookdev/docsbot": "^4.25.15",
     "@docusaurus/core": "3.8.1",
     "@docusaurus/plugin-client-redirects": "^3.8.1",
     "@docusaurus/preset-classic": "3.8.1",
