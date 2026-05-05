@@ -27,6 +27,7 @@ You can always reach the underlying WASM client from any hook via `useMidenClien
 | [`useMiden()`](./setup.md#client-lifecycle) | Raw lifecycle hook (`isReady`, `sync`, `runExclusive`) |
 | [`useMidenClient()`](./setup.md#client-lifecycle) | Shortcut for the ready WASM `WebClient` |
 | [Query hooks](./query-hooks.md) | `useAccount(s)`, `useNotes`, `useNoteStream`, `useTransactionHistory`, `useSyncState`, `useAssetMetadata` |
+| [Account state and balances](./account-state-and-balances.md) | Active account selection, sync boundaries, balance rendering, and refresh-after-transaction patterns |
 | [Mutation hooks](./mutation-hooks.md) | `useCreateWallet`, `useCreateFaucet`, `useImportAccount`, `useSend`, `useMultiSend`, `useMint`, `useConsume`, `useSwap` |
 | [Advanced hooks](./advanced.md) | `useTransaction`, `useExecuteProgram`, `useCompile`, `useSessionAccount`, `useExportStore`, `useImportStore`, `useImportNote`, `useExportNote`, `useSyncControl`, `useWaitForCommit`, `useWaitForNotes` |
 | [External signers](./signers.md) | `MultiSignerProvider`, `SignerContext`, `useSigner`, `useMultiSigner` — pluggable wallet integrations (Para, Turnkey, MidenFi, custom) |
@@ -38,6 +39,7 @@ Each hook exports its own result interface — not a generic `{ data, isLoading,
 
 - [Setup](./setup.md) — install the package, wrap your app in `MidenProvider`, configure the network.
 - [Query hooks](./query-hooks.md) — read accounts, notes, sync state, and asset metadata.
+- [Account state and balances](./account-state-and-balances.md) — practical account selection, sync, balances, and refresh examples.
 - [Mutation hooks](./mutation-hooks.md) — create wallets and faucets, send, mint, consume, swap.
 - [Advanced](./advanced.md) — custom scripts, MASM compilation, session accounts, note import/export.
 - [Signers](./signers.md) — external wallets (Para, Turnkey, MidenFi) and custom signer providers.

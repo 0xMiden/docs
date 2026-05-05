@@ -233,6 +233,7 @@ const sidebars: SidebarsConfig = {
               items: [
                 "builder/tools/clients/react-sdk/setup",
                 "builder/tools/clients/react-sdk/query-hooks",
+                "builder/tools/clients/react-sdk/account-state-and-balances",
                 "builder/tools/clients/react-sdk/mutation-hooks",
                 "builder/tools/clients/react-sdk/advanced",
                 "builder/tools/clients/react-sdk/signers",
