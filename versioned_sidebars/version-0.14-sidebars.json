@@ -193,6 +193,7 @@
             "id": "builder/tools/clients/index"
           },
           "items": [
+            "builder/tools/clients/local-node-testing",
             {
               "type": "category",
               "label": "Rust",
