@@ -16,12 +16,11 @@ Assets are now represented as two words (`ASSET_KEY` + `ASSET_VALUE`) instead of
 
 ### Summary
 
-The single 4-felt `ASSET` word has been split into two words:
+The single 4-felt `ASSET` word has been split into two words: `ASSET_KEY` (identity + faucet + callback flag) and `ASSET_VALUE` (amount or data hash). Every kernel procedure and standard-library helper that previously accepted or returned `ASSET` now works with the `ASSET_KEY, ASSET_VALUE` pair.
 
-- **`ASSET_KEY`** = `[asset_id_suffix, asset_id_prefix, (faucet_id_suffix << 8) | callbacks_enabled, faucet_id_prefix]`
-- **`ASSET_VALUE`** = `[amount, 0, 0, 0]` for fungible assets, or `DATA_HASH` for non-fungible assets.
-
-Every kernel procedure and standard-library helper that previously accepted or returned `ASSET` now works with the `ASSET_KEY, ASSET_VALUE` pair.
+:::note Canonical layout
+The full field-by-field layout — including how the per-asset callback flag is packed into the reserved low byte of `faucet_id_suffix` — is documented in [Asset encoding](../../core-concepts/protocol/asset.md#encoding). This page covers the v0.13 → v0.14 delta only.
+:::
 
 ### Affected Code
 
@@ -74,14 +73,22 @@ The `asset::build_fungible_asset` and `asset::build_non_fungible_asset` procedur
 
 ### Affected Code
 
-**MASM (fungible asset creation):**
+**MASM (asset creation):**
 ```masm
-# Before (0.13): stack = [faucet_id_prefix, faucet_id_suffix, amount, ...]
+# Before (0.13): fungible stack = [faucet_id_prefix, faucet_id_suffix, amount, ...]
 exec.asset::build_fungible_asset
 # -> [ASSET, ...]
 
-# After (0.14): stack = [enable_callbacks, faucet_id_suffix, faucet_id_prefix, amount, ...]
+# Before (0.13): non-fungible stack = [faucet_id_prefix, faucet_id_suffix, DATA_HASH, ...]
+exec.asset::build_non_fungible_asset
+# -> [ASSET, ...]
+
+# After (0.14): fungible stack = [enable_callbacks, faucet_id_suffix, faucet_id_prefix, amount, ...]
 exec.asset::create_fungible_asset
+# -> [ASSET_KEY, ASSET_VALUE, ...]
+
+# After (0.14): non-fungible stack = [enable_callbacks, faucet_id_suffix, faucet_id_prefix, DATA_HASH, ...]
+exec.asset::create_non_fungible_asset
 # -> [ASSET_KEY, ASSET_VALUE, ...]
 ```
 
@@ -101,7 +108,7 @@ let asset = FungibleAsset::new(faucet_id, amount)?;
 1. Rename all `exec.asset::build_fungible_asset` calls to `exec.asset::create_fungible_asset`.
 2. Rename all `exec.asset::build_non_fungible_asset` calls to `exec.asset::create_non_fungible_asset`.
 3. Add the `enable_callbacks` flag as the new top-of-stack element.
-4. Note the changed argument order: `[enable_callbacks, faucet_id_suffix, faucet_id_prefix, amount]`.
+4. Note the changed argument order: `[enable_callbacks, faucet_id_suffix, faucet_id_prefix, amount]` for fungible assets and `[enable_callbacks, faucet_id_suffix, faucet_id_prefix, DATA_HASH]` for non-fungible assets.
 5. Update consumers to expect `[ASSET_KEY, ASSET_VALUE]` on the stack instead of a single `[ASSET]`.
 
 ### Common Errors
@@ -110,7 +117,7 @@ let asset = FungibleAsset::new(faucet_id, amount)?;
 | --- | --- | --- |
 | `unknown procedure asset::build_fungible_asset` | Procedure renamed | Use `asset::create_fungible_asset`. |
 | `unknown procedure asset::build_non_fungible_asset` | Procedure renamed | Use `asset::create_non_fungible_asset`. |
-| `FailedAssertion` in `create_fungible_asset` | Missing `enable_callbacks` flag or wrong argument order | Push `[enable_callbacks, faucet_id_suffix, faucet_id_prefix, amount]`. |
+| `FailedAssertion` in `create_*_asset` | Missing `enable_callbacks` flag or wrong argument order | Push `[enable_callbacks, faucet_id_suffix, faucet_id_prefix, amount]` for fungible assets, or `[enable_callbacks, faucet_id_suffix, faucet_id_prefix, DATA_HASH]` for non-fungible assets. |
 
 ---
 
