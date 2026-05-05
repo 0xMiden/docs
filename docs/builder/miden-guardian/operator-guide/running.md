@@ -12,6 +12,17 @@ Miden Guardian exposes:
 
 Both ports are hard-coded in the server binary and are not currently overridable via environment variable. Embedders calling the builder API directly can configure them in code.
 
+## Get the code
+
+The Guardian server, client SDKs, multisig client libraries, and specification live in the [OpenZeppelin Guardian repository](https://github.com/OpenZeppelin/guardian).
+
+Clone the repository and run the commands on this page from its root:
+
+```bash
+git clone https://github.com/OpenZeppelin/guardian.git
+cd guardian
+```
+
 ## Run with Docker Compose
 
 ```bash
