@@ -84,8 +84,8 @@ It is recommended that faucets issue all of their assets with the same flag to e
 
 | Callback | Storage slot name | Triggered when |
 |---|---|---|
-| `on_before_asset_added_to_account` | `miden::protocol::faucet::callback::on_before_asset_added_to_account` | The asset is added to an account's vault (via `native_account::add_asset`). |
-| `on_before_asset_added_to_note` | `miden::protocol::faucet::callback::on_before_asset_added_to_note` | The asset is added to an output note (via `output_note::add_asset`). |
+| `on_before_asset_added_to_account` | <code>miden::protocol::faucet::callback::<wbr />on_before_asset_added_to_account</code> | Added to an account vault via `native_account::add_asset`. |
+| `on_before_asset_added_to_note` | <code>miden::protocol::faucet::callback::<wbr />on_before_asset_added_to_note</code> | Added to an output note via `output_note::add_asset`. |
 
 Account components that need to add callbacks to an account's storage should use the `AssetCallbacks` type, which provides an easy-to-use abstraction over these details.
 
