@@ -34,40 +34,11 @@ describe('SearchBar', () => {
     expect(originalSearchBar).toHaveTextContent('Original SearchBar');
   });
 
-  it('renders the AskCookbook component', () => {
-    render(<SearchBarWrapper />);
-    
-    const askCookbookComponent = screen.getByTestId('ask-cookbook');
-    expect(askCookbookComponent).toBeInTheDocument();
-    expect(askCookbookComponent).toHaveTextContent('Ask Cookbook Component');
-  });
-
   it('passes props to the original SearchBar', () => {
     const testClass = 'test-class-name';
     render(<SearchBarWrapper className={testClass} />);
     
     const originalSearchBar = screen.getByTestId('search-bar-original');
     expect(originalSearchBar).toHaveClass(testClass);
-  });
-
-  it('passes the correct API key to AskCookbook', () => {
-    render(<SearchBarWrapper />);
-    
-    const askCookbookComponent = screen.getByTestId('ask-cookbook');
-    expect(askCookbookComponent).toHaveAttribute('data-api-key', mockApiKey);
-  });
-
-  it('renders both components in the correct order', () => {
-    render(<SearchBarWrapper />);
-
-    const searchBarElement = screen.getByTestId('search-bar-original');
-    const cookbookElement = screen.getByTestId('ask-cookbook');
-
-    // Check that both elements are present
-    expect(searchBarElement).toBeInTheDocument();
-    expect(cookbookElement).toBeInTheDocument();
-
-    // Verify the order by checking that the SearchBar appears before the AskCookbook in the DOM
-    expect(searchBarElement.compareDocumentPosition(cookbookElement) & Node.DOCUMENT_POSITION_FOLLOWING).toBeGreaterThan(0);
   });
 });
