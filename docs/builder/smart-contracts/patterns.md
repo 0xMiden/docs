@@ -6,7 +6,7 @@ description: "Common patterns and security considerations for Miden smart contra
 
 # Patterns
 
-Security considerations and common patterns for Miden smart contracts. For runnable examples, see the [compiler examples directory](https://github.com/0xMiden/compiler/tree/next/examples) and the [Miden Bank Tutorial](../tutorials/miden-bank/).
+Security considerations and common patterns for Miden smart contracts. For runnable examples, see the [compiler examples directory](https://github.com/0xMiden/compiler/tree/next/examples) and the [Miden Bank Tutorial](../tutorials/rust-compiler/miden-bank/).
 
 ## Access control
 
