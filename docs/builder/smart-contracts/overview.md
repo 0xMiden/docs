@@ -1,10 +1,14 @@
 ---
 title: "What is a Miden Smart Contract"
 sidebar_position: 1
-description: "Miden's execution model, account structure, note system, and transaction lifecycle — how Rust code becomes zero-knowledge proofs."
+description: "Miden's execution model, account structure, note system, and transaction lifecycle."
 ---
 
 # What is a Miden Smart Contract
+
+:::info Concepts apply to both authoring paths
+This page describes Miden's execution model — accounts, notes, transactions, and lifecycle. The concepts apply regardless of whether you author contracts in MASM (the mainnet path) or the Rust SDK (in active development). Code examples on this page use Rust; for the MASM path, see [MASM Smart Contracts](./masm/).
+:::
 
 Miden is a zero-knowledge layer 2 where transactions execute on the client and only a cryptographic proof is submitted to the network. Every entity — wallets, contracts, faucets — is an account with code, storage, a vault, and a nonce. Assets move between accounts through notes, which act as programmable UTXOs. This page describes the execution model, account structure, note system, and transaction lifecycle. For a hands-on walkthrough, see the [Miden Bank Tutorial](../tutorials/miden-bank/).
 
