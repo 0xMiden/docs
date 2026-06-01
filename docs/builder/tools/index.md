@@ -12,7 +12,7 @@ Developer tools for building on and interacting with the Miden network. Use the 
 
 <CardGrid cols={3}>
   <Card title="Rust client" href="./clients/rust-client/" eyebrow="Rust · SDK">
-    Full-featured Rust library for Miden rollup integration — accounts, transactions, notes, proving.
+    Full-featured Rust library for Miden layer 2 integration — accounts, transactions, notes, proving.
   </Card>
   <Card title="Web SDK" href="./clients/web-client/" eyebrow="TypeScript · SDK">
     Browser-based client for managing accounts and transactions from a web app.

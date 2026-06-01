@@ -84,7 +84,7 @@ Yes, Miden enables consumption of notes based on time conditions, such as:
 
 ## What does a Miden operator do in Miden?
 
-A Miden operator is an entity that maintains the infrastructure necessary for the functioning of the Miden rollup. Their roles may involve:
+A Miden operator is an entity that maintains the infrastructure necessary for the functioning of the Miden layer 2. Their roles may involve:
 
 1. Running Sequencer Nodes
 2. Operating the Prover Infrastructure

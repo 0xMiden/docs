@@ -38,7 +38,7 @@ A technical reference for Miden's architecture: the protocol, the zkVM, the comp
 
 ## Architecture overview
 
-Miden is a zero-knowledge rollup that rethinks blockchain architecture. Instead of a single global state updated sequentially, Miden uses an **actor model** where each account is an independent state machine that executes transactions locally and generates validity proofs.
+Miden is a zero-knowledge layer 2 that rethinks blockchain architecture. Instead of a single global state updated sequentially, Miden uses an **actor model** where each account is an independent state machine that executes transactions locally and generates validity proofs.
 
 ### Core design principles
 

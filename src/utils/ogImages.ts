@@ -131,7 +131,7 @@ const OG_IMAGE_RULES: OgImageRule[] = [
   {
     pathPrefix: "/builder",
     image: "build.png",
-    description: "Start building private, verifiable applications on the Miden rollup.",
+    description: "Start building private, verifiable applications on the Miden layer 2.",
   },
   {
     pathPrefix: "/core-concepts/protocol/account",

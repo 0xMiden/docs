@@ -60,7 +60,7 @@ export default function Home(): JSX.Element {
                 Build scalable, private applications.
               </h1>
               <p className={styles.heroSub}>
-                A zero-knowledge rollup with client-side proving.
+                A zero-knowledge layer 2 with client-side proving.
                 Accounts and notes are private by default — only
                 commitments go on-chain.
               </p>
