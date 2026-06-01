@@ -23,7 +23,7 @@ flowchart TD
             BuilderMigration["builder/migration/"]
             BuilderFAQ["builder/faq.md"]
             BuilderGlossary["builder/glossary.md"]
-            ReferenceLanding["core-concepts/index.md"]
+            ReferenceLanding["reference/index.md"]
         end
 
         subgraph VersionedDocs["versioned_docs/ (snapshots)"]
@@ -87,7 +87,7 @@ flowchart TD
 | Category | Location | Source | Example |
 |----------|----------|--------|---------|
 | **Authored** | `docs/builder/` | Written in this repo | `docs/builder/get-started/`, `docs/builder/faq.md` |
-| **Ingested (live)** | `docs/core-concepts/`, `docs/builder/` | External repos @ next | `docs/core-concepts/protocol/`, `docs/builder/tutorials/` |
+| **Ingested (live)** | `docs/reference/`, `docs/builder/` | External repos @ next | `docs/reference/protocol/`, `docs/builder/tutorials/` |
 | **Ingested (versioned)** | `versioned_docs/` | External repos @ release tags | `versioned_docs/version-0.12/protocol/` |
 | **Snapshots** | `versioned_docs/` | Frozen via `docs:version` | All versioned content |
 
@@ -180,7 +180,7 @@ Deployment is **automatic** on push to `main`.
 The `.github/workflows/deploy-docs.yml` workflow:
 1. Checks out this repository and all external source repos
 2. Ingests external docs into v0.4 IA structure:
-   - Reference docs → `docs/core-concepts/protocol/`, `miden-vm/`, `compiler/`, `node/`
+   - Reference docs → `docs/reference/protocol/`, `miden-vm/`, `compiler/`, `node/`
    - Builder docs → `docs/builder/tutorials/`, `docs/builder/tools/client/`
 3. Runs `npm run build` to generate the static site
 4. Deploys to GitHub Pages at `docs.miden.xyz`
@@ -208,7 +208,7 @@ The build uses:
 ### ❌ DON'T
 
 - **Never** manually copy external content into `docs/` (use CI/CD ingestion)
-- **Never** create root-level `docs/protocol/`, `docs/miden-vm/`, etc. (use nested paths in `docs/core-concepts/`)
+- **Never** create root-level `docs/protocol/`, `docs/miden-vm/`, etc. (use nested paths in `docs/reference/`)
 - **Never** edit `versioned_docs/` directly (snapshots are immutable)
 - **Never** create a root-level `docs/quick-start/` (Get Started lives in `docs/builder/`)
 

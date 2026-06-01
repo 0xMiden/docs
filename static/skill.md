@@ -19,7 +19,7 @@ metadata:
 - The default docs at `https://docs.miden.xyz/` are the latest stable docs, currently **0.14**.
 - The next-release docs are under `https://docs.miden.xyz/next/...` routes and are currently labeled **0.15 unstable**.
 - If a user asks about released behavior, check the matching versioned docs and release tag before answering.
-- If a user asks about current development, use `/next/builder/` or `/next/core-concepts/` reference docs and the relevant source repository branch.
+- If a user asks about current development, use `/next/builder/` or `/next/reference/` reference docs and the relevant source repository branch.
 
 ## What Is Miden
 
@@ -62,16 +62,16 @@ Miden is a privacy-preserving blockchain where accounts are programmable smart c
 
 ## Reference Map
 
-- Reference: https://docs.miden.xyz/core-concepts/
-- Protocol: https://docs.miden.xyz/core-concepts/protocol/
-- Protocol account model: https://docs.miden.xyz/core-concepts/protocol/account/
-- Protocol notes: https://docs.miden.xyz/core-concepts/protocol/note
-- Protocol transactions: https://docs.miden.xyz/core-concepts/protocol/transaction
-- Protocol MASM library: https://docs.miden.xyz/core-concepts/protocol/protocol_library
-- Miden VM: https://docs.miden.xyz/core-concepts/miden-vm/
-- Compiler: https://docs.miden.xyz/core-concepts/compiler/
-- Node: https://docs.miden.xyz/core-concepts/node/
-- Node RPC: https://docs.miden.xyz/core-concepts/node/rpc
+- Reference: https://docs.miden.xyz/reference/
+- Protocol: https://docs.miden.xyz/reference/protocol/
+- Protocol account model: https://docs.miden.xyz/reference/protocol/account/
+- Protocol notes: https://docs.miden.xyz/reference/protocol/note
+- Protocol transactions: https://docs.miden.xyz/reference/protocol/transaction
+- Protocol MASM library: https://docs.miden.xyz/reference/protocol/protocol_library
+- Miden VM: https://docs.miden.xyz/reference/miden-vm/
+- Compiler: https://docs.miden.xyz/reference/compiler/
+- Node: https://docs.miden.xyz/reference/node/
+- Node RPC: https://docs.miden.xyz/reference/node/rpc
 
 ## Source Repositories
 

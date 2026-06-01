@@ -4,9 +4,9 @@
 Docusaurus v3 documentation site for the Miden ecosystem. Deployed at docs.miden.xyz.
 
 ## Key Directories
-- `docs/` — current docs (core-concepts, builder/)
+- `docs/` — current docs (reference, builder/)
 - `docs/builder/` — developer-facing: tools, develop, get-started, smart-contracts, migration
-- `docs/core-concepts/` — protocol design docs
+- `docs/reference/` — protocol design docs
 - `versioned_docs/` — pinned version snapshots
 - `src/` — custom React components, pages, CSS
 - `static/` — images, assets

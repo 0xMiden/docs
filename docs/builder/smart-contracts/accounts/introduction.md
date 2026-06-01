@@ -21,7 +21,7 @@ Every account has four parts:
 | **Vault** | The fungible and non-fungible assets the account holds |
 | **Nonce** | A counter that increments exactly once per state change, providing replay protection |
 
-The network doesn't store the full account state. Instead, it stores cryptographic commitments — hashes of the code, storage, and vault (see [account design](/core-concepts/protocol/account/)). Only the account owner (or a public account's observers) sees the actual data.
+The network doesn't store the full account state. Instead, it stores cryptographic commitments — hashes of the code, storage, and vault (see [account design](/reference/protocol/account/)). Only the account owner (or a public account's observers) sees the actual data.
 
 ## Components, not contracts
 

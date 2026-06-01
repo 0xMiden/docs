@@ -37,7 +37,7 @@
       "label": "Glossary"
     }
   ],
-  "coreConceptsSidebar": [
+  "referenceSidebar": [
     {
       "type": "category",
       "label": "Protocol",

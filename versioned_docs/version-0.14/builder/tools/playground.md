@@ -12,7 +12,7 @@ An interactive browser environment for writing, compiling, and executing Miden A
   <Card title="Open the Playground ↗" href="https://playground.miden.xyz/" eyebrow="External · playground.miden.xyz">
     Launch the browser IDE and start writing MASM immediately.
   </Card>
-  <Card title="Miden VM reference" href="/core-concepts" eyebrow="Reference · MASM">
+  <Card title="Miden VM reference" href="/reference" eyebrow="Reference · MASM">
     Instruction set, stack semantics, chiplets, and assembler behaviour.
   </Card>
 </CardGrid>

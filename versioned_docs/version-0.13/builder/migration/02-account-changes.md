@@ -90,7 +90,7 @@ The `set_map_item` procedure now takes slot IDs and returns only old values:
 The return value change means you may need to update stack manipulation after calling `set_map_item`.
 :::
 
-For details on the `word("...")` syntax, see the [MASM Changes](06-masm-changes.md#named-storage-slots) migration page. For the full list of storage procedures, see the [Protocol Library Reference](../../core-concepts/miden-base/protocol_library.md).
+For details on the `word("...")` syntax, see the [MASM Changes](06-masm-changes.md#named-storage-slots) migration page. For the full list of storage procedures, see the [Protocol Library Reference](../../reference/miden-base/protocol_library.md).
 
 ---
 

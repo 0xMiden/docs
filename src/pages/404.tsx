@@ -50,7 +50,7 @@ export default function NotFound(): JSX.Element {
                   <span>Breaking changes and renames since v0.13.</span>
                 </li>
                 <li>
-                  <Link to="/core-concepts">Reference</Link>
+                  <Link to="/reference">Reference</Link>
                   <span>Protocol, VM, compiler, and node architecture.</span>
                 </li>
               </ul>

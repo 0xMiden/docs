@@ -107,7 +107,7 @@ Key changes:
 - Use `[0..2]` slice notation to extract the slot ID (first 2 elements) for kernel procedures like `get_item` and `set_item`
 - Slot names should follow the `project::component::slot` naming convention to avoid collisions
 
-For more details on storage slot naming conventions, see [Account Storage](../../core-concepts/miden-base/account/storage.md). For the full list of storage procedures, see the [Protocol Library Reference](../../core-concepts/miden-base/protocol_library.md).
+For more details on storage slot naming conventions, see [Account Storage](../../reference/miden-base/account/storage.md). For the full list of storage procedures, see the [Protocol Library Reference](../../reference/miden-base/protocol_library.md).
 
 ---
 

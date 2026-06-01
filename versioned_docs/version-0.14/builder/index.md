@@ -72,9 +72,9 @@ import SectionLinks from '@site/src/components/SectionLinks';
 <SectionLinks
   title="Explore the reference"
   links={[
-    { href: '../core-concepts', label: 'Architecture overview', description: 'Actor model, state design, and protocol fundamentals' },
-    { href: '../core-concepts#protocol', label: 'Protocol reference', description: 'Accounts, notes, state model, and transaction semantics' },
-    { href: '../core-concepts#virtual-machine-miden-vm', label: 'Virtual machine', description: 'STARK-based VM, chiplets, and Miden Assembly' },
+    { href: '../reference', label: 'Architecture overview', description: 'Actor model, state design, and protocol fundamentals' },
+    { href: '../reference#protocol', label: 'Protocol reference', description: 'Accounts, notes, state model, and transaction semantics' },
+    { href: '../reference#virtual-machine-miden-vm', label: 'Virtual machine', description: 'STARK-based VM, chiplets, and Miden Assembly' },
   ]}
 />
 

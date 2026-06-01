@@ -29,13 +29,13 @@ const ROLES: Role[] = [
     eyebrow: "Protocol curious",
     title: "Understand the zkVM",
     desc: "Protocol specs, VM internals, constraints, and the path from Rust → MASM → proof.",
-    to: "/core-concepts",
+    to: "/reference",
   },
   {
     eyebrow: "zk researcher",
     title: "Dig into Miden VM",
     desc: "Execution trace, chiplets, advice provider, and the recursive proof pipeline.",
-    to: "/core-concepts/miden-vm",
+    to: "/reference/miden-vm",
   },
 ];
 

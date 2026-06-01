@@ -8,7 +8,7 @@ description: "Transactions are Miden's execution unit — they consume input not
 
 Transactions are the execution unit in Miden. Every state change — transferring assets, updating storage, minting tokens — happens inside a transaction. Each transaction runs against a single account, consumes zero or more input notes, and produces zero or more output notes.
 
-The critical difference from other blockchains: transactions execute locally on the user's machine, not on a shared VM. After execution, the Miden VM generates a zero-knowledge proof that the transaction was valid (see [transaction design](/core-concepts/protocol/transaction)). Only this proof and the resulting state commitments are submitted to the network. The network never sees the transaction inputs, the account's private state, or the logic that ran.
+The critical difference from other blockchains: transactions execute locally on the user's machine, not on a shared VM. After execution, the Miden VM generates a zero-knowledge proof that the transaction was valid (see [transaction design](/reference/protocol/transaction)). Only this proof and the resulting state commitments are submitted to the network. The network never sees the transaction inputs, the account's private state, or the logic that ran.
 
 ## Anatomy of a transaction
 

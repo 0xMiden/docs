@@ -77,7 +77,7 @@ To reset the chain, stop the node and remove the generated data:
 rm -rf data accounts
 ```
 
-Then run the bootstrap and start commands again. For the full node operator workflow, see the [v0.14 node usage guide](../../../core-concepts/node/operator/usage.md#operation).
+Then run the bootstrap and start commands again. For the full node operator workflow, see the [v0.14 node usage guide](../../../reference/node/operator/usage.md#operation).
 
 ## Import a local account
 

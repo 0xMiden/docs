@@ -64,7 +64,7 @@ Hard-coding testnet URLs in client configs is fine for demos, but the Miden ops 
   <Card title="Deploy your first contract" href="../get-started/your-first-smart-contract/deploy" eyebrow="Tutorial">
     End-to-end walkthrough — client → RPC → MidenScan verification.
   </Card>
-  <Card title="Miden node" href="/core-concepts" eyebrow="Architecture">
+  <Card title="Miden node" href="/reference" eyebrow="Architecture">
     How the node receives transactions, aggregates batches, and produces blocks.
   </Card>
 </CardGrid>

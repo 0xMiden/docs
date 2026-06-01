@@ -149,27 +149,38 @@ const config: Config = {
             redirects.push("/builder/tools/explorer");
           }
 
-          // Reference section: redirect old root-level paths to stable /core-concepts/ paths
-          if (existingPath.startsWith("/core-concepts/protocol")) {
-            redirects.push(existingPath.replace("/core-concepts/protocol", "/miden-base"));
+          // Reference section: redirect old root-level paths to stable /reference/ paths
+          if (existingPath.startsWith("/reference/protocol")) {
+            redirects.push(existingPath.replace("/reference/protocol", "/miden-base"));
             // Also redirect old nested path
-            redirects.push(existingPath.replace("/core-concepts/protocol", "/core-concepts/miden-base"));
+            redirects.push(existingPath.replace("/reference/protocol", "/core-concepts/miden-base"));
           }
-          if (existingPath.startsWith("/core-concepts/miden-vm")) {
-            redirects.push(existingPath.replace("/core-concepts/miden-vm", "/miden-vm"));
+          if (existingPath.startsWith("/reference/miden-vm")) {
+            redirects.push(existingPath.replace("/reference/miden-vm", "/miden-vm"));
           }
-          if (existingPath.startsWith("/core-concepts/compiler")) {
-            redirects.push(existingPath.replace("/core-concepts/compiler", "/compiler"));
+          if (existingPath.startsWith("/reference/compiler")) {
+            redirects.push(existingPath.replace("/reference/compiler", "/compiler"));
           }
-          if (existingPath.startsWith("/core-concepts/node")) {
-            redirects.push(existingPath.replace("/core-concepts/node", "/miden-node"));
+          if (existingPath.startsWith("/reference/node")) {
+            redirects.push(existingPath.replace("/reference/node", "/miden-node"));
             // Also redirect old nested path
-            redirects.push(existingPath.replace("/core-concepts/node", "/core-concepts/miden-node"));
+            redirects.push(existingPath.replace("/reference/node", "/core-concepts/miden-node"));
           }
 
-          // Redirect old /design/ paths to /core-concepts/
-          if (existingPath.startsWith("/core-concepts")) {
-            redirects.push(existingPath.replace("/core-concepts", "/design"));
+          // The section formerly at /core-concepts/ was renamed to /reference/.
+          // Redirect the legacy section URLs (current, /next, and versioned) so existing
+          // links and bookmarks keep working.
+          const renamedFromCoreConcepts = existingPath.replace(
+            /(^|\/(?:next|\d+\.\d+))\/reference(?=\/|$)/,
+            "$1/core-concepts",
+          );
+          if (renamedFromCoreConcepts !== existingPath) {
+            redirects.push(renamedFromCoreConcepts);
+          }
+
+          // Redirect old /design/ paths to /reference/
+          if (existingPath.startsWith("/reference")) {
+            redirects.push(existingPath.replace("/reference", "/design"));
           }
 
           return redirects.length > 0 ? redirects : undefined;
@@ -286,7 +297,7 @@ const config: Config = {
           },
           {
             type: "docSidebar",
-            sidebarId: "coreConceptsSidebar",
+            sidebarId: "referenceSidebar",
             label: "Reference",
             position: "left",
           },
@@ -351,11 +362,11 @@ const config: Config = {
           {
             title: "Reference",
             items: [
-              { label: "Overview", to: "/core-concepts" },
-              { label: "Protocol", to: "/core-concepts/protocol" },
-              { label: "Miden VM", to: "/core-concepts/miden-vm" },
-              { label: "Compiler", to: "/core-concepts/compiler" },
-              { label: "Node", to: "/core-concepts/node" },
+              { label: "Overview", to: "/reference" },
+              { label: "Protocol", to: "/reference/protocol" },
+              { label: "Miden VM", to: "/reference/miden-vm" },
+              { label: "Compiler", to: "/reference/compiler" },
+              { label: "Node", to: "/reference/node" },
             ],
           },
           {

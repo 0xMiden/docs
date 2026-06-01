@@ -42,7 +42,7 @@ The integration folder serves two essential functions in Miden development:
 Think of the scripts in `src/bin/` as Miden's equivalent to [**Foundry scripts**](https://getfoundry.sh/guides/scripting-with-solidity). These are executable Rust binaries that handle all your contract interactions:
 
 - **Contract Deployment**: Scripts that create and deploy accounts to the network
-- **Function/Procedure Calls**: Scripts that interact with deployed contracts through notes or [transaction scripts](/core-concepts/protocol/transaction#transaction-lifecycle)
+- **Function/Procedure Calls**: Scripts that interact with deployed contracts through notes or [transaction scripts](/reference/protocol/transaction#transaction-lifecycle)
 - **State Queries**: Scripts that read contract state from the network
 - **Operations**: Scripts for contract upgrades, configuration changes, etc.
 

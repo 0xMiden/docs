@@ -4,7 +4,7 @@
 
 - [Docs home](https://docs.miden.xyz/): Latest stable docs, currently 0.14.
 - [Next / unstable builder docs](https://docs.miden.xyz/next/builder/): Current development builder docs, currently labeled 0.15 unstable.
-- [Next / unstable reference](https://docs.miden.xyz/next/core-concepts/): Current development protocol, VM, node, and compiler docs.
+- [Next / unstable reference](https://docs.miden.xyz/next/reference/): Current development protocol, VM, node, and compiler docs.
 - [Agent skill](https://docs.miden.xyz/skill.md): Compact Miden context for AI coding assistants.
 - [GitHub organization](https://github.com/0xMiden): Source repositories.
 
@@ -57,11 +57,11 @@
 
 ## Reference
 
-- [Reference](https://docs.miden.xyz/core-concepts/): Protocol, VM, compiler, and node architecture.
-- [Protocol](https://docs.miden.xyz/core-concepts/protocol/): Accounts, assets, blockchain state, notes, transactions, and protocol MASM library.
-- [Miden VM](https://docs.miden.xyz/core-concepts/miden-vm/): VM architecture, programs, user docs, tooling, and performance.
-- [Compiler](https://docs.miden.xyz/core-concepts/compiler/): Rust-to-MASM compiler usage and guides.
-- [Node](https://docs.miden.xyz/core-concepts/node/): Node services, operator guide, and RPC reference.
+- [Reference](https://docs.miden.xyz/reference/): Protocol, VM, compiler, and node architecture.
+- [Protocol](https://docs.miden.xyz/reference/protocol/): Accounts, assets, blockchain state, notes, transactions, and protocol MASM library.
+- [Miden VM](https://docs.miden.xyz/reference/miden-vm/): VM architecture, programs, user docs, tooling, and performance.
+- [Compiler](https://docs.miden.xyz/reference/compiler/): Rust-to-MASM compiler usage and guides.
+- [Node](https://docs.miden.xyz/reference/node/): Node services, operator guide, and RPC reference.
 
 ## Source Repositories
 

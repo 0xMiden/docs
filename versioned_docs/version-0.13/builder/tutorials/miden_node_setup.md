@@ -21,7 +21,7 @@ Building the node from source requires a C/C++ toolchain (for compiling RocksDB)
 xcode-select --install
 ```
 
-On **Ubuntu**, see the [node installation page](../../../core-concepts/miden-node/operator/installation.md#install-using-cargo) for the required packages. If you run into `'cstdint' file not found` errors on macOS, see the [troubleshooting section](../../../core-concepts/miden-node/operator/installation.md#install-using-cargo) on the installation page.
+On **Ubuntu**, see the [node installation page](../../../reference/miden-node/operator/installation.md#install-using-cargo) for the required packages. If you run into `'cstdint' file not found` errors on macOS, see the [troubleshooting section](../../../reference/miden-node/operator/installation.md#install-using-cargo) on the installation page.
 :::
 
 ### Step 1: Install the Miden node

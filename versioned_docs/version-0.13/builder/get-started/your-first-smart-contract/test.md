@@ -300,6 +300,6 @@ Congratulations! You've successfully completed the Miden smart contract quick st
 To deepen your knowledge, we recommend exploring the following resources:
 
 - Visit the [Tutorials section](../../tutorials/rust-compiler/) for detailed, hands-on guides on topics such as contract interactions, advanced storage, custom note scripting, and integrating with external applications.
-- For in-depth technical explanations, consult the [Reference section](../../../core-concepts/) of the documentation. Here you'll find comprehensive information on Miden's architecture, account model, transaction lifecycle, and the underlying zero-knowledge technology that powers the network.
+- For in-depth technical explanations, consult the [Reference section](../../../reference/) of the documentation. Here you'll find comprehensive information on Miden's architecture, account model, transaction lifecycle, and the underlying zero-knowledge technology that powers the network.
 
 The foundational patterns and concepts you've practiced in this Quick Start will enable you to build complex, privacy-preserving applications on the Miden network. Continue with the resources above to take your development further!

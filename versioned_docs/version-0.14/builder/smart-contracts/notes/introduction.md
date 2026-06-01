@@ -48,7 +48,7 @@ Transaction 1 (Sender)                Transaction 2 (Recipient)
 
 **Transaction 1**: The sender's account creates an output note, attaches assets to it, and the note is published (either on-chain or kept private).
 
-**Transaction 2**: The recipient discovers the note, consumes it in their own transaction, the note script runs and verifies the consumer is authorized, and assets transfer into the recipient's vault. A **nullifier** is recorded to prevent the same note from being consumed again (see [note design](/core-concepts/protocol/note)).
+**Transaction 2**: The recipient discovers the note, consumes it in their own transaction, the note script runs and verifies the consumer is authorized, and assets transfer into the recipient's vault. A **nullifier** is recorded to prevent the same note from being consumed again (see [note design](/reference/protocol/note)).
 
 This separation is what enables privacy and parallelism — the two transactions are independent and unlinkable from the network's perspective.
 
