@@ -532,11 +532,11 @@ fn run(arg: Word, account: &mut Account) {
 }
 ```
 
-Alternatively, if the flow naturally consumes a note (most do — note scripts mutate state when they run), make sure the transaction request includes at least one input note:
+Alternatively, if the flow naturally consumes a note (most do — note scripts mutate state when they run), make sure the transaction request includes at least one input note. Pass the `Note` (the client deduces authentication from the note record) along with optional `NoteArgs`:
 
 ```rust
 let request = TransactionRequestBuilder::new()
-    .authenticated_input_notes([(note_id, args)])
+    .input_notes(vec![(input_note, None)])
     .build()?;
 ```
 
