@@ -346,12 +346,12 @@ Using `/` on `Felt` values can look correct in simple cases and then break as so
 is not exact.
 
 ```rust
-let exact = Felt::new(10) / Felt::new(2);   // 5
-let unexpected = Felt::new(20) / Felt::new(3);
+let exact = felt!(10) / felt!(2);   // 5
+let unexpected = felt!(20) / felt!(3);
 // 6148914689804861447, not 6
 ```
 
-This is especially dangerous for token amounts, fee calculations, and proportional splits, where
+This is a common source of bugs for token amounts, fee calculations, and proportional splits, where
 developers usually expect integer division semantics.
 
 ### Why This Happens
@@ -372,7 +372,7 @@ For business logic, convert to `u64`, do the integer arithmetic there, and conve
 the calculation is complete:
 
 ```rust
-let total_amount: u64 = total.inner[0].as_u64();
+let total_amount: u64 = total.a.as_u64();
 let recipients: u64 = recipient_count.as_u64();
 
 let share = total_amount / recipients;
@@ -381,11 +381,6 @@ let share_felt = Felt::from_u64_unchecked(share);
 
 Use `Felt` division only when you explicitly need field semantics for protocol, algebraic, or
 cryptographic logic.
-
-:::warning Do not use Felt division for balances or pricing math
-If the value represents an amount, balance, fee, or ratio that users reason about as an integer,
-do the calculation in `u64`.
-:::
 
 ---
 

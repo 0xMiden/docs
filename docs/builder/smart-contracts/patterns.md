@@ -71,7 +71,7 @@ Use `u64` when you are working with business quantities and expect integer seman
 - Fee calculations and proportional splits
 - Counters, limits, cooldowns, and similar control-flow values
 
-The `as_u64()` conversion is zero-cost and gives you standard Rust integer behavior. For DeFi-style
+The `as_u64()` conversion is inexpensive and gives you standard Rust integer behavior. For DeFi-style
 logic, convert out of `Felt`, do the arithmetic in `u64`, and convert back with
 `Felt::from_u64_unchecked()` once you know the result is in range.
 
