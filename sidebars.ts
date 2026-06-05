@@ -172,6 +172,7 @@ const sidebars: SidebarsConfig = {
                 "builder/tutorials/recipes/web/unauthenticated_note_how_to",
                 "builder/tutorials/recipes/web/foreign_procedure_invocation_tutorial",
                 "builder/tutorials/recipes/web/react_wallet_tutorial",
+                "builder/tutorials/recipes/web/bridging_with_epoch_tutorial",
               ],
             },
           ],

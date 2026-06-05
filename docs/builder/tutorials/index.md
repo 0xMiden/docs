@@ -20,6 +20,9 @@ Hands-on walkthroughs for building on Miden. Every tutorial pairs with runnable 
   <Card title="Miden node setup" href="./miden_node_setup" eyebrow="Operator">
     Run a Miden node locally or on testnet with `midenup` and the node binary.
   </Card>
+  <Card title="Bridging" href="./recipes/web/bridging_with_epoch_tutorial" eyebrow="Recipe · TypeScript">
+    Bridge assets between Miden and EVM chains (Sepolia testnet) with the Epoch protocol intent SDK.
+  </Card>
 </CardGrid>
 
 ## Development helpers
