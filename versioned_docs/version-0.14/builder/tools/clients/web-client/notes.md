@@ -34,11 +34,11 @@ for (const note of all) {
 
 Statuses:
 
-- `"committed"` — on-chain, consumable.
+- `"committed"` — onchain, consumable.
 - `"consumed"` — already spent.
 - `"expected"` — the client expects this note to arrive.
 - `"processing"` — mid-consume.
-- `"unverified"` — on-chain, awaiting local verification.
+- `"unverified"` — onchain, awaiting local verification.
 
 ## Retrieve a single note
 
@@ -92,7 +92,7 @@ const details = await client.notes.export("0xnote...", { format: NoteExportForma
 `NoteExportFormat`:
 
 - **`Id`** — just the note ID. Only works for public notes.
-- **`Full`** — complete note data plus inclusion proof. Requires the note to have an on-chain inclusion proof.
+- **`Full`** — complete note data plus inclusion proof. Requires the note to have an onchain inclusion proof.
 - **`Details`** — note ID, metadata, and creation block.
 
 ## Note transport (private notes)

@@ -31,7 +31,7 @@ console.log("Updated accounts:", summary.updatedAccounts().length);
 - `committedNotes(): NoteId[]` — notes committed in this sync window.
 - `consumedNotes(): NoteId[]` — notes consumed in this sync window.
 - `committedTransactions(): TransactionId[]` — transactions that were committed.
-- `updatedAccounts(): AccountId[]` — accounts whose on-chain state advanced.
+- `updatedAccounts(): AccountId[]` — accounts whose onchain state advanced.
 
 ## Sync with timeout
 

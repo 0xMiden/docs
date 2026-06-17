@@ -5,7 +5,7 @@ sidebar_position: 2
 
 # Rust Multisig SDK
 
-The `miden-multisig-client` crate provides a high-level Rust SDK for private multisig workflows on Miden. It wraps the on-chain multisig contracts and Guardian coordination into a single API.
+The `miden-multisig-client` crate provides a high-level Rust SDK for private multisig workflows on Miden. It wraps the onchain multisig contracts and Guardian coordination into a single API.
 
 **Source**: [`crates/miden-multisig-client`](https://github.com/OpenZeppelin/guardian/tree/main/crates/miden-multisig-client)
 

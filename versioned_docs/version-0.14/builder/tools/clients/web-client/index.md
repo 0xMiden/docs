@@ -9,7 +9,7 @@ The Web SDK is the browser-focused toolkit for the Miden network. It wraps the R
 
 ## Capabilities
 
-- Read and write on-chain state: accounts, notes, transactions, tags.
+- Read and write onchain state: accounts, notes, transactions, tags.
 - Build and execute Miden transactions, including custom MASM scripts.
 - Compile Miden Assembly into account components, transaction scripts, and note scripts directly in the browser.
 - Generate zero-knowledge proofs locally via the in-browser prover, or offload proving to a remote or delegated prover.

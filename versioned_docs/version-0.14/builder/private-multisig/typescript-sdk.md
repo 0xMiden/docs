@@ -60,7 +60,7 @@ await multisig.registerOnPsm();
 ## Loading an existing account
 
 ```typescript
-// Configuration is auto-detected from on-chain storage
+// Configuration is auto-detected from onchain storage
 const multisig = await client.load(accountId, signer);
 ```
 

@@ -68,7 +68,9 @@ The ZK circuit **cannot produce a valid proof**. This means:
 - No gas or fees are consumed
 - The client gets an error explaining which assertion failed
 
-This is fundamentally different from Ethereum's `revert`, where the failed transaction still lands on-chain, consumes gas, and is visible to everyone.
+This is fundamentally different from Ethereum's `revert`, where the failed transaction still lands onchain, consumes gas, and is visible to everyone.
+
+A separate failure mode is the **empty transaction**: a transaction that runs to completion but mutates no account state (storage, vault, or nonce) and consumes no input notes. Both the Rust client (which raises `TransactionRequestError::NoInputNotesNorAccountChange` before submission) and the VM kernel reject it. This typically catches transaction scripts whose conditional logic takes a no-op branch — see [Empty Transaction](../../tutorials/helpers/pitfalls#empty-transaction-no-state-change-no-notes) in the pitfalls guide for the recommended pattern.
 
 ## How transactions differ from EVM transactions
 
@@ -77,6 +79,6 @@ This is fundamentally different from Ethereum's `revert`, where the failed trans
 | **Execution** | Every validator re-executes the transaction | Client executes locally, submits only the proof |
 | **Scope** | Can call multiple contracts in one tx | One transaction mutates one account; cross-account via notes |
 | **Privacy** | All inputs, state reads, and call traces are public | Network sees only the proof and state commitments |
-| **Failure** | On-chain revert, gas consumed, visible trace | Proof can't be generated — no on-chain trace, no cost |
+| **Failure** | Onchain revert, gas consumed, visible trace | Proof can't be generated — no onchain trace, no cost |
 | **Parallelism** | Transactions touching same state must serialize | Single-account scope enables parallel execution |
 | **Authentication** | `msg.sender` set by protocol | Falcon512 signatures verified inside the transaction |

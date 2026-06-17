@@ -6,7 +6,7 @@ description: "Authentication component pattern and nonce management for Miden ac
 
 # Authentication
 
-Miden uses digital signatures for transaction authentication. Because transactions execute on the client rather than on-chain validators, the system needs a way to prove that a transaction was authorized by the account owner. Without authentication, anyone could construct a valid proof that transfers assets out of an account. The nonce prevents replay attacks — without it, a valid proof could be resubmitted to execute the same state change twice. For details on the cryptographic primitives, see [Cryptography](./cryptography).
+Miden uses digital signatures for transaction authentication. Because transactions execute on the client rather than onchain validators, the system needs a way to prove that a transaction was authorized by the account owner. Without authentication, anyone could construct a valid proof that transfers assets out of an account. The nonce prevents replay attacks — without it, a valid proof could be resubmitted to execute the same state change twice. For details on the cryptographic primitives, see [Cryptography](./cryptography).
 
 v0.14 unifies the previous per-scheme components (`AuthFalcon512Rpo`, `AuthEcdsaK256Keccak`, …) into a single scheme-agnostic [`AuthSingleSig`](https://docs.rs/miden-standards/latest/miden_standards/account/auth/struct.AuthSingleSig.html) component that takes an `AuthScheme` enum (`Falcon512Poseidon2` or `EcdsaK256Keccak`). The native hash function is Poseidon2, and the Falcon-512 verifier MASM module is `miden::core::crypto::dsa::falcon512_poseidon2`.
 

@@ -37,12 +37,19 @@
         "builder/smart-contracts/overview",
         {
           "type": "category",
+          "label": "MASM",
+          "link": {
+            "type": "doc",
+            "id": "builder/smart-contracts/masm/index"
+          },
+          "items": []
+        },
+        {
+          "type": "category",
           "label": "Rust",
           "link": {
-            "type": "generated-index",
-            "slug": "/builder/smart-contracts/rust",
-            "title": "Rust Smart Contracts",
-            "description": "Rust-first account, note, transaction, type, and composition docs."
+            "type": "doc",
+            "id": "builder/smart-contracts/rust/index"
           },
           "items": [
             {
@@ -183,7 +190,8 @@
                 "builder/tutorials/recipes/web/creating_multiple_notes_tutorial",
                 "builder/tutorials/recipes/web/unauthenticated_note_how_to",
                 "builder/tutorials/recipes/web/foreign_procedure_invocation_tutorial",
-                "builder/tutorials/recipes/web/react_wallet_tutorial"
+                "builder/tutorials/recipes/web/react_wallet_tutorial",
+                "builder/tutorials/recipes/web/bridging_with_epoch_tutorial"
               ]
             }
           ]
@@ -307,6 +315,19 @@
             "builder/tools/note-transport/design",
             "builder/tools/note-transport/operators",
             "builder/tools/note-transport/users"
+          ]
+        },
+        {
+          "type": "category",
+          "label": "Bridging",
+          "link": {
+            "type": "doc",
+            "id": "builder/tools/bridging/index"
+          },
+          "items": [
+            "builder/tools/bridging/testnet-sandbox",
+            "builder/tools/bridging/flows",
+            "builder/tools/bridging/api-reference"
           ]
         },
         "builder/tools/midenup",

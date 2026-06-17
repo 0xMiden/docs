@@ -7,7 +7,7 @@ pagination_prev: null
 
 # Clients
 
-The Miden client manages accounts, builds and executes transactions, produces zero-knowledge proofs, and synchronises local state with the node. The same core ships across three consumer surfaces — pick the runtime that matches your application. All three share the same on-chain semantics.
+The Miden client manages accounts, builds and executes transactions, produces zero-knowledge proofs, and synchronises local state with the node. The same core ships across three consumer surfaces — pick the runtime that matches your application. All three share the same onchain semantics.
 
 ## SDKs
 

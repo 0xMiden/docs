@@ -5,7 +5,7 @@ sidebar_position: 4
 
 # Transactions
 
-`client.transactions` is the resource namespace for everything that mutates on-chain state: sending, minting, consuming, swapping, running custom scripts, and inspecting history. Every mutation method handles the full lifecycle — execute, prove, submit — in one call.
+`client.transactions` is the resource namespace for everything that mutates onchain state: sending, minting, consuming, swapping, running custom scripts, and inspecting history. Every mutation method handles the full lifecycle — execute, prove, submit — in one call.
 
 ## Simplified operations
 
@@ -229,7 +229,7 @@ const { txId } = await client.transactions.execute({
 
 ## View calls (`executeProgram`)
 
-`executeProgram` runs a transaction script locally, returning the resulting stack without submitting or proving anything. Use it to read on-chain state — similar to `eth_call` in Ethereum.
+`executeProgram` runs a transaction script locally, returning the resulting stack without submitting or proving anything. Use it to read onchain state — similar to `eth_call` in Ethereum.
 
 ```typescript
 const script = await client.compile.txScript({

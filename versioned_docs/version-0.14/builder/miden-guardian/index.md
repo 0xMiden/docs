@@ -5,7 +5,7 @@ sidebar_position: 0
 
 # Miden Guardian
 
-Miden Guardian is an off-chain coordination service built by [OpenZeppelin](https://www.openzeppelin.com/) for Miden accounts. It helps clients back up private account state, synchronize that state across devices, and coordinate multi-signer workflows without giving the Guardian provider unilateral control over the account.
+Miden Guardian is an offchain coordination service built by [OpenZeppelin](https://www.openzeppelin.com/) for Miden accounts. It helps clients back up private account state, synchronize that state across devices, and coordinate multi-signer workflows without giving the Guardian provider unilateral control over the account.
 
 :::warning
 Guardian is a work in progress. Use the docs and the [OpenZeppelin Guardian repository](https://github.com/OpenZeppelin/guardian) as the current operator and integration reference, and expect interfaces and operational defaults to evolve.
@@ -19,11 +19,11 @@ Miden's execution model requires clients to manage their own private state - acc
 - **Shared-account users** risk having stale state due to a faulty or malicious participant withholding updates.
 - **Multi-device users** need all devices to see the same account state, but there is no public ledger to read from.
 
-On a public chain, the ledger is a universally readable source of truth. Every device and every signer can independently observe the latest state. In Miden's private account model, the canonical state is defined by the on-chain commitment, but the full private state is not publicly readable. The coordination surface moves off-chain.
+On a public chain, the ledger is a universally readable source of truth. Every device and every signer can independently observe the latest state. In Miden's private account model, the canonical state is defined by the onchain commitment, but the full private state is not publicly readable. The coordination surface moves offchain.
 
 ## What Guardian provides
 
-Guardian addresses these challenges by acting as an off-chain coordination layer:
+Guardian addresses these challenges by acting as an offchain coordination layer:
 
 - **Backup and recovery** - Account state is stored on Guardian, recoverable even if a device is lost.
 - **Multi-device sync** - Multiple devices push and pull state through Guardian, staying in sync with the latest canonical state.
@@ -50,7 +50,7 @@ Guardian has an explicit trust boundary:
 - **Safety**: The provider cannot forge account state, silently rewrite the commitment chain, or move assets without the required account signatures.
 - **Liveness**: The provider can delay, censor, or refuse requests. Users should keep recovery keys and provider-rotation paths available.
 - **Privacy**: Guardian protects state from unauthorized API callers, but the server stores the account state and delta payloads it receives. Treat the operator as able to observe submitted payloads unless your deployment adds a separate encryption layer or you operate the service yourself.
-- **Freshness**: Clients should verify acknowledgments and compare local state against the latest on-chain commitment when freshness matters.
+- **Freshness**: Clients should verify acknowledgments and compare local state against the latest onchain commitment when freshness matters.
 
 ## Learn more
 

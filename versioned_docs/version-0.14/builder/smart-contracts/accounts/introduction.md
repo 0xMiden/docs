@@ -58,16 +58,16 @@ Storage mode controls privacy:
 
 | Mode | Description |
 |------|-------------|
-| **Public** | Full state is stored on-chain and visible to everyone — suitable for shared protocols like DEXs and faucets |
-| **Private** | Only a state commitment is stored on-chain — the actual data stays with the account owner |
+| **Public** | Full state is stored onchain and visible to everyone — suitable for shared protocols like DEXs and faucets |
+| **Private** | Only a state commitment is stored onchain — the actual data stays with the account owner |
 
 ## How accounts differ from EVM contracts
 
 | | EVM | Miden |
 |---|---|---|
 | **Execution** | Every validator re-executes every transaction | Account owner executes locally, submits a ZK proof |
-| **State visibility** | All state variables are public on-chain | State is private by default (only commitments on-chain) |
+| **State visibility** | All state variables are public onchain | State is private by default (only commitments onchain) |
 | **Code structure** | Monolithic contract deployed to an address | Multiple reusable components composed into one account |
 | **Identity** | Wallets are EOAs, contracts are separate | Everything is an account — wallets are smart contracts |
-| **Failure** | `revert` consumes gas, leaves an on-chain trace | Proof cannot be generated — no on-chain trace, no cost |
+| **Failure** | `revert` consumes gas, leaves an onchain trace | Proof cannot be generated — no onchain trace, no cost |
 

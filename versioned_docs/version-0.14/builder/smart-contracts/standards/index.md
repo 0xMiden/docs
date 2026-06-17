@@ -1,6 +1,6 @@
 ---
 title: "Miden Standards"
-description: "Use v0.14 standard Miden account components, notes, faucets, and policies from Rust or Miden Assembly."
+description: "Use standard Miden account components, notes, faucets, and policies from Rust or Miden Assembly."
 ---
 
 # Miden Standards
@@ -9,8 +9,8 @@ Miden Standards are reusable building blocks for common smart-contract behavior:
 
 Use them when you want your account, note, or transaction flow to interoperate with the rest of the Miden ecosystem instead of defining every interface from scratch.
 
-:::info Version scope
-This page describes the v0.14 standards surface. Current unstable docs include newer names and modules, including a unified `FungibleFaucet`, role-based access control, richer token policies, and PSWAP notes.
+:::caution Current docs are unstable
+The current docs track the unstable standards line. The v0.14 snapshot has a different standards surface in a few important places, especially faucet and policy APIs. Use the version selector if you are building against v0.14.
 :::
 
 This section is a builder guide, not the canonical standards specification. It explains which standard to reach for, how it fits into the smart-contract model, and where to switch to reference docs when you need exact procedure names, storage schemas, or script roots.
@@ -29,13 +29,13 @@ Smart Contracts is the domain. Rust and Miden Assembly are authoring paths insid
 
 <CardGrid cols={3}>
   <Card title="Account components" href="./account-components" eyebrow="Compose accounts">
-    Use standard wallet, authentication, faucet, ownership, and metadata components.
+    Use standard wallet, authentication, access-control, faucet, and metadata components.
   </Card>
   <Card title="Standard notes" href="./standard-notes" eyebrow="Move assets">
-    Choose P2ID, P2IDE, SWAP, mint, and burn note scripts.
+    Choose P2ID, P2IDE, SWAP, PSWAP, mint, and burn note scripts.
   </Card>
   <Card title="Faucets and policies" href="./faucets-and-policies" eyebrow="Issue tokens">
-    Build token faucets and choose standard mint policy modules.
+    Build token faucets and choose mint, burn, send, and receive policy modules.
   </Card>
 </CardGrid>
 
@@ -60,4 +60,4 @@ You can mix both approaches. A typical application account starts with standard 
 - [Accounts](../accounts/) - components, storage, authentication, and account operations
 - [Notes](../notes/) - note model, note scripts, standard note types, and output notes
 - [Cross-component calls](../cross-component-calls) - calling component interfaces from scripts and components
-- [`miden-standards` v0.14.6 API reference](https://docs.rs/miden-standards/0.14.6/miden_standards/) - exact Rust API for this version
+- [`miden-standards` source](https://github.com/0xMiden/protocol/tree/next/crates/miden-standards) - current standards implementation

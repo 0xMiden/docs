@@ -20,7 +20,7 @@ This structure keeps your contract logic clean while providing a dedicated space
 
 ## Local Testing with Mockchain
 
-For most testing scenarios, we use Miden's **Mockchain** - a local, mocked blockchain instance specifically designed for testing. While you can also create tests that use the Miden client for end-to-end testing and on-chain interactions, the Mockchain provides the best developer experience for unit and integration testing.
+For most testing scenarios, we use Miden's **Mockchain** - a local, mocked blockchain instance specifically designed for testing. While you can also create tests that use the Miden client for end-to-end testing and onchain interactions, the Mockchain provides the best developer experience for unit and integration testing.
 
 ### What is the Mockchain?
 

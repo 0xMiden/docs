@@ -84,12 +84,15 @@ Several operations cause proof generation to fail if preconditions aren't met:
 | `get_balance(faucet_id)` | Referenced asset is non-fungible |
 | `get_procedure_root(index)` | Index out of bounds |
 | Any `assert!()` | Condition is false |
+| Transaction body (overall) | No state change occurred **and** no notes were consumed |
 
 When proof generation fails:
 1. The ZK circuit cannot produce a valid proof
 2. The transaction is rejected **before reaching the network**
 3. No state changes occur
 4. The client receives an error describing the failure
+
+The last row is enforced at end-of-execution by the VM kernel rather than mid-execution: a transaction that mutates no account state (storage, vault, or nonce) **and** consumes no notes is rejected. The Rust client also catches this case before submission as `TransactionRequestError::NoInputNotesNorAccountChange`. See [Empty Transaction](../../tutorials/helpers/pitfalls#empty-transaction-no-state-change-no-notes) for the recommended pattern.
 
 ## Example: ManagedWallet
 

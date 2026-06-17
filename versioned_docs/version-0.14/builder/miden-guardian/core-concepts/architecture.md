@@ -5,7 +5,7 @@ sidebar_position: 1
 
 # Architecture
 
-Guardian sits between Miden clients and the Miden network. It is an off-chain coordination layer for private account state, not the canonical source of account validity. Miden remains authoritative for account commitments; Guardian helps authorized clients keep the private state behind those commitments available, fresh, and synchronized.
+Guardian sits between Miden clients and the Miden network. It is an offchain coordination layer for private account state, not the canonical source of account validity. Miden remains authoritative for account commitments; Guardian helps authorized clients keep the private state behind those commitments available, fresh, and synchronized.
 
 ## System overview
 
@@ -128,8 +128,8 @@ Canonicalization is the process of validating that a candidate delta matches the
 ```mermaid
 stateDiagram-v2
     [*] --> candidate : push_delta
-    candidate --> canonical : On-chain commitment matches
-    candidate --> discarded : On-chain commitment mismatch
+    candidate --> canonical : Onchain commitment matches
+    candidate --> discarded : Onchain commitment mismatch
     canonical --> [*]
     discarded --> [*]
 ```

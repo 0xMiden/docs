@@ -9,12 +9,12 @@ Private multisig on Miden allows multiple parties to collectively control an acc
 
 ## The problem
 
-On public chains, multisig coordination is straightforward: every signer can read the same on-chain state and build their next action on top of it. Safe-style multisigs work because the ledger is transparent.
+On public chains, multisig coordination is straightforward: every signer can read the same onchain state and build their next action on top of it. Safe-style multisigs work because the ledger is transparent.
 
 In Miden's private account model, account state lives client-side. The chain stores only cryptographic commitments. This means:
 
 - Signers can't independently observe the latest state from the chain.
-- Proposals and signatures need an off-chain coordination surface.
+- Proposals and signatures need an offchain coordination surface.
 - Without a shared state view, participants risk divergent state or stale approvals.
 
 The [Miden Guardian](../miden-guardian/) solves this by acting as the coordination server for multisig accounts — keeping signers synchronized, managing proposal workflows, and ensuring all parties work from the same canonical state.
@@ -26,7 +26,7 @@ Miden multisigs can be fully private (code, signers, metadata, etc. are not visi
 1. **Propose**: A signer pushes a delta proposal (containing a `TransactionSummary`) to Guardian. Guardian validates the proposal against the current account state and the Miden network.
 2. **Sign**: Other authorized cosigners fetch the pending proposal from Guardian, verify the transaction details locally, and submit their signatures.
 3. **Ready**: Once enough signatures are collected (meeting the threshold), Guardian emits an acknowledgment.
-4. **Execute**: Any cosigner builds the final transaction using all signatures plus the Guardian acknowledgment, and submits it on-chain.
+4. **Execute**: Any cosigner builds the final transaction using all signatures plus the Guardian acknowledgment, and submits it onchain.
 5. **Sync**: All participants fetch the latest canonical state from Guardian.
 
 ```mermaid

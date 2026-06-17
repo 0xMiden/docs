@@ -105,7 +105,7 @@ function NewFaucetButton() {
 | `tokenSymbol` | required | Display symbol (e.g. `"USDC"`) |
 | `maxSupply` | required | `bigint \| number` |
 | `decimals` | `8` | Token decimals |
-| `storageMode` | `"private"` | Public faucets are discoverable/readable on-chain |
+| `storageMode` | `"private"` | Public faucets are discoverable/readable onchain |
 | `authScheme` | `AuthScheme.Falcon` | Signing scheme |
 
 ## `useSend`

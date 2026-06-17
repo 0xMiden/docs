@@ -38,15 +38,15 @@ A technical reference for Miden's architecture: the protocol, the zkVM, the comp
 
 ## Architecture overview
 
-Miden is a zero-knowledge rollup that rethinks blockchain architecture. Instead of a single global state updated sequentially, Miden uses an **actor model** where each account is an independent state machine that executes transactions locally and generates validity proofs.
+Miden is a zero-knowledge layer 2 that rethinks blockchain architecture. Instead of a single global state updated sequentially, Miden uses an **actor model** where each account is an independent state machine that executes transactions locally and generates validity proofs.
 
 ### Core design principles
 
 | Principle | How Miden achieves it |
 |-----------|----------------------|
-| **Privacy** | Accounts and notes store only cryptographic commitments on-chain; full data remains with users |
+| **Privacy** | Accounts and notes store only cryptographic commitments onchain; full data remains with users |
 | **Parallelism** | Single-account transactions enable concurrent execution without contention |
-| **Scalability** | Client-side proving offloads computation; proof aggregation reduces on-chain verification |
+| **Scalability** | Client-side proving offloads computation; proof aggregation reduces onchain verification |
 | **Programmability** | A Turing-complete VM supports arbitrary smart contract logic in accounts and notes |
 
 <Steps>
@@ -88,7 +88,7 @@ Notes are programmable messages that transfer assets between accounts:
 - **Assets** — tokens transferred to the recipient
 - **Metadata** — sender, tag (for discovery), and auxiliary data
 
-Notes can be **public** (all data on-chain) or **private** (only a commitment stored). Private notes require off-chain communication between sender and recipient.
+Notes can be **public** (all data onchain) or **private** (only a commitment stored). Private notes require offchain communication between sender and recipient.
 
 ### State model
 
@@ -163,7 +163,7 @@ The compiler toolchain enables writing Miden programs in high-level languages.
 
 - **cargo-miden** — Cargo extension for building Miden projects
 - **midenc** — core compiler from WebAssembly to Miden Assembly
-- **Debugger** — interactive debugging with breakpoints and state inspection
+- **[Debugger](https://github.com/0xMiden/miden-debug)** — interactive debugging with breakpoints and state inspection
 
 ### Compilation pipeline
 

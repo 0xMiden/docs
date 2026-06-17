@@ -110,7 +110,7 @@ miden client account --default <ACCOUNT_ID>
 
 ### Deploy Your Account
 
-The `miden client new-wallet` command above already deploys your account on-chain automatically. You can verify your account is deployed by syncing and checking its status:
+The `miden client new-wallet` command above already deploys your account onchain automatically. You can verify your account is deployed by syncing and checking its status:
 
 ```bash title=">_ Terminal"
 miden client sync

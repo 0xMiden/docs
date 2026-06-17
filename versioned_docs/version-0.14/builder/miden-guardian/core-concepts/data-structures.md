@@ -87,17 +87,17 @@ Each delta goes through a state machine:
 ```mermaid
 stateDiagram-v2
     [*] --> candidate : push_delta
-    candidate --> canonical : On-chain commitment matches
-    candidate --> discarded : On-chain commitment mismatch
+    candidate --> canonical : Onchain commitment matches
+    candidate --> discarded : Onchain commitment mismatch
     canonical --> [*]
     discarded --> [*]
 ```
 
 | Status | Meaning |
 |---|---|
-| `candidate` | Accepted by Guardian but not yet verified on-chain. Awaiting canonicalization. |
+| `candidate` | Accepted by Guardian but not yet verified onchain. Awaiting canonicalization. |
 | `canonical` | Verified against the network and permanently recorded. |
-| `discarded` | Failed on-chain verification. Removed from the active delta chain. |
+| `discarded` | Failed onchain verification. Removed from the active delta chain. |
 
 In **optimistic mode**, deltas skip the `candidate` stage and are immediately marked `canonical`.
 

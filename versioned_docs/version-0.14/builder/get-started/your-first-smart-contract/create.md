@@ -24,7 +24,7 @@ counter-project/
 │   └── increment-note/          # Example: Increment note contract
 ├── integration/                 # Integration crate (scripts + tests)
 │   ├── src/
-│   │   ├── bin/                 # Rust binaries for on-chain interactions
+│   │   ├── bin/                 # Rust binaries for onchain interactions
 │   │   ├── lib.rs
 │   │   └── helpers.rs           # Temporary helper file
 │   └── tests/                   # Test files
@@ -35,7 +35,7 @@ counter-project/
 The project follows Miden's design philosophy of clean separation:
 
 - **`contracts/`**: Your primary working directory for writing Miden smart contract code
-- **`integration/`**: All on-chain interactions, deployment scripts, and tests
+- **`integration/`**: All onchain interactions, deployment scripts, and tests
 
 Each contract is organized as its own individual crate, providing independent versioning, dependencies, and clear isolation between different contracts.
 

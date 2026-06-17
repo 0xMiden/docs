@@ -34,12 +34,12 @@ sequenceDiagram
 
     P->>Guardian: push_delta (with all signatures)
     Guardian-->>P: Canonical delta with ack_sig
-    P->>P: Execute on-chain with ZK proof
+    P->>P: Execute onchain with ZK proof
 ```
 
 1. **Propose**: The proposer builds a `TransactionSummary` locally, signs it, and pushes it to Guardian as a delta proposal.
 2. **Sign**: Each cosigner fetches pending proposals, verifies the transaction details against their local state, and submits their signature.
-3. **Execute**: Once the threshold is met, any participant pushes the final delta (with all signatures). Guardian returns the acknowledged delta. The executor builds and submits the on-chain transaction.
+3. **Execute**: Once the threshold is met, any participant pushes the final delta (with all signatures). Guardian returns the acknowledged delta. The executor builds and submits the onchain transaction.
 4. **Sync**: All participants fetch the latest state from Guardian to stay synchronized.
 
 ## Key architecture: 2-of-3 setup
@@ -110,12 +110,12 @@ sequenceDiagram
 
     File-->>A: Return signed file
     A->>A: Collect enough signatures
-    A->>A: Execute transaction on-chain
+    A->>A: Execute transaction onchain
 ```
 
 1. Create a proposal locally and export it as JSON.
 2. Share the file with cosigners through any side channel.
 3. Each cosigner signs offline and returns the signed file.
-4. Once the threshold is met, execute the transaction on-chain.
+4. Once the threshold is met, execute the transaction onchain.
 
 This ensures multisig operations remain functional even without Guardian connectivity.

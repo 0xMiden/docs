@@ -1,6 +1,6 @@
 ---
 title: Local node testing
-description: "Run a v0.14 local Miden node and point Rust, Web SDK, and React SDK clients at it for application testing."
+description: "Run a local Miden node and point Rust, Web SDK, and React SDK clients at it for application testing."
 sidebar_position: 2
 ---
 
@@ -8,84 +8,89 @@ sidebar_position: 2
 
 Use a local node when a test needs real node state: public accounts, block commits, transaction submission, network notes, or RPC error details. For unit tests and most CI, use the Web SDK mock client instead; it is faster and does not need a node.
 
-## Supported paths in v0.14
+## Supported paths
 
 | Need | Use |
 | --- | --- |
-| Browser or app testing against a local network | `miden-node bundled bootstrap` and `miden-node bundled start` |
+| Browser or app testing against a local network | The node repo Docker Compose stack |
 | Rust client integration tests | `TEST_MIDEN_NETWORK=localhost` against a running local node |
 | Private note delivery | A separate Miden Note Transport node |
 | Future one-command local dev | Track [node#1874](https://github.com/0xMiden/node/issues/1874) and [midenup#180](https://github.com/0xMiden/midenup/issues/180) |
 
-Docker Compose is not the v0.14 default local-node path in the versioned node docs. The supported v0.14 workflow is the bundled node command shown below. Current unreleased docs use the newer node repo Docker Compose stack.
+Docker Compose is the supported default path for running the current local node stack. The miden-client repo also has a `make start-node` helper for its own integration tests, but that helper runs the test node directly with Cargo and is not the operator-facing Docker workflow.
 
 ## Prerequisites
 
-- A Rust toolchain recent enough for the selected `miden-node` v0.14 release.
-- macOS: Xcode Command Line Tools.
-- Linux: a C/C++ toolchain plus `llvm`, `clang`, `bindgen`, `pkg-config`, OpenSSL headers, and SQLite headers.
+- Docker Desktop on macOS, or Docker Engine with the Compose v2 plugin on Linux.
+- Rust only if you run the Rust client integration tests or install the `miden-client` CLI locally.
 - A browser that supports WebAssembly, Web Workers, and gRPC-web requests.
 
-On macOS, install the Command Line Tools with:
-
-```bash
-xcode-select --install
-```
-
-On Ubuntu or Debian, install the common native dependencies with:
-
-```bash
-sudo apt install llvm clang bindgen pkg-config libssl-dev libsqlite3-dev
-```
+On Linux, make sure your user can run Docker commands without `sudo`, or prefix the Docker commands below with `sudo`.
 
 ## Start a local node
 
-Install a v0.14 node binary:
+Clone the node repo into a directory named `miden-node`. The account export command below assumes this Compose project name, which gives the genesis volume the name `miden-node_node-data`.
 
 ```bash
-cargo install miden-node --locked --version ^0.14
+git clone https://github.com/0xMiden/node.git miden-node
+cd miden-node
+
+make docker-build-node
+make docker-build-monitor
+make compose-genesis
+make compose-up
 ```
 
-Create a fresh data directory and bootstrap genesis:
-
-```bash
-mkdir -p miden-local/data miden-local/accounts
-cd miden-local
-
-miden-node bundled bootstrap \
-  --data-directory data \
-  --accounts-directory accounts
-```
-
-Start the node:
-
-```bash
-miden-node bundled start \
-  --data-directory data \
-  --rpc.url http://0.0.0.0:57291
-```
-
-The RPC endpoint is:
+The stack starts the store, validator, block producer, RPC component, network transaction builder, telemetry, and network monitor. The RPC endpoint is:
 
 ```text
 http://localhost:57291
 ```
 
-To reset the chain, stop the node and remove the generated data:
+Check the containers:
 
 ```bash
-rm -rf data accounts
+docker compose -f docker-compose.yml -f compose/telemetry.yml -f compose/monitor.yml ps
 ```
 
-Then run the bootstrap and start commands again. For the full node operator workflow, see the [v0.14 node usage guide](../../../reference/node/operator/usage.md#operation).
+Follow node logs:
 
-## Import a local account
+```bash
+make compose-logs
+```
 
-The bootstrap command writes genesis account files into `accounts/`. Import the account file your test needs:
+Stop the node without deleting chain data:
+
+```bash
+make compose-down
+```
+
+Reset the chain to a fresh genesis:
+
+```bash
+make compose-genesis
+make compose-up
+```
+
+For the full node operator workflow, see the [node usage guide](../../../reference/node/operator/usage.md#using-docker-compose).
+
+## Export the genesis account
+
+The local genesis process writes account files into the Compose volume. Copy the default genesis account into the repo root when you need to import it into a client:
+
+```bash
+docker run --rm \
+  -v miden-node_node-data:/data:ro \
+  -v "$PWD":/out \
+  alpine:3.20 \
+  cp /data/accounts/account.mac /out/account.mac
+```
+
+Then configure the CLI for localhost and import the account:
 
 ```bash
 miden-client init --local --network localhost
-miden-client import accounts/account.mac
+miden-client import account.mac
 miden-client sync
 miden-client account --list
 ```
@@ -165,19 +170,17 @@ For broader local runs, use the same `TEST_MIDEN_NETWORK=localhost` environment 
 
 ## Browser and proxy notes
 
-- The v0.14 node RPC server enables gRPC-web and CORS, so browser clients can call `http://localhost:57291` directly.
+- The node RPC server enables gRPC-web and CORS, so browser clients can call `http://localhost:57291` directly.
 - Do not proxy RPC as JSON. If your dev server or reverse proxy sits between the app and node, preserve gRPC-web requests and response headers.
-- Private note transport is not part of the node process. Run the note transport service separately or import private notes out of band.
+- Private note transport is not part of the node Compose stack. Run the note transport service separately or import private notes out of band.
 - When switching between testnet, devnet, and localhost, use a different `storeName` or clear the browser IndexedDB database used by the SDK.
 
 ## Debug local failures
 
-Start with the node terminal logs. For more detail, restart the node with `RUST_LOG=debug`:
+Start with the local logs:
 
 ```bash
-RUST_LOG=debug miden-node bundled start \
-  --data-directory data \
-  --rpc.url http://0.0.0.0:57291
+make compose-logs
 ```
 
 Then sync the client and inspect local transaction state:
@@ -187,4 +190,10 @@ miden-client sync
 miden-client tx --list
 ```
 
-In v0.14, network-note diagnostics are still limited compared with the current unreleased status endpoint. Use the node logs plus the note ID and transaction ID when debugging a note that remains committed but is not consumed.
+For network notes, query the node for the note processing status:
+
+```bash
+miden-client network-note-status <NOTE_ID>
+```
+
+The status output includes the processing state, attempt count, latest error, and last attempt block when the node has those details.

@@ -1,30 +1,37 @@
 ---
 title: "Miden Smart Contracts"
-description: "Build Miden smart contracts with Rust, Miden Assembly, and reusable Miden Standards."
+description: "Build Miden smart contracts in Miden Assembly (MASM) for mainnet production, with the Rust SDK in active development as the long-term direction."
 pagination_prev: null
 ---
 
 # Miden Smart Contracts
 
-This section covers the developer-facing paths for building smart contracts on Miden. Start with the overview for the execution model, use Rust for account, note, and transaction development, and use Miden Standards when you want reusable account components, note scripts, faucet policies, and protocol-compatible building blocks.
+This section covers the developer-facing paths for building smart contracts on Miden: an authoring guide for **Miden Assembly (MASM)** (the supported path for mainnet production today) and **Rust** (in active development as the long-term direction), plus the [Miden Standards](./standards/) library of reusable components callable from either.
 
-If you're new to Miden, follow the hands-on [Miden Bank Tutorial](../tutorials/miden-bank/).
+:::tip Building for mainnet?
+Miden mainnet supports smart contracts authored in **Miden Assembly (MASM)** today. The Rust SDK is in active development and will become the default authoring path once it ships v1. For production deployments now, see [MASM Smart Contracts](./masm/).
+:::
+
+If you're new to Miden, the hands-on [Miden Bank Tutorial](../tutorials/miden-bank/) walks through the full lifecycle using the Rust SDK; the concepts (accounts, notes, transactions, components) translate directly to MASM.
 
 ## Sections
 
-<CardGrid cols={3}>
+<CardGrid cols={2}>
   <Card title="Overview" href="./overview" eyebrow="Model">
-    Learn how accounts, notes, transactions, and components fit together.
+    How accounts, notes, transactions, and components fit together. Concepts apply regardless of authoring language.
   </Card>
-  <Card title="Rust" href="./rust" eyebrow="Authoring path">
-    Build accounts, notes, transactions, and reusable logic with the Rust-first workflow.
+  <Card title="MASM" href="./masm/" eyebrow="Mainnet path">
+    Author production-ready smart contracts directly in Miden Assembly. The path Miden mainnet supports today.
+  </Card>
+  <Card title="Rust" href="./rust" eyebrow="In development">
+    Build accounts, notes, transactions, and reusable logic with the Rust-first workflow. Currently in active development and not yet production-ready for mainnet.
   </Card>
   <Card title="Miden Standards" href="./standards/" eyebrow="Reusable libraries">
-    Use standard components, note scripts, faucet policies, and MASM modules.
+    Standard components, note scripts, faucet policies, and MASM modules. Callable from MASM or Rust.
   </Card>
 </CardGrid>
 
-## Inside Rust
+## Inside the Rust SDK
 
 <CardGrid cols={3}>
   <Card title="Accounts" href="./accounts/" eyebrow="State & code">

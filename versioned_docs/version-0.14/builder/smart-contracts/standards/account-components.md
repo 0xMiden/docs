@@ -1,29 +1,37 @@
 ---
 title: "Account Components"
-description: "Use v0.14 standard account components for wallets, authentication, faucets, ownership, and metadata."
+description: "Use standard account components for wallets, authentication, access control, faucets, and metadata."
 ---
 
 # Account Components
 
-Standard account components are prebuilt modules you can compose into accounts. They give an account a recognizable interface, such as "can receive assets", "can authenticate with this signature scheme", or "can mint fungible tokens".
+Standard account components are prebuilt modules you can compose into accounts. They give an account a recognizable interface, such as "can receive assets", "can authenticate with this signature scheme", "can mint fungible tokens", or "uses this access-control model".
 
 Use these components from Rust when you build accounts with the SDK, or import the underlying MASM modules when you are writing lower-level account code. The same standards surface is what note scripts and transaction scripts rely on when they call account procedures.
 
-## Common components
+## Common standards surfaces
 
-| Component | Use it for | Rust module |
-|-----------|------------|-------------|
+| Surface | Use it for | Rust module |
+|---------|------------|-------------|
 | `BasicWallet` | Holding assets, receiving assets from standard notes, and moving assets into output notes. | `miden_standards::account::wallets` |
-| `BasicFungibleFaucet` | Minting and burning fungible assets from a regular faucet account. | `miden_standards::account::faucets` |
-| `NetworkFungibleFaucet` | Minting and burning fungible assets from a network-account faucet flow. | `miden_standards::account::faucets` |
+| `FungibleFaucet` | Minting, sending, receiving, and burning fungible assets from faucet accounts. | `miden_standards::account::faucets` |
 | `AuthSingleSig` | Single-signature authentication of transactions. | `miden_standards::account::auth` |
 | `AuthSingleSigAcl` | Single-signature authentication with an access-control list. | `miden_standards::account::auth` |
-| `AuthMultisig` | Threshold-based multisig authentication. | `miden_standards::account::auth` |
-| `AuthMultisigPsm` | Multisig with procedure-specific thresholds. | `miden_standards::account::auth` |
-| `NoAuth` | Accounts that intentionally skip transaction authentication. | `miden_standards::account::auth` |
+| `AuthMultisig` / `AuthMultisigSmart` | Threshold or policy-aware multisig authentication. | `miden_standards::account::auth` |
+| `AuthGuardedMultisig` | Multisig guarded by a guardian configuration. | `miden_standards::account::auth` |
+| `AuthNetworkAccount` | Authentication through note allowlists for network accounts. | `miden_standards::account::auth` |
 | `Ownable2Step` | Access control for account owners. | `miden_standards::account::access` |
+| `RoleBasedAccessControl` | Role-based authorization for token policy management. | `miden_standards::account::access` |
+| `Authority` | Shared authority component used by policy-management standards. | `miden_standards::account::access` |
+| `TokenPolicyManager` | Registering and updating mint, burn, send, and receive token policies. | `miden_standards::account::policies` |
+| `BasicBlocklist` | Blocking specific native accounts in send and receive transfer-policy checks. | `miden_standards::account::policies` |
+| `BasicAllowlist` | Allowing only specific native accounts in send and receive transfer-policy checks. | `miden_standards::account::policies` |
 
 These are building blocks. They do not prevent you from adding custom components to the same account.
+
+:::info v0.14 differences
+The v0.14 snapshot uses separate `BasicFungibleFaucet` and `NetworkFungibleFaucet` components and does not include RBAC, authority, guarded multisig, smart multisig, network-account auth, `TokenPolicyManager`, `BasicBlocklist`, or `BasicAllowlist` in the same form. Use the v0.14 versioned docs when building against the v0.14 crates.
+:::
 
 ## Start with wallet and auth
 
@@ -65,8 +73,9 @@ Standard notes assume the consuming account exposes the procedures they need. Fo
 At the builder level, the practical rule is:
 
 - Add `BasicWallet` to accounts that should receive standard asset-transfer notes.
-- Add `BasicFungibleFaucet` or `NetworkFungibleFaucet` to faucet accounts that should mint or burn fungible assets.
-- Add auth components to every account that must reject unauthorized transactions.
+- Add `FungibleFaucet` to faucet accounts that should mint or burn fungible assets.
+- For local or user accounts, add an auth component to reject unauthorized transactions.
+- For network accounts, add an access-control component to gate the account procedures notes can call.
 
 Prefer building on top of `BasicWallet`: compose it with a custom extension component for application-specific methods. If you replace the wallet interface entirely, test consumption of the relevant standard notes deliberately.
 
@@ -88,4 +97,4 @@ Reach for MASM directly when you are implementing low-level behavior, integratin
 
 - [Standard notes](./standard-notes) - which account interfaces each standard note expects
 - [Faucets and policies](./faucets-and-policies) - using faucet and mint policy components
-- [`miden-standards` v0.14.6 account API](https://docs.rs/miden-standards/0.14.6/miden_standards/account/) - exact Rust API for this version
+- [`miden-standards` account source](https://github.com/0xMiden/protocol/tree/next/crates/miden-standards/src/account) - current implementation

@@ -1,15 +1,15 @@
 ---
 sidebar_position: 1
 title: Note Transport
-description: "Off-chain relay service for private note delivery on Miden."
+description: "Offchain relay service for private note delivery on Miden."
 pagination_prev: null
 ---
 
 # Note Transport
 
-The Miden note transport service is an off-chain relay for private note delivery. It gives senders a place to publish serialized private notes and gives recipients a way to fetch notes that match the tags they monitor.
+The Miden note transport service is an offchain relay for private note delivery. It gives senders a place to publish serialized private notes and gives recipients a way to fetch notes that match the tags they monitor.
 
-Private note contents are not published on-chain. The chain stores note commitments, while the full note data must reach the recipient through another channel. Note transport is the standard network service for that off-chain delivery path.
+Private note contents are not published onchain. The chain stores note commitments, while the full note data must reach the recipient through another channel. Note transport is the standard network service for that offchain delivery path.
 
 ## Start here
 
@@ -43,7 +43,7 @@ Private note contents are not published on-chain. The chain stores note commitme
 
 ## Current boundaries
 
-- **No chain-state validation.** The node does not connect to a Miden node and does not prove that a stored note was committed on-chain.
+- **No chain-state validation.** The node does not connect to a Miden node and does not prove that a stored note was committed onchain.
 - **No block context yet.** The current API does not attach commitment block numbers, note metadata, or inclusion proofs to fetched notes. This is tracked in [0xMiden/note-transport-service#68](https://github.com/0xMiden/note-transport-service/issues/68).
 - **Duplicate notes are rejected.** SQLite stores note IDs with a uniqueness constraint. Sending the same note twice fails instead of creating duplicate rows.
 - **Cursor values are server-owned.** Fetch pagination uses the monotonic SQLite `seq` value returned by the server. Clients should persist returned cursors, not fabricate them.

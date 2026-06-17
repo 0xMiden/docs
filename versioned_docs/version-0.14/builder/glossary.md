@@ -61,7 +61,7 @@ A multi-signature account on Miden that requires a configurable threshold (N-of-
 
 ### Note
 
-A fundamental data structure that represents an off-chain asset or a piece of information that can be transferred between accounts. Miden's UTXO-like model is designed around notes. **Output notes** are new notes created by a transaction; **input notes** are those consumed (spent) by a transaction.
+A fundamental data structure that represents an offchain asset or a piece of information that can be transferred between accounts. Miden's UTXO-like model is designed around notes. **Output notes** are new notes created by a transaction; **input notes** are those consumed (spent) by a transaction.
 
 ### Note script
 
@@ -104,6 +104,10 @@ A fundamental module of the Miden VM that acts as a base layer, providing core f
 ### Prover
 
 Responsible for generating zero-knowledge proofs that attest to the correctness of program execution without revealing the underlying data.
+
+### Miden Operator
+
+An entity that runs the node infrastructure powering the Miden network. Operators verify transaction proofs, record created notes and consumed-note nullifiers in the state databases, build the batches and blocks that progress the chain, and execute network transactions on behalf of users (for example, consuming a note against a public DEX contract).
 
 ### Miden Assembly
 

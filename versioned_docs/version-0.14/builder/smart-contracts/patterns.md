@@ -59,7 +59,7 @@ For Felt arithmetic, values wrap modulo the prime field (no overflow panic), but
 
 ### Anti-patterns
 
-- **Don't store secrets in contract code** — contract code is visible on-chain
+- **Don't store secrets in contract code** — contract code is visible onchain
 - **Don't skip nonce management** — prevents replay attacks
 - **Be careful with Felt division** — Felt division computes the multiplicative inverse, not integer division. Convert to `u64` first for integer-style operations
 

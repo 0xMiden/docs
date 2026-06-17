@@ -15,7 +15,7 @@ The note transport node is intentionally small: it accepts note bytes, indexes t
 4. A recipient calls `FetchNotes` for one or more tags and receives matching notes with a cursor.
 5. The recipient stores the returned cursor and uses it on the next fetch.
 
-The transport node does not connect to a Miden node and does not know whether a note has been committed on-chain. Clients still need to import fetched notes and sync against the Miden network.
+The transport node does not connect to a Miden node and does not know whether a note has been committed onchain. Clients still need to import fetched notes and sync against the Miden network.
 
 ## Stored data
 

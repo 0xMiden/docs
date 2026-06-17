@@ -1,6 +1,6 @@
 ---
 title: "Standard Notes"
-description: "Use v0.14 standard Miden note scripts for transfers, expiring transfers, swaps, minting, and burning."
+description: "Use standard Miden note scripts for transfers, expiring transfers, swaps, minting, and burning."
 ---
 
 # Standard Notes
@@ -16,21 +16,18 @@ Use the Rust APIs to construct standard notes in client or transaction-building 
 | P2ID | You are sending assets to a specific account ID. | `P2idNote` | `miden::standards::notes::p2id` |
 | P2IDE | You are sending to a specific account ID with a timelock and/or reclaim path. | `P2ideNote` | `miden::standards::notes::p2ide` |
 | SWAP | You are offering one asset and requiring a specific asset in return. | `SwapNote` | `miden::standards::notes::swap` |
+| PSWAP | You need a partially fillable swap note. | `PswapNote` | `miden::standards::notes::pswap` |
 | MINT | A faucet is minting fungible tokens into a note. | `MintNote` | `miden::standards::notes::mint` |
 | BURN | A faucet is burning fungible tokens returned through a note. | `BurnNote` | `miden::standards::notes::burn` |
-
-:::info PSWAP availability
-PSWAP is not available in the v0.14 standards snapshot. It appears in the current unstable standards surface.
-:::
 
 For the note model itself, start with [What are Notes?](../notes/introduction). This page focuses on how the standards fit into builder workflows.
 
 ```rust title="Create a public P2ID note"
+use miden_protocol::Word;
 use miden_protocol::account::{AccountId, AccountIdVersion, AccountStorageMode, AccountType};
 use miden_protocol::asset::{Asset, FungibleAsset};
 use miden_protocol::crypto::rand::RandomCoin;
-use miden_protocol::note::{NoteAttachment, NoteType};
-use miden_protocol::Word;
+use miden_protocol::note::{NoteAttachments, NoteType};
 use miden_standards::note::P2idNote;
 
 fn dummy_account(byte: u8, account_type: AccountType) -> AccountId {
@@ -38,7 +35,7 @@ fn dummy_account(byte: u8, account_type: AccountType) -> AccountId {
     bytes[0] = byte;
     AccountId::dummy(
         bytes,
-        AccountIdVersion::Version0,
+        AccountIdVersion::Version1,
         account_type,
         AccountStorageMode::Public,
     )
@@ -56,7 +53,7 @@ fn create_p2id_note() -> Result<(), Box<dyn std::error::Error>> {
         target,
         vec![asset],
         NoteType::Public,
-        NoteAttachment::default(),
+        NoteAttachments::default(),
         &mut rng,
     )?;
 
@@ -65,6 +62,10 @@ fn create_p2id_note() -> Result<(), Box<dyn std::error::Error>> {
 }
 ```
 
+:::info v0.14 differences
+PSWAP is part of the current unstable standards surface, but it is not available in the v0.14 standards snapshot. Use the v0.14 versioned docs if you are building against the v0.14 crates.
+:::
+
 ## Account requirements
 
 Standard notes assume the consuming account exposes the procedures the note script calls.
@@ -72,7 +73,7 @@ Standard notes assume the consuming account exposes the procedures the note scri
 | Note | Consuming account needs |
 |------|-------------------------|
 | P2ID / P2IDE | A wallet-compatible receive procedure, usually from `BasicWallet`. |
-| SWAP | Wallet-compatible receive and asset-to-note procedures. |
+| SWAP / PSWAP | Wallet-compatible receive and asset-to-note procedures. |
 | MINT | A compatible faucet/account flow for mint authorization and recipient delivery. |
 | BURN | A compatible faucet burn procedure. |
 
@@ -103,4 +104,4 @@ The Rust types live under `miden_standards::note`. The MASM scripts live under `
 - [Standard Note Types](../notes/note-types) - more detail on P2ID, P2IDE, and SWAP
 - [Output Notes](../notes/output-notes) - creating output notes from transactions
 - [Note Scripts](../notes/note-scripts) - writing custom note scripts
-- [`miden-standards` v0.14.6 note API](https://docs.rs/miden-standards/0.14.6/miden_standards/note/) - exact Rust API for this version
+- [`miden-standards` note source](https://github.com/0xMiden/protocol/tree/next/crates/miden-standards/src/note) - current implementation

@@ -41,12 +41,12 @@ Transaction 1 (Sender)                Transaction 2 (Recipient)
 │ 1. Create note           │            │ 1. Discover note         │
 │ 2. Attach assets         │            │ 2. Consume note          │
 │ 3. Note published        │──────────▶│ 3. Script runs           │
-│    (on-chain or private) │            │ 4. Assets move to vault  │
+│    (onchain or private) │            │ 4. Assets move to vault  │
 │                          │            │ 5. Note nullified        │
 └─────────────────────────┘            └─────────────────────────┘
 ```
 
-**Transaction 1**: The sender's account creates an output note, attaches assets to it, and the note is published (either on-chain or kept private).
+**Transaction 1**: The sender's account creates an output note, attaches assets to it, and the note is published (either onchain or kept private).
 
 **Transaction 2**: The recipient discovers the note, consumes it in their own transaction, the note script runs and verifies the consumer is authorized, and assets transfer into the recipient's vault. A **nullifier** is recorded to prevent the same note from being consumed again (see [note design](/reference/protocol/note)).
 
@@ -58,8 +58,8 @@ Notes come in two visibility modes:
 
 | Mode | Description |
 |------|-------------|
-| **Public** | The note's full data (assets, script, storage) is stored by the Miden network and visible on-chain. Anyone can discover and attempt to consume it. |
-| **Private** | Only a commitment (hash) is stored on-chain. The actual note data must be communicated off-chain between sender and recipient. |
+| **Public** | The note's full data (assets, script, storage) is stored by the Miden network and visible onchain. Anyone can discover and attempt to consume it. |
+| **Private** | Only a commitment (hash) is stored onchain. The actual note data must be communicated offchain between sender and recipient. |
 
 Private notes provide stronger privacy guarantees — the network can't even see what assets a note carries — but they require the sender and recipient to have a communication channel outside the protocol.
 
@@ -72,6 +72,6 @@ Miden provides built-in note patterns (P2ID, P2IDE, SWAP) for common transfer sc
 | **Transfer model** | Single `transfer()` call on a token contract | Two transactions: create note, then consume note |
 | **Privacy** | Sender, recipient, and amount are public | Transactions are unlinkable; private notes hide all data |
 | **Programmability** | Token contracts control transfer logic | Each note carries its own script with custom conditions |
-| **Failure** | Revert on-chain, gas consumed | Proof can't be generated — no on-chain trace |
+| **Failure** | Revert onchain, gas consumed | Proof can't be generated — no onchain trace |
 | **Parallelism** | Transfers contend for contract state | Notes are independent — unlimited parallel creation |
 

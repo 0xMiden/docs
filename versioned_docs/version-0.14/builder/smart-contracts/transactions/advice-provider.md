@@ -10,7 +10,7 @@ The advice provider is a mechanism for supplying non-deterministic auxiliary dat
 
 ## Trust model and data integrity
 
-The advice provider is supplied by the **host** (the Miden client or node) — not by on-chain consensus. This means the VM cannot blindly trust that the host provided correct data. Two patterns address this:
+The advice provider is supplied by the **host** (the Miden client or node) — not by onchain consensus. This means the VM cannot blindly trust that the host provided correct data. Two patterns address this:
 
 ### Unverified stack push (caller must verify)
 

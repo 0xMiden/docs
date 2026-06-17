@@ -265,7 +265,7 @@ await client.accounts.import({
 ```
 
 :::warning[Seed imports are public-only]
-Import-by-seed works only for accounts originally created with `storage: "public"`. Private account state is never published on-chain, so it can't be reconstructed from a seed alone. For private accounts, use the file export / import workflow below.
+Import-by-seed works only for accounts originally created with `storage: "public"`. Private account state is never published onchain, so it can't be reconstructed from a seed alone. For private accounts, use the file export / import workflow below.
 :::
 
 If you aren't sure whether the account is already in your local store, prefer [`getOrImport()`](#getorimport) — it skips the network call when the account is already known.

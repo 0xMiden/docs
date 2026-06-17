@@ -115,8 +115,8 @@ Each library takes:
 
 | Value | Behaviour | When to use |
 | --- | --- | --- |
-| `Linking.Dynamic` (default) | Links via DYNCALL at prove time. The foreign contract's on-chain code is fetched by the prover. | FPI — foreign contract lives on-chain. |
-| `Linking.Static` | Inlines library code into the script at compile time. | Off-chain libraries that must be self-contained. |
+| `Linking.Dynamic` (default) | Links via DYNCALL at prove time. The foreign contract's onchain code is fetched by the prover. | FPI — foreign contract lives onchain. |
+| `Linking.Static` | Inlines library code into the script at compile time. | Offchain libraries that must be self-contained. |
 
 ## Note scripts
 

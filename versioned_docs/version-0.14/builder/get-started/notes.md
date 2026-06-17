@@ -210,7 +210,7 @@ export async function demo() {
     // Creating Alice's account
     const alice = await client.accounts.create({
         type: AccountType.MutableWallet,
-        storage: "public", // Public: account state is visible on-chain
+        storage: "public", // Public: account state is visible onchain
     });
     console.log("Alice's account ID:", alice.id().toString());
 

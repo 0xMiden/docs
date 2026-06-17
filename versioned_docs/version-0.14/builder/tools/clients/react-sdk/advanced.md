@@ -44,7 +44,7 @@ await execute({
 | `skipSync` | Skip pre-send auto-sync (default `false`) |
 | `privateNoteTarget` | Deliver private output notes to this account after commit (any `AccountRef` form) |
 
-The `privateNoteTarget` field is the 4-step pipeline shortcut: execute the tx, commit on-chain, then auto-deliver the private note through the note transport to the target. Useful for "send private note" UIs where the recipient already has the React SDK running.
+The `privateNoteTarget` field is the 4-step pipeline shortcut: execute the tx, commit onchain, then auto-deliver the private note through the note transport to the target. Useful for "send private note" UIs where the recipient already has the React SDK running.
 
 ## `useExecuteProgram`
 

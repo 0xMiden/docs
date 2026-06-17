@@ -431,8 +431,8 @@ Use the correct values for note types:
 
 | Value | Type | Description |
 |-------|------|-------------|
-| 1 | Public | Note data is visible on-chain |
-| 2 | Private | Note data is hidden (only hash on-chain) |
+| 1 | Public | Note data is visible onchain |
+| 2 | Private | Note data is hidden (only hash onchain) |
 
 ```rust
 // In note inputs or when creating output notes
@@ -476,7 +476,81 @@ let p2id_script_root: Word = P2idNote::script().root();
 ```
 
 :::info Why Not Hardcode
-The native hash function changed from RPO to Poseidon2 in v0.14, so every MAST root — including the P2ID script's — is different from v0.13. Any hardcoded digest from v0.13 will fail a script-root check against v0.14. Reading the root from `P2idNote::script().root()` (or the active note's storage for on-chain code) keeps the contract resilient to future script changes.
+The native hash function changed from RPO to Poseidon2 in v0.14, so every MAST root — including the P2ID script's — is different from v0.13. Any hardcoded digest from v0.13 will fail a script-root check against v0.14. Reading the root from `P2idNote::script().root()` (or the active note's storage for onchain code) keeps the contract resilient to future script changes.
+:::
+
+---
+
+## Empty Transaction (No State Change, No Notes)
+
+### Problem
+
+Every Miden transaction must either change tracked account state (storage, vault, or nonce) **or** consume at least one input note. A transaction that does neither is rejected.
+
+The Rust client surfaces this as `TransactionRequestError::NoInputNotesNorAccountChange` before submission:
+
+```
+empty transaction: the request has no input notes and no account state changes
+```
+
+The VM kernel enforces the same invariant during execution, surfacing the message:
+
+```
+executed transaction neither changed the account state, nor consumed any notes
+```
+
+This commonly catches transaction scripts that take a no-op branch — the script ran fine, but nothing in its body mutated state:
+
+```rust
+#[tx_script]
+fn run(arg: Word, account: &mut Account) {
+    let should_settle = arg[0];
+    if should_settle == felt!(1) {
+        account.settle();  // mutates state
+    }
+    // WRONG: when should_settle != felt!(1), the script returns
+    //        without mutating state and the transaction is rejected.
+}
+```
+
+The script executed correctly — Miden just refuses to admit transactions with no observable effect.
+
+### Solution
+
+Give every branch something to mutate, or record the no-op explicitly so the transaction has a state delta:
+
+```rust
+#[tx_script]
+fn run(arg: Word, account: &mut Account) {
+    let should_settle = arg[0];
+    if should_settle == felt!(1) {
+        account.settle();
+    } else {
+        // Record the attempt so the transaction still has a state delta.
+        account.record_attempt();
+    }
+}
+```
+
+Alternatively, if the flow naturally consumes a note (most do — note scripts mutate state when they run), make sure the transaction request includes at least one input note. Pass the `Note` (the client deduces authentication from the note record) along with optional `NoteArgs`:
+
+```rust
+let request = TransactionRequestBuilder::new()
+    .input_notes(vec![(input_note, None)])
+    .build()?;
+```
+
+:::tip Standard auth handles this for you
+Most account templates run an authentication procedure that calls `incr_nonce()` on every transaction. If your account uses `BasicWallet`, `IncrNonceAuthComponent`, or any auth component that increments the nonce, you only hit this pitfall in transaction-script-only flows that skip the auth path. See [Authentication](../../smart-contracts/accounts/authentication) for details.
+:::
+
+### Why this exists
+
+A Miden transaction commits to a state delta plus a set of consumed notes. A transaction with neither is indistinguishable from "no transaction at all" — admitting it would waste a block slot and a proof verification. The invariant lets the network reject empty proofs cheaply.
+
+:::info See also
+- Client-side error catalog: [`TransactionRequestError::NoInputNotesNorAccountChange`](../../tools/clients/common-errors)
+- Failure modes table: [Account Operations](../../smart-contracts/accounts/account-operations#when-proof-generation-fails)
 :::
 
 ---
@@ -493,6 +567,7 @@ The native hash function changed from RPO to Poseidon2 in v0.14, so every MAST r
 | Missing wallet | Asset operation fails | Add `BasicWallet` component |
 | Key mismatch | Zero balances | Use helper function for keys |
 | Note type | Wrong note visibility | Use 1 (Public) or 2 (Private) |
+| Empty transaction | "Neither changed account state nor consumed notes" | Mutate state in every path, or consume a note |
 
 :::tip View Complete Source
 See these patterns in context in the [miden-bank repository](https://github.com/keinberger/miden-bank).
