@@ -1,117 +1,110 @@
 ---
 sidebar_position: 2
-title: "Hashing & Stack Changes"
-description: "Poseidon2 hash function, little-endian stack, and Falcon module rename in v0.14"
+title: "Hashing, SMT & Crypto Changes"
+description: "SMT leaf domain separation, miden-crypto 0.25, and downstream crypto renames in v0.15"
 ---
 
-# Hashing & Stack Changes
+# Hashing, SMT & Crypto Changes
 
 :::warning Breaking Change
-The native hash function changed from RPO to Poseidon2, and the operand stack is now little-endian. These are the most fundamental changes in v0.14 — every digest and every multi-limb operation is affected.
+SMT leaf hashing now mixes a Poseidon2 leaf-domain separator into the capacity word, and `miden-crypto` bumped to `0.25`. These are digest-changing: persisted SMT roots, leaf digests, and `PartialSmt` values from earlier versions do not round-trip.
 :::
 
 ---
 
-## Native Hash Function: RPO → Poseidon2
+## SMT leaf hashing switched to Poseidon2 domain separation
 
 ### Summary
 
-The VM's native sponge hash flipped from RPO to Poseidon2. Rust type names (`Word`, `Hasher`, digests) are unchanged but **every digest the VM produces is different**: MAST roots, advice-map keys derived from hashing, account/note commitments, transaction IDs — none of them roundtrip with 0.13 artifacts.
-
-### Migration Steps
-
-1. Re-assemble every `.masl` and `.masp` from source under 0.22 (the MAST format version was bumped — old serialized forests will not deserialize anyway).
-2. Re-derive any persisted commitments (account commitments, note commitments, advice-map keys, MAST roots).
-3. Discard any cached transaction IDs, proven transactions, and proofs from 0.13.
-4. If you hard-coded MAST root literals in tests, regenerate them.
-
-### Common Errors
-
-| Error Message | Cause | Solution |
-| --- | --- | --- |
-| `MastForest deserialization failed: unexpected version` | MAST format version bumped along with the hash change | Re-assemble from source under 0.22. |
-| `transaction id mismatch` / `account commitment mismatch` | Old digest computed under RPO | Recompute from current state under 0.14. |
-
----
-
-## Operand Stack Is Little-Endian
-
-### Summary
-
-Every multi-limb operation in the VM was unified around **"low limb closest to the top of the stack"**. Before 0.14 conventions were mixed: `u64` lived on the stack as `[hi, lo]`, `hperm` consumed `[R1, R0, C]` and produced its digest at indices 4..8, `mem_stream` returned words with the address-highest word on top. After 0.14 the low-significance limb is always on top: `u64` is `[lo, hi]`, `hperm` takes `[R0, R1, C]` with the digest at indices 0..4, and `mem_stream` returns the words in address-ascending order.
-
-This affects MASM that uses `u32split`, `u32widening_mul`, `u32madd`, `hperm`, `hmerge`, `mem_stream`, `adv_pipe`, `adv.insert_hdword`, `adv.insert_hdword_d`, `adv.insert_hqword`, `adv.insert_hperm`, all of `std::math::u64`, all of `std::math::u256`, and `ext2` extension-field values.
+The core library's Sparse Merkle Tree leaf hashing (`miden::core` `collections::smt`) now mixes a leaf‑domain separator into the Poseidon2 capacity word, so MASM‑side leaf digests match `SmtLeaf::hash()` in `miden-crypto`. Leaf preimages are hashed with `poseidon2::merge_in_domain` using `LEAF_DOMAIN = 0x13af`. This is a **digest‑changing** change: any SMT leaf digest, SMT root, or advice‑map key derived from MASM‑side leaf hashing under `0.22` will not reproduce under `0.23`. It pairs with the `miden-crypto 0.25` bump.
 
 ### Affected Code
 
-**MASM (u64 add):**
-```masm
-# Before (0.13): [b_hi, b_lo, a_hi, a_lo, ...] -> [c_hi, c_lo, ...]
-push.0.0xFFFFFFFF push.0.1
-exec.::std::math::u64::wrapping_add
-
-# After (0.14): [b_lo, b_hi, a_lo, a_hi, ...] -> [c_lo, c_hi, ...]
-push.0xFFFFFFFF.0 push.1.0
-exec.::std::math::u64::wrapping_add
+**MASM (core‑lib `collections::smt`, simplified):**
+```diff
+- exec.poseidon2::merge assert_eqw
++ push.LEAF_DOMAIN exec.poseidon2::merge_in_domain assert_eqw
 ```
-
-**MASM (`hperm` and digest extraction):** the input is now `[R0, R1, C, ...]` (was `[R1, R0, C, ...]`) and the digest comes out at indices `0..4` (was `4..8`).
-
-**MASM (`hmerge`):** input is now `[A, B, ...] -> [hash(A || B), ...]` (was `[B, A, ...]`).
-
-**Rust (`StackInputs` / `StackOutputs`):**
-
-For `StackInputs::try_from_ints([1, 2, 3, 4])` the first element (`1`) is the top of the stack — no reversal. When seeding a `u64`, push `[lo, hi]`, not `[hi, lo]`. Same when reading `StackOutputs`: `stack[0]` is the top.
+The per‑leaf cycle cost also changed (the `pair_count` coefficient went from `3` to `6`), so any hard‑coded cycle‑count expectations around `smt::get` / `smt::set` need updating.
 
 ### Migration Steps
 
-1. Audit every MASM call into `std::math::u64` / `u256` and flip the limb order in adjacent `push`/`movdn`/`movup` instructions.
-2. Audit every `hperm`/`hmerge` site and update the index where you extract the digest (it moved from `[4..8]` to `[0..4]`).
-3. Audit `mem_stream` / `adv_pipe` users — the word at the address now lands on top, not buried.
-4. In Rust, drop any `[Felt; 16]` reversal helpers you used to construct stacks "in pretty order".
-
-### Common Errors
-
-| Error Message | Cause | Solution |
-| --- | --- | --- |
-| `assertion failed: ...` (off-by-one in u64 arithmetic) | Limb order flipped | Push `[lo, hi]` instead of `[hi, lo]`. |
-| `expected hash 0x... at clock cycle ...` | Digest at wrong stack offset | The digest is now at indices 0..4, not 4..8. |
+1. Re‑derive every persisted SMT root, leaf digest, and advice‑map key computed from a MASM‑side SMT leaf hash under `0.22`.
+2. If you compute SMT leaf digests in Rust via `miden-crypto`, upgrade to `0.25` so both sides agree.
+3. Discard cached proofs / transaction artifacts whose witnesses depend on the old leaf hashing.
 
 ---
 
-## Falcon Module Rename
+## `miden-crypto` 0.25 downstream renames
 
 ### Summary
 
-Because the native hash flipped to Poseidon2, the Falcon-512 verifier was rewritten and renamed. The MASM module path moved to `miden::core::crypto::dsa::falcon512_poseidon2` and the Rust auth scheme variant is `Falcon512Poseidon2`.
+Bumping to `miden-crypto 0.25` (and `miden-vm 0.23`) surfaces several renames in code that builds against the protocol crates directly:
+
+- `Felt::new(n)` call sites that want the previous (non‑reducing) behaviour are now **`Felt::new_unchecked(n)`** (`Felt::new` now reduces modulo the field).
+- The ECDSA secret key type `ecdsa_k256_keccak::SecretKey` is renamed **`SigningKey`**; the EdDSA/X25519 key `eddsa_25519_sha512::SecretKey` is **`KeyExchangeKey`**. Falcon's `falcon512_poseidon2::SecretKey` is unchanged.
+- The kernel's `EMPTY_SMT_ROOT` constant was recomputed for the Plonky3‑aligned Poseidon2 and the domain‑separated `SmtLeaf::hash` — any hard‑coded SMT‑root literal changes.
+- In kernel/standards MASM, the immediate form of `adv_push` was dropped and cross‑module‑referenced MASM constants/procedures must be marked `pub`.
 
 ### Affected Code
 
-**MASM:**
-```masm
-# Before (0.13)
-use.miden::core::crypto::dsa::falcon512rpo
-exec.falcon512rpo::verify
-
-# After (0.14)
-use.miden::core::crypto::dsa::falcon512_poseidon2
-exec.falcon512_poseidon2::verify
+```diff
+- let f = Felt::new(value);
+- use miden_protocol::crypto::dsa::ecdsa_k256_keccak::SecretKey;
+- use miden_protocol::crypto::dsa::eddsa_25519_sha512::SecretKey as EdSecretKey;
++ let f = Felt::new_unchecked(value);
++ use miden_protocol::crypto::dsa::ecdsa_k256_keccak::SigningKey;
++ use miden_protocol::crypto::dsa::eddsa_25519_sha512::KeyExchangeKey;
 ```
 
-**Rust:**
-```rust
-// Before (0.13)
-use miden_protocol::account::auth::AuthScheme;
-let scheme = AuthScheme::Falcon512Rpo;
+### Migration Steps
 
-// After (0.14)
-use miden_protocol::account::auth::AuthScheme;
-let scheme = AuthScheme::Falcon512Poseidon2;
-```
+1. Replace `Felt::new(...)` with `Felt::new_unchecked(...)` where you relied on the non‑reducing constructor.
+2. Rename `ecdsa_k256_keccak::SecretKey` → `SigningKey` and `eddsa_25519_sha512::SecretKey` → `KeyExchangeKey`.
+3. Mark any cross‑module‑referenced MASM constants/procedures `pub`, and regenerate hard‑coded `EMPTY_SMT_ROOT` / SMT‑root literals.
 
-### Common Errors
+---
 
-| Error Message | Cause | Solution |
-| --- | --- | --- |
-| `unknown module miden::core::crypto::dsa::falcon512rpo` | Module renamed | Use `falcon512_poseidon2`. |
-| `no variant or associated item named Falcon512Rpo for AuthScheme` | Variant renamed | Use `AuthScheme::Falcon512Poseidon2`. |
+## `PartialSmt` serialization changed
+
+### Summary
+
+In `miden-crypto 0.25` the serialized byte layout of `PartialSmt` changed. Old serialized `PartialSmt` values are **not compatible** with `0.25` and will not deserialize correctly.
+
+### Migration Steps
+
+1. Discard any `PartialSmt` values serialized under an earlier `miden-crypto`.
+2. Rebuild them from current state, or re‑fetch them under `0.25`.
+
+---
+
+## Custom `LargeSmt` storage backends: reads move to `SmtStorageReader`
+
+### Summary
+
+Custom `LargeSmt` storage backends need a small trait update: reads moved to a dedicated **`SmtStorageReader`**. Writable storage still implements `SmtStorage`, but now also sets an associated `type Reader` and returns a point‑in‑time reader via `reader()`. Read operations go through `SmtStorageReader` rather than the writable `SmtStorage` directly.
+
+### Migration Steps
+
+1. Keep your writable backend implementing `SmtStorage`, and add the associated `type Reader` plus a `reader()` method that returns a point‑in‑time `SmtStorageReader`.
+2. Move read operations onto the `SmtStorageReader` returned by `reader()`.
+
+---
+
+## Direct `miden-crypto` 0.24 API breaks
+
+### Summary
+
+For the rare consumers that depend on `miden-crypto` directly, the `0.24` step carries a few additional API breaks:
+
+- The `WORD_SIZE`, `WORD_SIZE_FELTS`, and `WORD_SIZE_BYTES` constants moved to **`Word::NUM_ELEMENTS`** / **`Word::SERIALIZED_SIZE`**.
+- `LexicographicWord` is now just **`Word`**.
+- `Felt` no longer derefs.
+- Custom multi‑AIR prover/verifier code must handle `StarkProof` log trace heights and `air_order`.
+
+### Migration Steps
+
+1. Replace `WORD_SIZE` / `WORD_SIZE_FELTS` with `Word::NUM_ELEMENTS` and `WORD_SIZE_BYTES` with `Word::SERIALIZED_SIZE`.
+2. Replace `LexicographicWord` with `Word`.
+3. Remove any reliance on `Felt`'s `Deref`; access the inner value explicitly.
+4. If you maintain custom multi‑AIR prover/verifier code, update it to handle `StarkProof` log trace heights and `air_order`.
