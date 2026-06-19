@@ -1,222 +1,108 @@
 ---
 sidebar_position: 9
 title: "VM & Assembler Changes"
-description: "Host trait consolidation, FastProcessor builder API, and other VM-level breaking changes in v0.14"
+description: "Sync-first execution, separated proving options, stricter assembly resolution, and the MAST/project wire-format bump (0.0.2 → 0.0.3) in Miden v0.15"
 ---
 
 # VM & Assembler Changes
 
 :::warning Breaking Change
-The VM host interface has been collapsed from three traits to one, the processor construction API has changed to a builder pattern, and several types have been cleaned up or relocated. These changes affect anyone embedding the Miden VM directly.
+Execution and proving are now **sync-first**: the single `Host` trait is split into `BaseHost` / `SyncHost` (plus an async `Host`), and `execute()` / `execute_sync()` return an `ExecutionOutput` instead of an `ExecutionTrace`. Separately, the MAST wire format bumped `0.0.2` → `0.0.3`, so `.masl` / `.masp` packages and serialized `MastForest` blobs produced under `0.22` will **not** load under `0.23` — re-assemble everything from source.
 :::
 
 ---
 
-## `SyncHost` / `BaseHost` Removed; `AsyncHost` → `Host`
+## Sync-first execution: `BaseHost`/`SyncHost`; `execute` returns `ExecutionOutput`
 
 ### Summary
 
-The previous three-trait hierarchy (`BaseHost`, `SyncHost`, `AsyncHost`) has been collapsed into a single `Host` trait. All methods now return `impl FutureMaybeSend<...>`, making the trait async-compatible by default. Additionally, `ProcessState` was renamed from `ProcessorState`, and the `on_assert_failed` callback was removed.
+Execution and proving became **sync-first with runtime-free async compatibility**. The single `Host` trait from `0.22` is split into three: `BaseHost` (shared source/label resolution + event-name lookup), `SyncHost: BaseHost` (synchronous `get_mast_forest` / `on_event`), and `Host: BaseHost` (the async variant). A blanket impl makes every `SyncHost` automatically a `Host`. The sync entry points (`execute_sync`, `prove_sync`, `FastProcessor::execute_sync`/`execute_mut_sync`) require `SyncHost`. Both `execute()` and `execute_sync()` now return **`ExecutionOutput`** instead of `ExecutionTrace` — trace building is explicit via `execute_trace_inputs*()` + `trace::build_trace()`. The deprecated `execute_sync_mut()` / `execute_for_trace*()` aliases and the unbound `TraceBuildInputs::new()` / `from_program()` constructors were removed.
 
 ### Affected Code
 
 ```rust
-// Before (0.13)
-impl BaseHost for MyHost {}
-
+// After (0.23): implement BaseHost + SyncHost; you get Host for free via the blanket impl.
+// (Before: a single async `impl Host for MyHost` with async get_mast_forest / on_event.)
+use miden_processor::{BaseHost, SyncHost, AdviceMutation, host::handlers::EventError, ProcessorState};
+impl BaseHost for MyHost {
+    fn get_label_and_source_file(&self, location: &Location) -> (SourceSpan, Option<Arc<SourceFile>>) { /* ... */ }
+}
 impl SyncHost for MyHost {
-    fn get_mast_forest(
-        &self,
-        node_digest: &Digest,
-    ) -> Option<Arc<MastForest>> {
-        // ...
-    }
-
-    fn on_event(
-        &mut self,
-        process: &ProcessState,
-        event_id: u32,
-    ) -> Result<(), ExecutionError> {
-        // ...
-    }
+    fn get_mast_forest(&self, d: &Word) -> Option<Arc<MastForest>> { /* ... */ }
+    fn on_event(&mut self, p: &ProcessorState<'_>) -> Result<Vec<AdviceMutation>, EventError> { /* ... */ }
 }
-```
 
-```rust
-// After (0.14)
-impl Host for MyHost {
-    fn get_mast_forest(
-        &self,
-        node_digest: &Digest,
-    ) -> impl FutureMaybeSend<Output = Option<Arc<MastForest>>> {
-        async {
-            // ...
-        }
-    }
-
-    fn on_event(
-        &mut self,
-        process: &ProcessorState,
-        event_id: u32,
-    ) -> impl FutureMaybeSend<Output = Result<(), ExecutionError>> {
-        async {
-            // ...
-        }
-    }
-}
+// Calling execute now returns ExecutionOutput (exposes `stack`, `advice`, `memory`):
+let output: ExecutionOutput = miden_processor::execute_sync(&program, stack_inputs, advice_inputs, &mut host, options)?;
 ```
 
 ### Migration Steps
 
-1. Remove `impl BaseHost for ...` and `impl SyncHost for ...` blocks.
-2. Implement the single `Host` trait instead.
-3. Wrap each method body in `async { ... }` and return `impl FutureMaybeSend<...>`.
-4. Rename any `ProcessState` references to `ProcessorState`.
-5. Remove any `on_assert_failed` implementations — the callback no longer exists.
+1. Split your `Host` impl into a `BaseHost` impl (label/source resolution) plus a `SyncHost` impl with plain (non-async) `get_mast_forest` / `on_event`.
+2. If you call the sync entry points, pass a `SyncHost`.
+3. Replace destructuring of an `ExecutionTrace` return with `ExecutionOutput` accessors; build a trace explicitly only when needed.
+4. Replace `FastProcessor::execute_sync_mut(...)` with `execute_mut_sync(...)`, and `execute_for_trace*` / `TraceBuildInputs::new()` with `execute_trace_inputs_sync()` / `execute_trace_inputs()`.
 
 ---
 
-## `FastProcessor` Builder API
+## `prove_sync` takes execution options separately
 
 ### Summary
 
-`FastProcessor::new_with_advice_inputs()` and `FastProcessor::new_debug()` have been removed. Construction now follows a builder pattern starting from `FastProcessor::new(stack_inputs)`.
+`ProvingOptions` no longer carries an `ExecutionOptions`. `prove_sync` / `prove` now take execution options and proving options as **two separate parameters** (and the sync path requires a `SyncHost`). The `with_execution_options(...)` / `execution_options()` accessors on `ProvingOptions` are gone. `prove_from_trace_sync()` now takes a `TraceProvingInputs`.
 
-### Affected Code
-
-```rust
-// Before (0.13)
-let processor = FastProcessor::new_with_advice_inputs(stack_inputs, advice_inputs);
-let processor = FastProcessor::new_debug(stack_inputs);
-```
-
-```rust
-// After (0.14)
-let processor = FastProcessor::new(stack_inputs)
-    .with_advice(advice_inputs)
-    .with_debugging(true)
-    .with_tracing(true);
-
-// Or with execution options:
-let processor = FastProcessor::new(stack_inputs)
-    .with_advice(advice_inputs)
-    .with_options(execution_options);
+```diff
+- let options = ProvingOptions::default().with_execution_options(exec_options);
+- let (stack_outputs, proof) = prove_sync(&program, stack_inputs, advice_inputs, &mut host, options)?;
++ use miden_processor::ExecutionOptions;
++ let (stack_outputs, proof) = prove_sync(
++     &program, stack_inputs, advice_inputs, &mut host,  // must be a SyncHost
++     ExecutionOptions::default(), ProvingOptions::default())?;
 ```
 
 ### Migration Steps
 
-1. Replace `new_with_advice_inputs(stack, advice)` with `new(stack).with_advice(advice)`.
-2. Replace `new_debug(stack)` with `new(stack).with_debugging(true)`.
-3. Chain `.with_options(...)` or `.with_tracing(true)` as needed.
+1. Stop calling `ProvingOptions::with_execution_options(...)`; pass `ExecutionOptions` as its own argument.
+2. Ensure the host you pass to `prove_sync` implements `SyncHost`.
+3. If you drove `prove_from_trace_sync()`, build a `TraceProvingInputs` from post-execution trace inputs.
 
 ---
 
-## `StackInputs` / `StackOutputs` API Cleanup
+## Live advice map bounded by total field elements
 
 ### Summary
 
-Both `StackInputs` and `StackOutputs` now derive `Copy`, so you can drop explicit `.clone()` calls. `StackInputs::new()` now takes a `&[Felt]` slice instead of a `Vec<Felt>`.
-
-### Affected Code
-
-```rust
-// Before (0.13)
-let inputs = StackInputs::new(vec![felt_a, felt_b, felt_c]);
-let inputs_copy = inputs.clone();
-
-// After (0.14)
-let inputs = StackInputs::new(&[felt_a, felt_b, felt_c]);
-let inputs_copy = inputs; // Copy, no clone needed
-```
+The live advice map is now bounded by total field-element count during execution. Advice-provider setup returns an error when the **initial** advice already exceeds the limit, and writes that would push the live map past the limit fail. `AdviceMap` gained a `total_element_count()` accessor.
 
 ### Migration Steps
 
-1. Replace `StackInputs::new(vec![...])` with `StackInputs::new(&[...])`.
-2. Remove unnecessary `.clone()` calls on `StackInputs` and `StackOutputs`.
+1. If you seed very large advice maps up front, split the data or stream it in during execution.
+2. Handle the new setup-time error from advice-provider construction instead of assuming it always succeeds.
 
 ---
 
-## `MastForest::strip_decorators` → `clear_debug_info`
+## Stricter assembly resolution: structured errors replace panics
 
 ### Summary
 
-`MastForest::strip_decorators()` has been renamed to `MastForest::clear_debug_info()` and now wipes the entire `DebugInfo` structure, not just decorators. A new convenience method `MastForest::write_stripped()` writes the forest with debug info removed without mutating the original.
-
-The MAST serialization format version was also bumped — `.masl` and `.masp` files produced by v0.13 will **not** deserialize under v0.14.
-
-### Affected Code
-
-```rust
-// Before (0.13)
-forest.strip_decorators();
-
-// After (0.14)
-forest.clear_debug_info();
-
-// Or write a stripped copy without mutating:
-forest.write_stripped(&mut output)?;
-```
+Several previously-panicking or silently-partial assembly paths now return structured errors: oversized modules are rejected at resolver construction, non-procedure invoke targets are rejected, self-recursive / rootless call graphs return typed cycle errors, and unresolved `pub use <digest> -> <name>` returns a normal assembly error. The linker also rejects non-`syscall` references to exported kernel procedures and rejects empty kernel packages. Code that assembled cleanly under `0.22` continues to assemble; the change is that malformed inputs now surface as recoverable `Report` errors instead of panics.
 
 ### Migration Steps
 
-1. Replace `strip_decorators()` calls with `clear_debug_info()`.
-2. Consider using `write_stripped()` if you only need stripped output without modifying the forest in memory.
-3. Re-assemble all `.masl` and `.masp` files from source — 0.13 serialized files will fail to deserialize.
-
-### Common Errors
-
-| Error Message | Cause | Solution |
-| --- | --- | --- |
-| `no method named strip_decorators found` | Method renamed | Use `clear_debug_info()`. |
-| `MastForest deserialization failed: unexpected version` | MAST format version bumped | Re-assemble from source under 0.22. |
+1. If you wrapped assembly in panic-catching logic for malformed inputs, replace it with normal `Result`/`Report` error handling.
+2. Fix any MASM that referenced an exported kernel procedure via `exec`/`call` instead of `syscall` — that is now a hard error.
 
 ---
 
-## `Process`, `VmStateIterator`, `execute_iter()` Removed
+## Post-last-operation decorators deprecated
 
 ### Summary
 
-The "slow" `Process` type, `VmStateIterator`, `VmState`, `AsmOpInfo`, `SlowProcessState`, and the top-level `miden_processor::execute_iter()` function have been removed. Execution goes exclusively through `FastProcessor`.
+Operation-indexed decorators placed *after* the last operation of a basic block are now rejected in both block assembly and serialized MAST forests. Decorators that should run after a block exits must use the `after_exit` slot instead. This only affects code that builds `MastForest`s programmatically — ordinary MASM source is unaffected.
 
-### Affected Code
+### Migration Steps
 
-```rust
-// Before (0.13)
-for state in execute_iter(&program, stack_inputs, advice_inputs, &mut host) {
-    let state: VmState = state?;
-    println!("clk={} op={:?}", state.clk(), state.op());
-}
-
-// After (0.14)
-let mut processor = FastProcessor::new(stack_inputs).with_advice(advice_inputs);
-let mut ctx = processor.get_initial_resume_context(&program)?;
-loop {
-    let outcome = processor.step(&program, &mut ctx, &mut host)?;
-    if outcome.is_done() { break; }
-}
-```
-
-For one-shot non-iterating execution, use `FastProcessor::execute_sync(...)` or the top-level `miden_processor::execute_sync(...)`.
-
----
-
-## `miden debug` / `analyze` / `repl` Removed
-
-The three CLI subcommands were removed along with `VmStateIterator`. The CLI now exposes only `compile`, `bundle`, `run`, `prove`, `verify`. There is no drop-in replacement; use the external debugger or write a small Rust program that drives `FastProcessor::step` if you need step-by-step inspection.
-
----
-
-## `Operation` Enum Trimmed to Basic-Block Ops
-
-### Summary
-
-Control-flow opcodes (`Join`, `Split`, `Loop`, `Call`, `Dyn`, `Dyncall`, `SysCall`, `Span`, `End`, `Respan`, `Halt`) were removed from `miden_core::Operation`; they live exclusively at the MAST node level (`MastNode::Join`, etc.). Pattern matches over those variants must move to traversals over `MastNode`.
-
----
-
-## `ExecutionOptions`, `ProvingOptions`, `ExecutionProof` Relocated
-
-These types have moved crates. See [Imports & Dependencies](./imports-dependencies) for the updated import paths.
+1. If you attach decorators programmatically, move any decorator targeting the post-last-op index to the block's `after_exit` decorator list.
 
 ---
 
@@ -224,39 +110,20 @@ These types have moved crates. See [Imports & Dependencies](./imports-dependenci
 
 ### Summary
 
-v0.14 introduces a **first-class Miden project file format** (`miden-project.toml`), implemented in the new `miden-project` crate. Projects describe a single package or a workspace of packages with dependencies (path, git, registry), profiles, lints, and per-package metadata — much like `Cargo.toml`. The assembler compiles a project directly to a `.masp` package via `Assembler::link_package`, with dependency resolution through `pubgrub`.
+The MAST forest serialization format was refactored around fixed-layout **full**, **stripped**, and **hashless** sections, with stable node IDs and stricter validation of untrusted forests. The wire-format version constant bumped from `[0, 0, 2]` to `[0, 0, 3]`. Serialized `.masl` / `.masp` / `MastForest` blobs produced under `0.22` will not deserialize under `0.23`. Deserialization of serialized libraries and kernel libraries is now treated as **untrusted** by default, rejecting spoofed/inconsistent node digests rather than trusting the bytes.
 
-This is **additive** for existing per-file assembly users — old `Assembler::compile_and_statically_link` / `assemble_library` APIs still work — but it is the recommended layout for any new MASM project of more than a single file.
-
-### Standalone Package Example
-
-```toml title="my-app/miden-project.toml"
-[package]
-name = "example"
-version = "0.1.0"
-
-[lib]
-path = "lib/mod.masm"
-
-[dependencies]
-miden-protocol = { path = "../protocol/userspace" }
-
-[profile.test]
-inherits = "dev"
-network = "local"
-
-[lints.miden]
-unused = "error"
-```
-
-### Building from Rust
+### Affected Code
 
 ```rust
-use miden_assembly::Assembler;
-
-let package = Assembler::default()
-    .link_package("./my-app/miden-project.toml")?;
+// Any blob serialized under 0.22 (VERSION = [0, 0, 2]) fails to read under 0.23:
+let forest = MastForest::read_from_bytes(&old_bytes)?; // Err: unexpected version
 ```
+
+### Migration Steps
+
+1. Re-assemble every `.masl` / `.masp` package and re-serialize any cached `MastForest` blobs from source under `0.23`.
+2. If you persisted MAST forests or packages to disk or a database, invalidate and regenerate them.
+3. If you deserialize forests from an untrusted source, expect stricter validation — malformed or spoofed-digest forests now return an error instead of loading.
 
 ---
 
