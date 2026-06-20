@@ -410,7 +410,7 @@ async fn main() -> anyhow::Result<()> {
             .await?;
 
         if consumable_notes.is_empty() {
-            println!("Waiting for P2ID note to be comitted...");
+            println!("Waiting for P2ID note to be committed...");
             tokio::time::sleep(Duration::from_secs(2)).await;
             continue;
         }
@@ -682,7 +682,7 @@ async fn main() -> anyhow::Result<()> {
             .await?;
 
         if consumable_notes.is_empty() {
-            println!("Waiting for P2ID note to be comitted...");
+            println!("Waiting for P2ID note to be committed...");
             tokio::time::sleep(Duration::from_secs(2)).await;
             continue;
         }
@@ -834,7 +834,7 @@ Faucet account ID: 0xe48c43d6ad6496201bcfa585a5a4b6
 Minting 1000 tokens to Alice...
 Mint transaction submitted successfully, ID: 0x948a0eef754068b3126dd3261b6b54214fa5608fb13c5e5953faf59bad79c75f
 Consume transaction submitted successfully, ID: 0xc69ab84b784120abe858bb536aebda90bd2067695f11d5da93ab0b704f39ad78
-Alice's TEST token balance: 100
+Alice's TEST token balance: Ok(1000)
 Send 100 tokens to Bob note transaction ID: "0x51ac27474ade3a54adadd50db6c2b9a2ede254c5f9137f93d7a970f0bc7d66d5"
 ```
 
