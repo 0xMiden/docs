@@ -51,7 +51,7 @@ flowchart TD
         MidenVM["0xMiden/miden-vm"]
         MidenNode["0xMiden/node"]
         Compiler["0xMiden/compiler"]
-        MidenClient["0xMiden/miden-client"]
+        MidenClient["0xMiden/rust-sdk"]
         MidenTutorials["0xMiden/tutorials"]
     end
 
@@ -145,7 +145,7 @@ refs:
   miden-vm: refs/tags/v0.22.1
   node: refs/tags/v0.14.9
   compiler: refs/tags/v0.8.1
-  miden-client: refs/tags/v0.14.4
+  rust-sdk: refs/tags/v0.14.4
   tutorials: refs/heads/main        # Or specific commit/tag
 ```
 
@@ -221,7 +221,7 @@ The build uses:
 | Edit Protocol docs | `0xMiden/protocol` repo → cut new version |
 | Edit VM docs | `0xMiden/miden-vm` repo → cut new version |
 | Edit Tutorials | `0xMiden/tutorials` repo → cut new version |
-| Edit Client docs | `0xMiden/miden-client` repo → cut new version |
+| Edit Client docs | `0xMiden/rust-sdk` repo → cut new version |
 | Create new release | Update `.release/release-manifest.yml` → run `cut-versions.yml` |
 
 ---

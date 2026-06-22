@@ -2,7 +2,7 @@
 name: miden-architecture
 description: >
   Miden protocol, SDK, and documentation knowledge. Use when working on Miden
-  docs or source repositories, especially protocol, miden-client, node,
+  docs or source repositories, especially protocol, rust-sdk, web-sdk, node,
   miden-vm, compiler, tutorials, and application templates.
 compatibility: Designed for AI coding assistants.
 metadata:
@@ -78,7 +78,8 @@ Miden is a privacy-preserving blockchain where accounts are programmable smart c
 - Docs: https://github.com/0xMiden/docs
 - Protocol: https://github.com/0xMiden/protocol
 - Miden VM and assembler: https://github.com/0xMiden/miden-vm
-- Client SDKs: https://github.com/0xMiden/miden-client
+- Rust client SDK: https://github.com/0xMiden/rust-sdk
+- Web SDK: https://github.com/0xMiden/web-sdk
 - Node: https://github.com/0xMiden/node
 - Compiler: https://github.com/0xMiden/compiler
 - Tutorials: https://github.com/0xMiden/tutorials

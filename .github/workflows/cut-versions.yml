@@ -4,7 +4,7 @@
 #
 # v0.4 Information Architecture:
 #   - Reference docs (protocol, miden-vm, compiler, node) → docs/reference/
-#   - Builder docs (tutorials, miden-client) → docs/builder/tutorials/, docs/builder/tools/client/
+#   - Builder docs (tutorials, rust-sdk) → docs/builder/tutorials/, docs/builder/tools/client/
 #
 # Workflow responsibilities:
 #   1. Check out external repos at pinned refs
@@ -30,7 +30,7 @@ on:
       miden_node_ref: { required: false }
       miden_vm_ref: { required: false }
       miden_base_ref: { required: false }
-      miden_client_ref: { required: false }
+      rust_sdk_ref: { required: false }
       compiler_ref: { required: false }
       miden_tutorials_ref: { required: false }
 
@@ -50,7 +50,7 @@ jobs:
       REPO_NODE: 0xMiden/node
       REPO_VM: 0xMiden/miden-vm
       REPO_BASE: 0xMiden/protocol
-      REPO_CLIENT: 0xMiden/miden-client
+      REPO_RUST_SDK: 0xMiden/rust-sdk
       REPO_COMPILER: 0xMiden/compiler
       REPO_TUTORIALS: 0xMiden/tutorials
     steps:
@@ -91,7 +91,7 @@ jobs:
             miden_node_ref:      getRef(process.env.INPUT_MIDEN_NODE_REF,      refs['node']),
             miden_vm_ref:        getRef(process.env.INPUT_MIDEN_VM_REF,        refs['miden-vm']),
             miden_base_ref:      getRef(process.env.INPUT_MIDEN_BASE_REF,      refs['protocol']),
-            miden_client_ref:    getRef(process.env.INPUT_MIDEN_CLIENT_REF,    refs['miden-client']),
+            rust_sdk_ref:        getRef(process.env.INPUT_RUST_SDK_REF,        refs['rust-sdk']),
             compiler_ref:  getRef(process.env.INPUT_COMPILER_REF,  refs['compiler']),
             miden_tutorials_ref: getRef(process.env.INPUT_MIDEN_TUTORIALS_REF, refs['tutorials']),
           };
@@ -121,7 +121,7 @@ jobs:
           validate "${REPO_NODE}"      "${{ steps.manifest.outputs.miden_node_ref }}"
           validate "${REPO_VM}"        "${{ steps.manifest.outputs.miden_vm_ref }}"
           validate "${REPO_BASE}"      "${{ steps.manifest.outputs.miden_base_ref }}"
-          validate "${REPO_CLIENT}"    "${{ steps.manifest.outputs.miden_client_ref }}"
+          validate "${REPO_RUST_SDK}" "${{ steps.manifest.outputs.rust_sdk_ref }}"
           validate "${REPO_COMPILER}"  "${{ steps.manifest.outputs.compiler_ref }}"
           validate "${REPO_TUTORIALS}" "${{ steps.manifest.outputs.miden_tutorials_ref }}"
 
@@ -137,7 +137,7 @@ jobs:
           checkout_ref "${REPO_NODE}"      "${{ steps.manifest.outputs.miden_node_ref }}"      vendor/node
           checkout_ref "${REPO_VM}"        "${{ steps.manifest.outputs.miden_vm_ref }}"        vendor/miden-vm
           checkout_ref "${REPO_BASE}"      "${{ steps.manifest.outputs.miden_base_ref }}"      vendor/protocol
-          checkout_ref "${REPO_CLIENT}"    "${{ steps.manifest.outputs.miden_client_ref }}"    vendor/miden-client
+          checkout_ref "${REPO_RUST_SDK}" "${{ steps.manifest.outputs.rust_sdk_ref }}" vendor/rust-sdk
           checkout_ref "${REPO_COMPILER}"  "${{ steps.manifest.outputs.compiler_ref }}"  vendor/compiler
           checkout_ref "${REPO_TUTORIALS}" "${{ steps.manifest.outputs.miden_tutorials_ref }}" vendor/tutorials
 
@@ -249,20 +249,20 @@ jobs:
             echo "Synced tutorials (miden-bank, components, img, theme, miden_node_setup.md, recipes/rust, recipes/web) → docs/builder/tutorials"
           fi
 
-          if [ -d "vendor/miden-client/docs/external/src" ]; then
+          if [ -d "vendor/rust-sdk/docs/external/src" ]; then
             mkdir -p docs/builder/tools/clients
-            # Selective ingestion: only subdirs/files we still auto-sync from miden-client.
+            # Selective ingestion: only subdirs/files we still auto-sync from rust-sdk.
             # web-client/, react-sdk/, and top-level index.md are locally authored in the docs repo
             # — they are preserved through this clean/ingest cycle.
             for name in rust-client img theme; do
-              src="vendor/miden-client/docs/external/src/$name"
+              src="vendor/rust-sdk/docs/external/src/$name"
               [ -d "$src" ] && cp -r "$src" docs/builder/tools/clients/
             done
             for name in common-errors.md _category_.yml; do
-              src="vendor/miden-client/docs/external/src/$name"
+              src="vendor/rust-sdk/docs/external/src/$name"
               [ -f "$src" ] && cp "$src" docs/builder/tools/clients/
             done
-            echo "Synced miden-client (rust-client, img, theme, common-errors, _category_) → docs/builder/tools/clients"
+            echo "Synced rust-sdk (rust-client, img, theme, common-errors, _category_) → docs/builder/tools/clients"
           fi
 
           echo "Content aggregation complete. Final docs structure:"

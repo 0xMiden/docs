@@ -17,7 +17,7 @@ Use a local node when a test needs real node state: public accounts, block commi
 | Private note delivery | A separate Miden Note Transport node |
 | Future one-command local dev | Track [node#1874](https://github.com/0xMiden/node/issues/1874) and [midenup#180](https://github.com/0xMiden/midenup/issues/180) |
 
-Docker Compose is the supported default path for running the current local node stack. The miden-client repo also has a `make start-node` helper for its own integration tests, but that helper runs the test node directly with Cargo and is not the operator-facing Docker workflow.
+Docker Compose is the supported default path for running the current local node stack. The rust-sdk repo also has a `make start-node` helper for its own integration tests, but that helper runs the test node directly with Cargo and is not the operator-facing Docker workflow.
 
 ## Prerequisites
 
@@ -154,11 +154,11 @@ If the frontend itself runs inside Docker, `localhost` is the frontend container
 
 ## Rust client smoke test
 
-The miden-client integration test binary uses the same local network preset:
+The rust-sdk integration test binary uses the same local network preset:
 
 ```bash
-git clone https://github.com/0xMiden/miden-client.git
-cd miden-client
+git clone https://github.com/0xMiden/rust-sdk.git
+cd rust-sdk
 
 TEST_MIDEN_NETWORK=localhost \
   cargo run --package miden-client-integration-tests --release --locked -- \

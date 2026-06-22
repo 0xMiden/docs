@@ -35,7 +35,7 @@ The Web SDK is the browser-focused toolkit for the Miden network. It wraps the R
 └────────────────────────────────────────────────┘
 ```
 
-The SDK is built from the `web-client` Rust crate in [0xMiden/miden-client](https://github.com/0xMiden/miden-client), compiled with `wasm-bindgen`, and bundled with the WASM module, JavaScript bindings, and a dedicated Web Worker script.
+The SDK is built from the `web-client` Rust crate in [0xMiden/web-sdk](https://github.com/0xMiden/web-sdk), compiled with `wasm-bindgen`, and bundled with the WASM module, JavaScript bindings, and a dedicated Web Worker script.
 
 ## Resource management
 

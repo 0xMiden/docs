@@ -12,8 +12,8 @@ on:
       miden_tutorials_ref:
         description: "Ref for 0xMiden/tutorials"
         required: false
-      miden_client_ref:
-        description: "Ref for 0xMiden/miden-client"
+      rust_sdk_ref:
+        description: "Ref for 0xMiden/rust-sdk"
         required: false
       miden_node_ref:
         description: "Ref for 0xMiden/node"
@@ -74,9 +74,9 @@ jobs:
           [ -z "$tutorials_ref" ] && tutorials_ref="$tutorials_def"
           echo "MIDEN_TUTORIALS_REF=$tutorials_ref" >> $GITHUB_OUTPUT
 
-          client_ref='${{ inputs.miden_client_ref }}'
-          [ -z "$client_ref" ] && client_ref="$def"
-          echo "MIDEN_CLIENT_REF=$client_ref" >> $GITHUB_OUTPUT
+          rust_sdk_ref='${{ inputs.rust_sdk_ref }}'
+          [ -z "$rust_sdk_ref" ] && rust_sdk_ref="$def"
+          echo "RUST_SDK_REF=$rust_sdk_ref" >> $GITHUB_OUTPUT
 
           node_ref='${{ inputs.miden_node_ref }}'
           [ -z "$node_ref" ] && node_ref="$def"
@@ -97,7 +97,7 @@ jobs:
           echo "Resolved refs:"
           echo "  protocol:         $base_ref"
           echo "  tutorials:        $tutorials_ref"
-          echo "  miden-client:     $client_ref"
+          echo "  rust-sdk:         $rust_sdk_ref"
           echo "  node:             $node_ref"
           echo "  note-transport:   $note_transport_ref"
           echo "  miden-vm:         $vm_ref"
@@ -118,12 +118,12 @@ jobs:
           ref: ${{ steps.refs.outputs.MIDEN_TUTORIALS_REF }}
           path: vendor/tutorials
 
-      - name: Checkout 0xMiden/miden-client
+      - name: Checkout 0xMiden/rust-sdk
         uses: actions/checkout@v4
         with:
-          repository: 0xMiden/miden-client
-          ref: ${{ steps.refs.outputs.MIDEN_CLIENT_REF }}
-          path: vendor/miden-client
+          repository: 0xMiden/rust-sdk
+          ref: ${{ steps.refs.outputs.RUST_SDK_REF }}
+          path: vendor/rust-sdk
 
       - name: Checkout 0xMiden/node
         uses: actions/checkout@v4
@@ -156,7 +156,7 @@ jobs:
       # ============================================================
       # v0.4 IA: Aggregate into nested structure
       #   - Reference docs (protocol, miden-vm, compiler, node) → docs/reference/
-      #   - Builder docs (tutorials, miden-client) → docs/builder/
+      #   - Builder docs (tutorials, rust-sdk) → docs/builder/
       # ============================================================
       - name: Aggregate docs into single docs tree
         run: |
@@ -282,20 +282,20 @@ jobs:
             echo "Synced tutorials (miden-bank, components, img, theme, miden_node_setup.md, recipes/rust, recipes/web) → docs/builder/tutorials"
           fi
 
-          if [ -d "vendor/miden-client/docs/external/src" ]; then
+          if [ -d "vendor/rust-sdk/docs/external/src" ]; then
             mkdir -p docs/builder/tools/clients
-            # Selective ingestion: only subdirs/files we still auto-sync from miden-client.
+            # Selective ingestion: only subdirs/files we still auto-sync from rust-sdk.
             # web-client/, react-sdk/, and top-level index.md are locally authored in the docs repo
             # — they are preserved through this clean/ingest cycle.
             for name in rust-client img theme; do
-              src="vendor/miden-client/docs/external/src/$name"
+              src="vendor/rust-sdk/docs/external/src/$name"
               [ -d "$src" ] && cp -r "$src" docs/builder/tools/clients/
             done
             for name in common-errors.md _category_.yml; do
-              src="vendor/miden-client/docs/external/src/$name"
+              src="vendor/rust-sdk/docs/external/src/$name"
               [ -f "$src" ] && cp "$src" docs/builder/tools/clients/
             done
-            echo "Synced miden-client (rust-client, img, theme, common-errors, _category_) → docs/builder/tools/clients"
+            echo "Synced rust-sdk (rust-client, img, theme, common-errors, _category_) → docs/builder/tools/clients"
           fi
 
           if [ -d "vendor/note-transport-service/docs/external/src" ]; then
