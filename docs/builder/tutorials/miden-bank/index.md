@@ -30,20 +30,6 @@ This tutorial is designed for hands-on learning. Each part builds on the previou
 
 ### Parts Overview
 
-| Part       | Topic                                                    | What You'll Build                   |
-| ---------- | -------------------------------------------------------- | ----------------------------------- |
-| **Part 0** | [Project Setup](./00-project-setup.md)                   | Create project with `miden new`     |
-| **Part 1** | [Account Components](./01-account-components.md)         | Bank struct with storage            |
-| **Part 2** | [Constants & Constraints](./02-constants-constraints.md) | Business rules and validation       |
-| **Part 3** | [Asset Management](./03-asset-management.md)             | Deposit logic with balance tracking |
-| **Part 4** | [Note Scripts](./04-note-scripts.md)                     | Deposit note for receiving assets   |
-| **Part 5** | [Cross-Component Calls](./05-cross-component-calls.md)   | How bindings enable calls           |
-| **Part 6** | [Transaction Scripts](./06-transaction-scripts.md)       | Initialization script               |
-| **Part 7** | [Output Notes](./07-output-notes.md)                     | Withdraw with P2ID output           |
-| **Part 8** | [Complete Flows](./08-complete-flows.md)                 | End-to-end verification             |
-
-## Tutorial Cards
-
 <CardGrid cols={2}>
   <Card title="Project Setup" href="./project-setup" eyebrow="Part 0">
     Create your project with <code>miden new</code> and understand the workspace structure.
@@ -110,14 +96,6 @@ The complete source code for this tutorial is available in the [examples/miden-b
 git clone https://github.com/0xMiden/miden-tutorials.git
 cd miden-tutorials/examples/miden-bank
 ```
-
-## Supplementary Guides
-
-These standalone guides complement the tutorial:
-
-- **[Testing with MockChain](https://docs.miden.xyz/builder/tutorials/rust-compiler/testing)** - Learn to test your contracts
-- **[Debugging](https://docs.miden.xyz/builder/tutorials/rust-compiler/debugging)** - Troubleshoot common issues
-- **[Common Pitfalls](https://docs.miden.xyz/builder/tutorials/rust-compiler/pitfalls)** - Avoid known gotchas
 
 ## Getting Help
 
