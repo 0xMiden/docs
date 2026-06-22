@@ -2,7 +2,7 @@ version: "0.14" # the label to snapshot (used if no manual override)
 refs: # exact, immutable refs per source repo (tags or release branches)
   protocol: "refs/tags/v0.14.6"
   node: "refs/tags/v0.14.10"
-  miden-client: "refs/tags/v0.14.8"
+  rust-sdk: "refs/tags/v0.14.8"
   tutorials: "refs/heads/main"
   miden-vm: "refs/tags/v0.22.3"
   compiler: "refs/tags/v0.8.1"
