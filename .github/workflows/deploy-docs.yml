@@ -317,6 +317,12 @@ jobs:
       - name: Install deps
         run: npm install --frozen-lockfile
 
+      # Heal browser-relative internal links across the whole tree (current docs
+      # + every versioned_docs snapshot) before building. Versioned snapshots are
+      # not normalized in-repo, so this is where historical versions get fixed.
+      - name: Normalize docs links
+        run: npm run normalize-doc-links:all
+
       - name: Build site
         env:
           NODE_OPTIONS: "--max-old-space-size=12288" # 12GB
