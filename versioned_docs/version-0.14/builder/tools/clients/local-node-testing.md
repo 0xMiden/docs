@@ -72,7 +72,7 @@ make compose-genesis
 make compose-up
 ```
 
-For the full node operator workflow, see the [node usage guide](../../../reference/node/operator/usage.md#using-docker-compose).
+For the full node operator workflow, see the [node usage guide](../../../reference/node/operator/usage.md).
 
 ## Export the genesis account
 
