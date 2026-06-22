@@ -210,6 +210,19 @@ jobs:
             echo "Synced compiler → docs/reference/compiler"
           fi
 
+          # Rebase root-absolute internal links in ingested reference sections.
+          # Each section is ingested from a repo whose docs are their own standalone
+          # Docusaurus site (baseUrl "/"), so internal links are authored
+          # root-absolute (e.g. "/full-node/installation"). Mounted here under
+          # /reference/<section>/ and served per-version, those links lose the mount
+          # prefix and version segment and 404. The script converts them to
+          # version-safe relative .md links (resolved + validated by Docusaurus).
+          # A no-op for sections that already use relative links (protocol, miden-vm).
+          for section in protocol miden-vm node compiler; do
+            [ -d "docs/reference/$section" ] || continue
+            node scripts/rebase-ingested-links.mjs "docs/reference/$section"
+          done
+
           # Builder docs → docs/builder/*
           # Sync tutorials into tutorials — selective ingest.
           # rust-compiler/, index.md, miden-bank/index.md, recipes/_category_.json,
@@ -252,6 +265,15 @@ jobs:
             if [ -d "vendor/tutorials/docs/src/img" ]; then
               cp -r vendor/tutorials/docs/src/img docs/builder/tutorials/recipes/
             fi
+            # Depth fixup for the rust-client→recipes/rust rename. In the vendor
+            # tree rust-client/ sits directly under docs/src, so links up to the
+            # tutorials root use one "../" (e.g. ../miden_node_setup.md). The
+            # rename nests them one level deeper (recipes/rust/), so those links
+            # need an extra "../". Image refs (../img/...) are unaffected because
+            # the img dir is mirrored into recipes/ alongside them (above).
+            find docs/builder/tutorials/recipes/rust docs/builder/tutorials/recipes/web \
+              -type f \( -name '*.md' -o -name '*.mdx' \) -print0 2>/dev/null \
+              | xargs -0 perl -i -pe 's{\]\(\.\./miden_node_setup(\.md)?}{](../../miden_node_setup$1}g'
             # Restore locally-authored files over vendor versions.
             git checkout HEAD -- docs/builder/tutorials/miden-bank/index.md 2>/dev/null || true
             git checkout HEAD -- docs/builder/tutorials/recipes/_category_.json 2>/dev/null || true
