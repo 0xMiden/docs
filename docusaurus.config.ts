@@ -142,6 +142,9 @@ const config: Config = {
           // old /builder/guides/* paths to the new location.
           if (existingPath.startsWith("/builder/tutorials/helpers")) {
             redirects.push(existingPath.replace("/builder/tutorials/helpers", "/builder/guides"));
+            // The testing/debugging/pitfalls guides also previously lived under
+            // tutorials/rust-compiler/; the miden-bank tutorial still links there.
+            redirects.push(existingPath.replace("/builder/tutorials/helpers", "/builder/tutorials/rust-compiler"));
           }
           // tools/explorer renamed to tools/network (now covers status,
           // RPC, faucet, remote prover — not just the block explorer).
