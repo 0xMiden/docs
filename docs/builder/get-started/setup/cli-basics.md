@@ -29,7 +29,7 @@ You can unset it with `miden-client account --default none`.
 
 </details>
 
-This command creates a **BasicMutable** account with **private** storage mode, giving you full control while keeping your data confidential.
+This command creates a basic wallet account with **private** storage, giving you full control while keeping your data confidential.
 
 ### View Your Account
 
@@ -92,7 +92,7 @@ Storage:
 
 **Key Account Components:**
 
-- **Account ID**: Unique 120-bit identifier encoding the account type and storage mode
+- **Account ID**: Unique 120-bit identifier encoding the account visibility and version
 - **Vault**: Secure storage for your assets
 - **Storage**: Key-value store for account data (255 slots available)
 - **Code Commitment**: Hash of the account's smart contract logic
