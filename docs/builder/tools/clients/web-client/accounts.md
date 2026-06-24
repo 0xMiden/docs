@@ -9,34 +9,31 @@ sidebar_position: 3
 
 ## Account type and auth scheme values
 
-Account creation uses two small enums:
+Account creation uses a few small option values. Wallets are the default shape; faucet creation is selected with a faucet type literal; contract creation is selected by passing `components`.
 
 | Kind | Accepted values | Meaning |
 | --- | --- | --- |
-| `AccountType.FungibleFaucet` | `0` | Mintable token source |
-| `AccountType.NonFungibleFaucet` | `1` | Non-fungible token source |
-| `AccountType.RegularAccountImmutableCode` | `2` | Immutable wallet or contract |
-| `AccountType.RegularAccountUpdatableCode` | `3` | Mutable wallet or contract (default) |
+| faucet `type` field | `0` \| `1` | Fungible or non-fungible faucet selector |
 | `auth` field | `"falcon"` \| `"ecdsa"` | Signing scheme — Falcon is the default |
-| `storage` field | `"public"` \| `"private"` \| `"network"` | Visibility and persistence mode |
+| `storage` field | `"public"` \| `"private"` | Account visibility mode |
+| low-level `AccountType` | `AccountType.Public` \| `AccountType.Private` | WASM builder visibility flag |
 
-All snippets below use these names. The SDK also ships friendly aliases (`AccountType.MutableWallet`, `AccountType.ImmutableContract`, etc.) but prefer the canonical names above when writing TypeScript — the aliases currently fail strict type-checking in some builds.
+The v0.15 protocol no longer encodes wallet/faucet/contract role or mutability in the low-level `AccountType`; role comes from the create options and attached components.
 
 ## Create
 
 ### Wallet
 
 ```typescript
-import { MidenClient, AccountType } from "@miden-sdk/miden-sdk";
+import { MidenClient } from "@miden-sdk/miden-sdk";
 
 const client = await MidenClient.createTestnet();
 
-// Default: mutable wallet, private storage, Falcon auth
+// Default: wallet, private storage, Falcon auth
 const wallet = await client.accounts.create();
 
 // With explicit options
 const wallet2 = await client.accounts.create({
-  type: AccountType.RegularAccountImmutableCode, // immutable wallet
   storage: "public",
   auth: "ecdsa",
   seed: "my-seed", // hashed to 32 bytes via SHA-256
@@ -53,19 +50,24 @@ console.log(wallet.isRegularAccount());
 ### Faucet
 
 ```typescript
-import { MidenClient, AccountType } from "@miden-sdk/miden-sdk";
+import {
+  MidenClient,
+  type AccountTypeValue,
+} from "@miden-sdk/miden-sdk";
+
+const FUNGIBLE_FAUCET: AccountTypeValue = 0;
 
 const client = await MidenClient.createTestnet();
 
 const faucet = await client.accounts.create({
-  type: AccountType.FungibleFaucet,
+  type: FUNGIBLE_FAUCET,
   symbol: "TEST",
   decimals: 8,
   maxSupply: 10_000_000n, // number | bigint
 });
 
 const faucet2 = await client.accounts.create({
-  type: AccountType.FungibleFaucet,
+  type: FUNGIBLE_FAUCET,
   symbol: "DAG",
   decimals: 8,
   maxSupply: 10_000_000n,
@@ -81,7 +83,6 @@ Contract accounts hold custom MASM code. Compile the code into an `AccountCompon
 ```typescript
 import {
   MidenClient,
-  AccountType,
   AuthSecretKey,
   StorageSlot,
 } from "@miden-sdk/miden-sdk";
@@ -118,7 +119,6 @@ const seed = crypto.getRandomValues(new Uint8Array(32));
 const auth = AuthSecretKey.rpoFalconWithRNG(seed);
 
 const contract = await client.accounts.create({
-  type: AccountType.RegularAccountImmutableCode, // immutable contract
   seed,
   auth,
   components: [component],
@@ -143,7 +143,6 @@ import {
   MidenClient,
   AccountBuilder,
   AccountComponent,
-  AccountStorageMode,
   AccountType,
 } from "@miden-sdk/miden-sdk";
 
@@ -156,8 +155,7 @@ const account = new AccountBuilder(seed)
   .withAuthComponent(
     AccountComponent.createAuthComponentFromCommitment(commitment, 1),
   )
-  .accountType(AccountType.RegularAccountImmutableCode)
-  .storageMode(AccountStorageMode.public())
+  .accountType(AccountType.Public)
   .withBasicWalletComponent()
   .build().account;
 
@@ -259,7 +257,6 @@ await client.accounts.import({ file: accountFile });
 // 3. From a seed — PUBLIC ACCOUNTS ONLY.
 await client.accounts.import({
   seed: initSeed, // Uint8Array
-  type: AccountType.RegularAccountUpdatableCode, // mutable wallet
   auth: "falcon",
 });
 ```

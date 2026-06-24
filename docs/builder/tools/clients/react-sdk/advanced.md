@@ -99,7 +99,7 @@ const script = await txScript({
   ],
 });
 
-// Note script — v0.14 uses the @note_script attribute on a library proc
+// Note script — use the @note_script attribute on a library proc
 const attachScript = await noteScript({
   code: `
     use miden::protocol::active_note
@@ -132,7 +132,7 @@ const { initialize, sessionAccountId, isReady, step, error, reset } =
       await sendFromMainWallet(sessionAccountId);
     },
     assetId: usdcFaucetId,      // optional
-    walletOptions: { storageMode: "private", mutable: true },
+    walletOptions: { storageMode: "private" },
     pollIntervalMs: 3_000,      // default 3_000
     maxWaitMs: 60_000,          // default 60_000
   });
@@ -170,7 +170,8 @@ download(new Blob([dump]), "wallet-backup.json");
 // Positional: (storeDump, storeName, options?)
 const { importStore } = useImportStore();
 const client = useMidenClient();
-await importStore(uploadedDump, client.storeIdentifier(), { skipSync: false });
+const storeName = await client.storeIdentifier();
+await importStore(uploadedDump, storeName, { skipSync: false });
 ```
 
 `ImportStoreOptions` exposes `skipSync` (default `false`) so you can defer the post-import sync. There's no second "raw bytes" form — `importStore` takes the JSON dump string as its first argument and the target store name as its second.

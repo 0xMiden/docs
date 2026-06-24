@@ -33,12 +33,13 @@ console.log("Updated accounts:", summary.updatedAccounts().length);
 - `committedTransactions(): TransactionId[]` — transactions that were committed.
 - `updatedAccounts(): AccountId[]` — accounts whose onchain state advanced.
 
-## Sync with timeout
+## Timeout handling
 
 ```typescript
-// 30-second timeout
-const summary = await client.sync({ timeout: 30_000 });
+const summary = await client.sync();
 ```
+
+`client.sync()` does not take a timeout option. If a UI needs a wall-clock timeout, wrap the promise at the application layer.
 
 ## Auto-sync on creation
 
@@ -68,7 +69,7 @@ The SDK exposes two **standalone** functions (not methods on `MidenClient`) for 
 import { exportStore, importStore } from "@miden-sdk/miden-sdk";
 
 // Dump the store identified by storeName into a JSON string.
-const storeName = client.storeIdentifier(); // or pass your own storeName
+const storeName = await client.storeIdentifier(); // or pass your own storeName
 const dump = await exportStore(storeName);
 
 // Later — on another device, or after a page refresh — restore it.

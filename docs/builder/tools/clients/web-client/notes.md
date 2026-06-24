@@ -28,7 +28,7 @@ const unverified  = await client.notes.list({ status: "unverified" });
 const specific = await client.notes.list({ ids: [noteId1, noteId2] });
 
 for (const note of all) {
-  console.log(note.id().toString());
+  console.log(note.id()?.toString());
 }
 ```
 
@@ -45,7 +45,7 @@ Statuses:
 ```typescript
 const note = await client.notes.get("0xnote...");
 if (note) {
-  console.log(note.id().toString());
+  console.log(note.id()?.toString());
 }
 ```
 
@@ -66,7 +66,7 @@ const committedSent = await client.notes.listSent({ status: "committed" });
 const records = await client.notes.listAvailable({ account: wallet });
 
 for (const record of records) {
-  console.log("Note:", record.id().toString());
+  console.log("Note:", record.id()?.toString());
 }
 ```
 
@@ -81,7 +81,7 @@ const client = await MidenClient.createTestnet();
 
 // Import from a previously exported NoteFile
 const noteId = await client.notes.import(noteFile);
-console.log("Imported:", noteId.toString());
+console.log("Imported:", noteId);
 
 // Export — formats differ in completeness
 const idOnly  = await client.notes.export("0xnote...", { format: NoteExportFormat.Id });
