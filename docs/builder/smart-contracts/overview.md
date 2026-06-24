@@ -63,18 +63,25 @@ An account has four parts:
 Components are reusable code modules attached to accounts. Think of them as **traits or mixins**, not monolithic contracts. An account can have multiple components.
 
 ```rust
-#[component]
-struct MyWallet;
+use miden::{component, component_storage, Asset};
+
+#[component_storage]
+struct MyWalletStorage;
 
 #[component]
-impl MyWallet {
-    pub fn receive_asset(&mut self, asset: Asset) {
+trait MyWallet {
+    fn receive_asset(&mut self, asset: Asset);
+}
+
+#[component]
+impl MyWallet for MyWalletStorage {
+    fn receive_asset(&mut self, asset: Asset) {
         self.add_asset(asset);
     }
 }
 ```
 
-Each component defines its own storage layout and public methods. The `#[component]` macro generates the necessary WIT (WebAssembly Interface Type) definitions for cross-component interoperability.
+Each component defines its own storage layout and public methods. In the Rust SDK, storage lives on a `#[component_storage]` struct, the public API is a `#[component]` trait, and the `#[component] impl` block provides the behavior. The macro generates the necessary WIT (WebAssembly Interface Type) definitions for cross-component interoperability.
 
 See [Components](./accounts/components) for full details.
 
@@ -90,7 +97,7 @@ Notes are similar to Bitcoin's UTXOs, but with arbitrary programmable logic. A n
 
 - **Assets**: The tokens or NFTs being transferred
 - **Script**: Code that executes when the note is consumed (e.g., "only account X can claim this")
-- **Inputs**: Custom data the script can read
+- **Storage**: Custom data the script can read
 
 The most common pattern is **P2ID** (Pay to ID) — a note that can only be consumed by a specific account.
 
@@ -139,14 +146,14 @@ A separate failure mode is the [empty transaction](../tutorials/helpers/pitfalls
 
 ## Account types
 
-Miden supports four account types, set at deployment time. The same types are used regardless of authoring language:
+`AccountType` now controls account-state visibility:
 
 | Type | Description |
 |------|-------------|
-| `RegularAccountUpdatableCode` | Standard account — code can be updated after deployment |
-| `RegularAccountImmutableCode` | Account with fixed code — cannot be changed after deployment |
-| `FungibleFaucet` | Token minting account (fungible assets) |
-| `NonFungibleFaucet` | NFT minting account (non-fungible assets) |
+| `AccountType::Private` | Only a state commitment is stored onchain; the account owner keeps the full state offchain |
+| `AccountType::Public` | Full account state is stored onchain and visible to observers |
+
+Wallet, contract, and faucet behavior comes from the components and configuration attached to the account. For example, a wallet account typically combines `BasicWallet` with an authentication component, while a fungible token issuer uses the standard `FungibleFaucet` component and token policies.
 
 ## Where to go next
 
@@ -168,7 +175,7 @@ Miden supports four account types, set at deployment time. The same types are us
 | [Account Operations](./accounts/account-operations) | Read/write account state and vault |
 | [Notes](./notes/) | Programmable UTXOs for asset transfers |
 | [Transactions](./transactions/) | Transaction context, scripts, and the advice provider |
-| [Authentication](./accounts/authentication) | RPO-Falcon512 signatures and replay protection |
+| [Authentication](./accounts/authentication) | Falcon-512 Poseidon2 signatures and replay protection |
 | [Cross-Component Calls](./cross-component-calls) | Inter-component communication |
 | [Types](./types) | Felt, Word, Asset — the VM's native types |
 | [Patterns](./patterns) | Access control, rate limiting, spending limits, anti-patterns |

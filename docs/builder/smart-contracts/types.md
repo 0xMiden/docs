@@ -33,8 +33,8 @@ let answer = felt!(42);
 // From u32 (always safe)
 let f = Felt::from_u32(255);
 
-// From u64 (infallible — values are reduced into canonical form internally)
-let f = Felt::new(1_000_000_000);
+// From u64 (fallible if the value is outside the field)
+let f = Felt::new(1_000_000_000).unwrap();
 
 // Built-in zero / one constants
 let z = Felt::ZERO;
@@ -42,7 +42,7 @@ let o = Felt::ONE;
 ```
 
 :::info `felt!()` range limitation
-The `felt!()` macro currently only accepts values up to `u32::MAX` (4,294,967,295). For larger values, use `Felt::new()`. This limitation may be lifted in a future release.
+The `felt!()` macro currently only accepts values up to `u32::MAX` (4,294,967,295). For larger values, use `Felt::new(...).unwrap()` or handle the error. This limitation may be lifted in a future release.
 :::
 
 ### Arithmetic
@@ -68,7 +68,7 @@ x *= felt!(2);          // x is now felt!(12)
 ```
 
 :::note For business logic, prefer u64
-For computing amounts, balances, counters, or any value where overflow/underflow behavior matters, convert to `u64` first, perform the arithmetic, then convert back with `Felt::new()`.
+For computing amounts, balances, counters, or any value where overflow/underflow behavior matters, convert to `u64` first, perform the arithmetic, then convert back with `Felt::new(...).unwrap()` or explicit error handling.
 :::
 
 ### Comparison and conversion
@@ -77,28 +77,28 @@ For computing amounts, balances, counters, or any value where overflow/underflow
 let f = felt!(42);
 
 // Convert to u64 (canonical representation)
-let n: u64 = f.as_u64();
+let n: u64 = f.as_canonical_u64();
 
 // Equality comparison
 if f == felt!(42) { /* ... */ }
 
 // For numeric comparisons, convert to u64 first
-if f.as_u64() > 100 { /* ... */ }
+if f.as_canonical_u64() > 100 { /* ... */ }
 
 // Check parity
 if f.is_odd() { /* ... */ }
 ```
 
 :::tip Integer arithmetic on Felt values
-Converting `Felt` to `u64` with `.as_u64()` gives you standard Rust integer arithmetic — with overflow and underflow protection from Rust's debug-mode checks and `saturating_*` / `checked_*` methods. For business logic involving amounts, limits, or counters, prefer `u64` arithmetic:
+Converting `Felt` to `u64` with `.as_canonical_u64()` gives you standard Rust integer arithmetic — with overflow and underflow protection from Rust's debug-mode checks and `saturating_*` / `checked_*` methods. For business logic involving amounts, limits, or counters, prefer `u64` arithmetic:
 
 ```rust
 // Convert, compute in u64, convert back
-let a: u64 = felt_a.as_u64();
-let b: u64 = felt_b.as_u64();
+let a: u64 = felt_a.as_canonical_u64();
+let b: u64 = felt_b.as_canonical_u64();
 let sum = a.saturating_add(b); // safe addition
 let diff = a.saturating_sub(b); // no underflow
-let result = Felt::new(sum);
+let result = Felt::new(sum).unwrap();
 ```
 :::
 
@@ -171,20 +171,20 @@ Since each storage slot holds one `Word`, you'll often pack multiple values:
 ```rust
 // Pack two u64 values into a Word
 let config = Word::new([
-    Felt::new(max_amount),    // a: max amount
-    Felt::new(cooldown),      // b: cooldown blocks
+    Felt::new(max_amount).unwrap(),    // a: max amount
+    Felt::new(cooldown).unwrap(),      // b: cooldown blocks
     felt!(0),                 // c: unused
     felt!(0),                 // d: unused
 ]);
 
 // Unpack via named fields
-let max_amount = config.a.as_u64();
-let cooldown = config.b.as_u64();
+let max_amount = config.a.as_canonical_u64();
+let cooldown = config.b.as_canonical_u64();
 ```
 
 ## Asset
 
-`Asset` represents either a fungible or non-fungible asset. In v0.14 it is **two words** — a `key` (identifies the asset class) and a `value` (encodes the fungible amount or non-fungible data).
+`Asset` represents either a fungible or non-fungible asset. In v0.15 contract code it is **two words** — a `key` (an asset vault key identifying the asset class and composition) and a `value` (encoding the fungible amount or non-fungible data).
 
 ```rust
 pub struct Asset {
@@ -201,7 +201,7 @@ pub struct Asset {
 |----------|-------|---------|
 | `key`    | `a`   | `0` |
 | `key`    | `b`   | `0` |
-| `key`    | `c`   | Faucet ID suffix |
+| `key`    | `c`   | Faucet ID suffix plus metadata byte |
 | `key`    | `d`   | Faucet ID prefix |
 | `value`  | `a`   | Amount |
 | `value`  | `b`   | `0` |
@@ -214,9 +214,11 @@ pub struct Asset {
 |----------|-------|---------|
 | `key`    | `a`   | Data hash element 0 |
 | `key`    | `b`   | Data hash element 1 |
-| `key`    | `c`   | Faucet ID suffix |
+| `key`    | `c`   | Faucet ID suffix plus metadata byte |
 | `key`    | `d`   | Faucet ID prefix |
 | `value`  | `a..d`| Data payload (implementation-defined) |
+
+The low metadata byte in `key.c` encodes `AssetComposition` in bits 0-1 and the callback flag in bit 2. Use the protocol helpers instead of hand-decoding this byte.
 
 ### Working with assets
 
@@ -224,22 +226,22 @@ pub struct Asset {
 use miden::{Asset, Word, felt};
 
 // Build a fungible asset from key + value words.
-// Fungible key = [0, 0, faucet_suffix, faucet_prefix],
+// Fungible key = [0, 0, faucet_suffix_with_metadata, faucet_prefix],
 // fungible value = [amount, 0, 0, 0].
 let asset = Asset::new(
-    Word::from([felt!(0), felt!(0), faucet_suffix, faucet_prefix]),
+    Word::from([felt!(0), felt!(0), faucet_suffix_with_metadata, faucet_prefix]),
     Word::from([felt!(100), felt!(0), felt!(0), felt!(0)]),
 );
 
 // Read the amount (fungible): first limb of `value`.
-let amount: u64 = asset.value.a.as_u64();
+let amount: u64 = asset.value.a.as_canonical_u64();
 
 // Build a fungible asset from faucet ID + amount via the SDK helper.
 use miden::asset;
-let asset = asset::create_fungible_asset(faucet_id, felt!(1000));
+let asset = asset::create_fungible_asset(faucet_id, felt!(1000), false);
 
 // Build a non-fungible asset.
-let nft = asset::create_non_fungible_asset(faucet_id, data_hash);
+let nft = asset::create_non_fungible_asset(faucet_id, data_hash, false);
 ```
 
 :::note Asset on the host side
@@ -276,9 +278,9 @@ The SDK also provides `NoteIdx`, `Tag`, `NoteType`, `Recipient`, `Digest`, and `
 | From | To | Method |
 |------|----|--------|
 | `u32` | `Felt` | `Felt::from_u32(n)` |
-| `u64` | `Felt` | `Felt::new(n)` |
+| `u64` | `Felt` | `Felt::new(n).unwrap()` |
 | literal | `Felt` | `felt!(n)` |
-| `Felt` | `u64` | `f.as_u64()` |
+| `Felt` | `u64` | `f.as_canonical_u64()` |
 | `[Felt; 4]` | `Word` | `Word::new(arr)` or `Word::from(arr)` |
 | `[u32; 4]` / `[u16; 4]` / `[u8; 4]` / `[bool; 4]` | `Word` | `Word::from(arr)` |
 | `Word` | `[Felt; 4]` | `w.into_elements()` or `let arr: [Felt; 4] = w.into()` |

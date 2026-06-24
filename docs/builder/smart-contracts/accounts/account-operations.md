@@ -12,15 +12,15 @@ The `#[component]` macro automatically provides methods on `self` for interactin
 
 ```rust
 #[component]
-impl MyAccount {
-    pub fn check_state(&self) {
+impl MyAccount for MyAccountStorage {
+    fn check_state(&self) {
         // Account identity
         let id: AccountId = self.get_id();
         let nonce: Felt = self.get_nonce();
 
         // Vault queries
-        let balance: Felt = self.get_balance(faucet_id);
-        let initial: Felt = self.get_initial_balance(faucet_id);
+        let balance: Felt = self.get_balance(asset_key);
+        let initial: Felt = self.get_initial_balance(asset_key);
         let has_nft: bool = self.has_non_fungible_asset(asset);
         let root: Word = self.get_vault_root();
         let initial_root: Word = self.get_initial_vault_root();
@@ -44,20 +44,20 @@ impl MyAccount {
 
 ```rust
 #[component]
-impl MyAccount {
-    pub fn receive_asset(&mut self, asset: Asset) {
+impl MyAccount for MyAccountStorage {
+    fn receive_asset(&mut self, asset: Asset) {
         // Add an asset to the vault — returns the asset as stored
         let stored: Asset = self.add_asset(asset);
     }
 
-    pub fn send_asset(&mut self, asset: Asset, note_idx: NoteIdx) {
+    fn send_asset(&mut self, asset: Asset, note_idx: NoteIdx) {
         // Remove an asset from the vault — returns the removed asset
         // Proof generation fails if the asset doesn't exist or insufficient balance
         let removed: Asset = self.remove_asset(asset);
         output_note::add_asset(removed, note_idx);
     }
 
-    pub fn auth(&mut self) {
+    fn auth(&mut self) {
         // Increment the account nonce (replay protection)
         let new_nonce: Felt = self.incr_nonce();
 
@@ -81,7 +81,7 @@ Several operations cause proof generation to fail if preconditions aren't met:
 | Operation | Fails when |
 |-----------|-----------|
 | `remove_asset(asset)` | Asset not in vault or insufficient balance |
-| `get_balance(faucet_id)` | Referenced asset is non-fungible |
+| `get_balance(asset_key)` | Referenced asset key is non-fungible or invalid |
 | `get_procedure_root(index)` | Index out of bounds |
 | Any `assert!()` | Condition is false |
 | Transaction body (overall) | No state change occurred **and** no notes were consumed |
@@ -100,27 +100,34 @@ The last row is enforced at end-of-execution by the VM kernel rather than mid-ex
 #![no_std]
 #![feature(alloc_error_handler)]
 
-use miden::{component, output_note, Asset, AccountId, NoteIdx, Felt};
+use miden::{component, component_storage, output_note, Asset, Felt, NoteIdx, Word};
+
+#[component_storage]
+struct ManagedWalletStorage;
 
 #[component]
-struct ManagedWallet;
+trait ManagedWallet {
+    fn receive_asset(&mut self, asset: Asset);
+    fn send_asset(&mut self, asset: Asset, note_idx: NoteIdx);
+    fn balance_of(&self, asset_key: Word) -> Felt;
+}
 
 #[component]
-impl ManagedWallet {
+impl ManagedWallet for ManagedWalletStorage {
     /// Receive an asset into the vault.
-    pub fn receive_asset(&mut self, asset: Asset) {
+    fn receive_asset(&mut self, asset: Asset) {
         self.add_asset(asset);
     }
 
     /// Send an asset to an output note, with balance check.
-    pub fn send_asset(&mut self, asset: Asset, note_idx: NoteIdx) {
+    fn send_asset(&mut self, asset: Asset, note_idx: NoteIdx) {
         let removed = self.remove_asset(asset);
         output_note::add_asset(removed, note_idx);
     }
 
     /// Query the balance of a fungible asset.
-    pub fn balance_of(&self, faucet_id: AccountId) -> Felt {
-        self.get_balance(faucet_id)
+    fn balance_of(&self, asset_key: Word) -> Felt {
+        self.get_balance(asset_key)
     }
 }
 ```

@@ -7,6 +7,8 @@ description: "Author Miden smart contracts in Rust — the long-term direction f
 
 The Rust SDK is the long-term direction for Miden smart-contract development: define account components, note scripts, and transaction scripts in idiomatic `#![no_std]` Rust with typed storage, attribute macros, and client-side proving. The SDK compiles to Miden Assembly (MASM) under the hood, so the same execution model and standards library apply.
 
+The examples in this section assume protocol v0.15.3, Miden VM / Assembly v0.23, miden-crypto v0.25, and the Miden SDK v0.13 macro surface.
+
 :::caution Currently in active development
 The Rust SDK is being actively developed and is **not yet production-ready for mainnet**. For production deployments today, write contracts in [Miden Assembly (MASM)](../masm/) — the supported path Miden mainnet verifies. Use the Rust SDK for prototyping, experimentation, and exploration of the long-term direction.
 :::

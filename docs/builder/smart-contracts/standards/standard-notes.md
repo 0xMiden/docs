@@ -24,7 +24,7 @@ For the note model itself, start with [What are Notes?](../notes/introduction). 
 
 ```rust title="Create a public P2ID note"
 use miden_protocol::Word;
-use miden_protocol::account::{AccountId, AccountIdVersion, AccountStorageMode, AccountType};
+use miden_protocol::account::{AccountId, AccountIdVersion, AccountType};
 use miden_protocol::asset::{Asset, FungibleAsset};
 use miden_protocol::crypto::rand::RandomCoin;
 use miden_protocol::note::{NoteAttachments, NoteType};
@@ -37,14 +37,13 @@ fn dummy_account(byte: u8, account_type: AccountType) -> AccountId {
         bytes,
         AccountIdVersion::Version1,
         account_type,
-        AccountStorageMode::Public,
     )
 }
 
 fn create_p2id_note() -> Result<(), Box<dyn std::error::Error>> {
-    let sender = dummy_account(1, AccountType::RegularAccountImmutableCode);
-    let target = dummy_account(2, AccountType::RegularAccountImmutableCode);
-    let faucet_id = dummy_account(3, AccountType::FungibleFaucet);
+    let sender = dummy_account(1, AccountType::Public);
+    let target = dummy_account(2, AccountType::Public);
+    let faucet_id = dummy_account(3, AccountType::Public);
     let asset: Asset = FungibleAsset::new(faucet_id, 100)?.into();
     let mut rng = RandomCoin::new(Word::from([1, 2, 3, 4u32]));
 
@@ -53,7 +52,7 @@ fn create_p2id_note() -> Result<(), Box<dyn std::error::Error>> {
         target,
         vec![asset],
         NoteType::Public,
-        NoteAttachments::default(),
+        NoteAttachments::empty(),
         &mut rng,
     )?;
 
@@ -61,10 +60,6 @@ fn create_p2id_note() -> Result<(), Box<dyn std::error::Error>> {
     Ok(())
 }
 ```
-
-:::info v0.14 differences
-PSWAP is part of the current unstable standards surface, but it is not available in the v0.14 standards snapshot. Use the v0.14 versioned docs if you are building against the v0.14 crates.
-:::
 
 ## Account requirements
 

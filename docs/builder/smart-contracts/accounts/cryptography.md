@@ -1,14 +1,14 @@
 ---
 title: "Cryptography"
 sidebar_position: 5
-description: "RPO-Falcon512 signature verification and hashing primitives in Miden contracts."
+description: "Falcon-512 Poseidon2 signature verification and hashing primitives in Miden contracts."
 ---
 
 # Cryptography
 
 The Miden SDK exposes cryptographic primitives for signature verification and hashing. These are low-level functions used by authentication components and anywhere message digests or hash-based commitments are needed.
 
-## RPO-Falcon512 verification
+## Falcon-512 Poseidon2 verification
 
 The core function for signature verification:
 
@@ -16,20 +16,20 @@ The core function for signature verification:
 use miden::rpo_falcon512_verify;
 
 // Verify a Falcon512 signature
-// pk: RPO256 hash of the public key
-// msg: RPO256 hash of the message
+// pk: Poseidon2 hash of the public key
+// msg: Poseidon2 hash of the message
 rpo_falcon512_verify(pk, msg);
 ```
 
 | Parameter | Type | Description |
 |-----------|------|-------------|
-| `pk` | `Word` | RPO256 hash of the signer's public key |
-| `msg` | `Word` | RPO256 hash of the message being verified |
+| `pk` | `Word` | Poseidon2 hash of the signer's public key |
+| `msg` | `Word` | Poseidon2 hash of the message being verified |
 
 The function panics (proof generation fails) if the signature is invalid.
 
 :::info Where's the signature?
-The actual signature data is loaded onto the advice stack by the host. The `rpo_falcon512_verify` function reads it from there. You don't pass the signature as an argument.
+The actual signature data is loaded onto the advice stack by the host. The Rust helper is still named `rpo_falcon512_verify` for compatibility, but the v0.15 verifier uses Falcon-512 over Poseidon2. You don't pass the signature as an argument.
 :::
 
 ## Hashing

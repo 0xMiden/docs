@@ -8,6 +8,8 @@ pagination_prev: null
 
 This section covers the developer-facing paths for building smart contracts on Miden: an authoring guide for **Miden Assembly (MASM)** (the supported path for mainnet production today) and **Rust** (in active development as the long-term direction), plus the [Miden Standards](./standards/) library of reusable components callable from either.
 
+These pages track protocol v0.15.3, Miden VM / Assembly v0.23, miden-crypto v0.25, and the Rust smart-contract SDK macro surface from Miden SDK v0.13.
+
 :::tip Building for mainnet?
 Miden mainnet supports smart contracts authored in **Miden Assembly (MASM)** today. The Rust SDK is in active development and will become the default authoring path once it ships v1. For production deployments now, see [MASM Smart Contracts](./masm/).
 :::

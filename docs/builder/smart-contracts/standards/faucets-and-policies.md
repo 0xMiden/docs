@@ -9,10 +9,6 @@ In Miden, a token issuer is an account. The current `FungibleFaucet` component b
 
 Use this page when you need to create a faucet account, decide who can mint or burn, or understand how faucet behavior relates to standard notes.
 
-:::info v0.14 differences
-The current unstable standards surface uses a unified `FungibleFaucet` component and a richer `TokenPolicyManager`. The v0.14 snapshot uses separate `BasicFungibleFaucet` and `NetworkFungibleFaucet` components plus mint-policy components. Use the versioned docs if you are building against v0.14.
-:::
-
 ## Faucet component
 
 The current standard fungible faucet component is `FungibleFaucet`.
@@ -27,25 +23,29 @@ The current standard fungible faucet component is `FungibleFaucet`.
 Public state is typical for shared token faucets because clients can discover faucet state, metadata, code, and vault changes. Private state is possible, but it changes who can observe the faucet.
 
 ```rust title="Create a fungible faucet with allow-all policies"
-use miden_protocol::Word;
-use miden_protocol::account::AccountStorageMode;
-use miden_protocol::account::auth::{AuthScheme, PublicKeyCommitment};
-use miden_protocol::asset::{AssetAmount, TokenSymbol};
+use miden_client::{
+    account::{
+        AccountType,
+        component::{
+            AccessControl,
+            BurnPolicyConfig,
+            FungibleFaucet,
+            MintPolicyConfig,
+            PolicyRegistration,
+            TokenName,
+            TokenPolicyManager,
+            TransferPolicy,
+            create_fungible_faucet,
+        },
+    },
+    asset::TokenSymbol,
+};
+use miden_protocol::{
+    account::auth::{AuthScheme, PublicKeyCommitment},
+    asset::AssetAmount,
+    Word,
+};
 use miden_standards::AuthMethod;
-use miden_standards::account::access::AccessControl;
-use miden_standards::account::faucets::{
-    Description,
-    FungibleFaucet,
-    TokenName,
-    create_fungible_faucet,
-};
-use miden_standards::account::policies::{
-    BurnPolicyConfig,
-    MintPolicyConfig,
-    PolicyRegistration,
-    TokenPolicyManager,
-    TransferPolicy,
-};
 
 fn create_faucet_account() -> Result<(), Box<dyn std::error::Error>> {
     let public_key = PublicKeyCommitment::from(Word::from([1, 2, 3, 4u32]));
@@ -55,7 +55,6 @@ fn create_faucet_account() -> Result<(), Box<dyn std::error::Error>> {
         .symbol(TokenSymbol::new("EXT")?)
         .decimals(6)
         .max_supply(AssetAmount::from(1_000_000u32))
-        .description(Description::new("Example token")?)
         .build()?;
 
     let policies = TokenPolicyManager::new()
@@ -67,7 +66,7 @@ fn create_faucet_account() -> Result<(), Box<dyn std::error::Error>> {
     let account = create_fungible_faucet(
         [9; 32],
         faucet,
-        AccountStorageMode::Public,
+        AccountType::Public,
         AuthMethod::SingleSig {
             approver: (public_key, AuthScheme::Falcon512Poseidon2),
         },
@@ -75,7 +74,7 @@ fn create_faucet_account() -> Result<(), Box<dyn std::error::Error>> {
         policies,
     )?;
 
-    assert!(account.is_faucet());
+    assert_eq!(account.account_type(), AccountType::Public);
     Ok(())
 }
 ```
@@ -93,7 +92,7 @@ A fungible asset is tied to its faucet account ID. The faucet's metadata describ
 | Optional metadata | Optional display fields such as description, logo URI, and external link. |
 | Faucet account ID | The issuer ID used when constructing fungible assets and checking balances. |
 
-When an account checks its balance for a fungible token, it queries by the faucet account ID.
+When an account checks its balance for a fungible token at the protocol/client layer, it queries by the asset's `AssetVaultKey`, which is derived from the faucet account ID and callback flag.
 
 ## Choose policy modules
 
@@ -101,10 +100,10 @@ Policy modules decide which operations are allowed for a token faucet.
 
 | Policy area | Current standard examples | Use it for |
 |-------------|---------------------------|------------|
-| Mint | `MintAllowAll`, `MintOwnerOnly` | Gate mint operations. |
-| Burn | `BurnAllowAll`, `BurnOwnerOnly` | Gate burn operations. |
-| Send | `TransferAllowAll`, `BasicBlocklist`, `OwnerControlledBlocklist` | Gate assets leaving accounts through notes. |
-| Receive | `TransferAllowAll`, `BasicBlocklist`, `OwnerControlledBlocklist` | Gate assets entering account vaults. |
+| Mint | `MintPolicyConfig::AllowAll`, `MintPolicyConfig::OwnerOnly` | Gate mint operations. |
+| Burn | `BurnPolicyConfig::AllowAll`, `BurnPolicyConfig::OwnerOnly` | Gate burn operations. |
+| Send | `TransferPolicy::AllowAll`, `BasicBlocklist`, `BlocklistOwnerControlled` | Gate assets leaving accounts through notes. |
+| Receive | `TransferPolicy::AllowAll`, `BasicBlocklist`, `BlocklistOwnerControlled` | Gate assets entering account vaults. |
 
 `TokenPolicyManager` owns the active policy roots and validates policy changes. Authority for changing policies comes from the account's access-control setup, such as owner-controlled or role-based authority.
 
@@ -142,5 +141,5 @@ If you only need additional public methods, compose the faucet account with an e
 
 - [Account components](./account-components) - composing faucets with standard auth and ownership components
 - [Standard notes](./standard-notes) - mint and burn notes
-- [Assets, Vault, and Faucet migration notes](../../migration/asset-vault-faucet) - v0.14 asset and faucet changes
+- [Assets, Vault, and Faucet migration notes](../../migration/asset-vault-faucet) - asset and faucet changes
 - [`miden-standards` faucet source](https://github.com/0xMiden/protocol/tree/next/crates/miden-standards/src/account/faucets) - current implementation
