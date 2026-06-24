@@ -73,7 +73,9 @@ let faucet = FungibleFaucet::builder()
 
 A new **`AssetComposition`** enum (`None`, `Fungible`, `Custom`) discriminates assets, and the asset vault key's metadata byte now encodes the composition (plus the asset‑callback flag). `AssetVaultKey::new(asset_id, faucet_id, composition, callback_flag)` is the general constructor; `AssetVaultKey::new_fungible(faucet_id, callback_flag)` is the fungible shortcut. (`Custom` composition is reserved and currently rejected.)
 
+**What composition means:** it describes how two instances of the same asset combine in a vault — `None` (non‑fungible: instances never merge), `Fungible` (instances merge by summing amounts), and `Custom` (reserved for faucet‑defined logic; rejected at construction today). Because composition is carried in the key's metadata byte rather than derived from the faucet ID, the vault key is self‑describing. Read it back with `AssetVaultKey::composition()` and the callback flag with `AssetVaultKey::callback_flag()`. See the [asset encoding reference](../../reference/protocol/asset#encoding) and [composition reference](../../reference/protocol/asset#composition) for the full layout, and [MASM Changes](./masm-changes#asset-vault-key-composition) for the procedure‑level effects.
+
 ### Migration Steps
 
 1. Where you constructed a raw vault key word, use `AssetVaultKey::new_fungible` / `AssetVaultKey::new`.
-2. Branch on `AssetComposition` (via `key.composition()`) instead of inspecting raw bits.
+2. Branch on `AssetComposition` (via `AssetVaultKey::composition()`) instead of inspecting raw bits.

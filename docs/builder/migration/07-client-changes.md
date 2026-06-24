@@ -48,7 +48,7 @@ let account: Option<Account> = rpc_api.get_account_details(account_id).await?;
 
 ### Summary
 Several `NodeRpcClient` methods changed to match the `0.15` RPC definitions:
-- `sync_chain_mmr`'s `block_to: Option<BlockNumber>` became `upper_bound: SyncTarget`. Use `SyncTarget::CommittedChainTip` for the old `None` behavior, `SyncTarget::ProvenChainTip` for the latest proven block, or `SyncTarget::BlockNumber(n)` for a specific height.
+- `sync_chain_mmr`'s `block_to: Option<BlockNumber>` became `upper_bound: SyncTarget`. `SyncTarget` has exactly two variants: use `SyncTarget::CommittedChainTip` for the old `None` behavior, or `SyncTarget::ProvenChainTip` for the latest proven block. There is no explicit block-height target.
 - `check_nullifiers` (and `RpcEndpoint::CheckNullifiers`, `EndpointError::CheckNullifiers`, `CheckNullifiersError`) were **removed**. Use `sync_nullifiers` to retrieve nullifier updates.
 - `sync_nullifiers`, `sync_notes`, `sync_notes_with_details`, `sync_storage_maps`, and `sync_account_vault` lost their `Option<BlockNumber>` upper bound in favor of a required `block_to: BlockNumber`.
 - `get_block_by_number` gained an `include_proof: bool` parameter.
@@ -66,7 +66,7 @@ let block = rpc_api.get_block_by_number(block_num, /* include_proof */ false).aw
 ```
 
 ### Migration Steps
-1. Replace `sync_chain_mmr(_, None)` with `sync_chain_mmr(_, SyncTarget::CommittedChainTip)`; map any explicit `Some(n)` to `SyncTarget::BlockNumber(n)`.
+1. Replace `sync_chain_mmr(_, None)` with `sync_chain_mmr(_, SyncTarget::CommittedChainTip)`. v0.15 dropped explicit-height targeting, so map any explicit `Some(n)` to `SyncTarget::CommittedChainTip` as well (or `SyncTarget::ProvenChainTip` if you need the latest proven block).
 2. Replace `check_nullifiers` with `sync_nullifiers` and adapt to `Vec<NullifierUpdate>` (drop the `SmtProof` path).
 3. Pass an explicit `block_to` (e.g. the client's current sync height / chain tip) to `sync_nullifiers`, `sync_notes`, `sync_storage_maps`, `sync_account_vault`.
 4. Add `include_proof` to `get_block_by_number` calls (`false` unless you need the block proof).
