@@ -169,5 +169,6 @@ If your project builds and all tests pass, you've successfully migrated to v0.15
 ## Need Help?
 
 - **Telegram:** [Build on Miden](https://t.me/BuildOnMiden) — technical discussion and support.
+- **Forum:** [Miden discussions](https://github.com/0xMiden/miden-node/discussions) — longer-form questions and design discussion.
 - **GitHub issues:** file against the relevant repo — [`miden-client`](https://github.com/0xMiden/miden-client/issues), [`web-sdk`](https://github.com/0xMiden/web-sdk/issues), [`protocol`](https://github.com/0xMiden/protocol/issues), or [`miden-vm`](https://github.com/0xMiden/miden-vm/issues).
 - **Changelogs:** the per-repo `CHANGELOG.md` files carry the full list of changes, including non-breaking features and fixes omitted from this guide.
