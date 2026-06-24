@@ -354,6 +354,7 @@ const sidebars: SidebarsConfig = {
         "builder/migration/client-changes",
         "builder/migration/masm-changes",
         "builder/migration/vm-assembler",
+        "builder/migration/rust-sdk-compiler",
       ],
     },
     { type: "doc", id: "builder/glossary" },
