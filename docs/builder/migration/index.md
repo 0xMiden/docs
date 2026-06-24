@@ -10,9 +10,10 @@ This guide covers all breaking changes you need to migrate an application to Mid
 - building accounts, notes, or transactions
 - running a client, web client or React SDK
 - writing or compiling MASM
+- writing Rust smart contracts with the `miden` SDK
 - interacting with storage, auth, or RPCs
 
-this document is for you. It folds together the breaking changes from the protocol crates (`miden-base`, `0.14` → `0.15.3`), the VM crates (`miden-vm`, `0.22` → `0.23`), `miden-client` (`0.14` → `0.15`), and the Web SDK (`@miden-sdk/*` `0.14` → `0.15`). Because `miden-client` and the Web SDK still ship from unified-in-progress `main`/`next` branches, this guide unions the breaking surface from both.
+this document is for you. It folds together the breaking changes from the protocol crates (`miden-base`, `0.14` → `0.15.3`), the VM crates (`miden-vm`, `0.22` → `0.23`), `miden-client` (`0.14` → `0.15`), the Web SDK (`@miden-sdk/*` `0.14` → `0.15`), and the `miden` Rust SDK / compiler (`0.12` → `0.13`). Because `miden-client` and the Web SDK still ship from unified-in-progress `main`/`next` branches, this guide unions the breaking surface from both.
 
 ---
 
@@ -96,6 +97,7 @@ Big themes in 0.15:
 | **VM 0.23 / crypto 0.25 are digest-changing** | SMT leaf hashing gains a Poseidon2 domain separator, the MAST wire format bumped `0.0.2` → `0.0.3` (old `.masl`/`.masp` won't load), execution is **sync-first** (`BaseHost`/`SyncHost`; `execute` → `ExecutionOutput`), and `adv_push.N` was removed. |
 | **Client RPC rebuilt around `GetAccount`** | `get_account_proof`/`get_account_details` reshaped, `check_nullifiers` removed (use `sync_nullifiers`), most sync methods now require an explicit `block_to`. |
 | **Web SDK on the 0.15 protocol surface** | `"network"` storage mode is gone, the WASM `AccountType` narrowed to `{ Private, Public }`, attachments are word-vector-shaped, `Felt`/`Word` throw on overflow, several methods return `undefined`/`string`, `proveTransactionWithProver` is renamed `proveTransaction`, and `storeIdentifier()` went async. |
+| **Rust SDK macros reworked** | `#[component]` is now a **trait + a `#[component_storage]` struct**, a `miden-project.toml` manifest is **required**, accounts are declared explicitly with `#[account(package::Interface)]`, and the tx-kernel bindings changed (`Felt::new` fallible, `create_*_asset` takes `enable_callbacks`, `get_balance` takes an asset key `Word`, `set_attachment` removed). |
 
 If you only skim a few sections, skim **Account Changes**, **Note Changes**, **Assets, Vault & Faucet**, **Hashing, SMT & Crypto Changes**, and **Client Changes**.
 
@@ -111,6 +113,7 @@ If you only skim a few sections, skim **Account Changes**, **Note Changes**, **A
 | miden-standards | 0.15+ | 0.15.3 |
 | miden-client | 0.15+ | 0.15.0 |
 | Web SDK (`@miden-sdk/*`) | 0.15+ | 0.15.0 |
+| `miden` SDK / compiler | 0.13+ | 0.13.0 |
 | Rust (client) | 1.93+ | 1.93.0 |
 | Rust (base crates) | 1.90+ | 1.90.0 |
 
@@ -135,6 +138,7 @@ Work through these sections in order for a complete migration:
 | [7. Client Changes](./client-changes) | `GetAccount` surface, `sync_nullifiers`, `TokenPolicyManager`, Web/React/CLI changes |
 | [8. MASM Changes](./masm-changes) | `metadata_into_*` renames, trimmed kernel outputs, `adv_push.N` removed |
 | [9. VM & Assembler Changes](./vm-assembler) | Sync-first execution, `prove_sync`, stricter assembly, MAST wire format `0.0.3` |
+| [10. Rust SDK & Compiler Changes](./rust-sdk-compiler) | `#[component]` trait + storage struct, required `miden-project.toml`, explicit `#[account(...)]`, v0.15 tx-kernel bindings |
 
 ---
 
@@ -157,6 +161,7 @@ Complete these steps to verify your migration:
 - [ ] Pass explicit `block_to` to the sync methods that now require it
 - [ ] Web: drop `"network"` storage, move faucet checks onto `Account`, reshape attachments, guard `Felt`/`Word` construction
 - [ ] Split your `Host` impl into `BaseHost` + `SyncHost`; handle `ExecutionOutput`
+- [ ] *(If you write Rust contracts with the `miden` SDK)* rewrite components as `#[component_storage]` + `#[component] trait` + `#[component] impl`; add a `miden-project.toml`; declare accounts with `#[account(package::Interface)]`; update the v0.15 tx-kernel bindings (`Felt::new().unwrap()`, `enable_callbacks`, asset-key `get_balance`, `add_*_attachment`)
 - [ ] Run `cargo build` — **no errors**
 - [ ] Run `cargo test` — **all tests pass**
 
