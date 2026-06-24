@@ -34,7 +34,7 @@ New convenience helpers were also added: `note::metadata_into_note_type` and `no
 
 ---
 
-## Asset vault key: `AssetComposition` metadata + `key_to_*` helpers
+## Asset vault key & composition {#asset-vault-key-composition}
 
 ### Summary
 
@@ -66,6 +66,8 @@ New and updated procedures in `miden::protocol::asset` (call as `exec.asset::<pr
 | `asset::key_into_faucet_id` | `[ASSET_KEY] → [faucet_id_suffix, faucet_id_prefix]` | **Not renamed.** Consumes the key. |
 | `asset::key_to_asset_id` / `asset::key_into_asset_id` | `[ASSET_KEY] → [asset_id_suffix, asset_id_prefix(, ASSET_KEY)]` | **Not renamed.** |
 
+The transaction kernel also adds `is_fungible_asset_key` (`[ASSET_KEY] → [is_fungible_asset, ASSET_KEY]`), equivalent to `key_to_composition` followed by `eq.COMPOSITION_FUNGIBLE`. The asset constructors (`create_fungible_key`, `create_fungible_asset_unchecked`, `create_non_fungible_asset_unchecked`) keep their v0.14 signatures — they encode the composition internally.
+
 ```masm
 # Read the callback flag (bit moved 0 → 2; use the helper, don't mask manually)
 exec.asset::key_to_callbacks_enabled
@@ -81,7 +83,7 @@ eq.COMPOSITION_FUNGIBLE
 
 1. If you read the callback flag by masking **bit 0** of the metadata, switch to `asset::key_to_callbacks_enabled` — the flag now lives in **bit 2**.
 2. To branch on the asset type, call `asset::key_to_composition` and compare against the `COMPOSITION_*` constants instead of inspecting raw bits.
-3. No change is needed for `asset::key_to_faucet_id`, `asset::key_into_faucet_id`, `asset::key_to_asset_id`, or `asset::key_into_asset_id` — their names and stack effects are unchanged.
+3. No change is needed for `asset::key_to_faucet_id`, `asset::key_into_faucet_id`, `asset::key_to_asset_id`, or `asset::key_into_asset_id` — their names and stack effects are unchanged. Only code that **hand-decodes** the metadata byte is affected by the bit-layout shift; callers using these helper procs are not.
 
 See [Assets, Vault & Faucet](./asset-vault-faucet) for the matching Rust-side `AssetComposition` / `AssetVaultKey` changes.
 
