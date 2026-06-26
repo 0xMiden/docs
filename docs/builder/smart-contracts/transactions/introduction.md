@@ -70,7 +70,7 @@ The ZK circuit **cannot produce a valid proof**. This means:
 
 This is fundamentally different from Ethereum's `revert`, where the failed transaction still lands onchain, consumes gas, and is visible to everyone.
 
-A separate failure mode is the **empty transaction**: a transaction that runs to completion but mutates no account state (storage, vault, or nonce) and consumes no input notes. Both the Rust client (which raises `TransactionRequestError::NoInputNotesNorAccountChange` before submission) and the VM kernel reject it. This typically catches transaction scripts whose conditional logic takes a no-op branch — see [Empty Transaction](../../tutorials/helpers/pitfalls#empty-transaction-no-state-change-no-notes) in the pitfalls guide for the recommended pattern.
+A separate failure mode is the **empty transaction**: a transaction that runs to completion but mutates no account state (storage, vault, or nonce) and consumes no input notes. Both the Rust client (which raises `TransactionRequestError::NoInputNotesNorAccountChange` before submission) and the VM kernel reject it. This typically catches transaction scripts whose conditional logic takes a no-op branch — see [Empty Transaction](../../tutorials/helpers/pitfalls.md#empty-transaction-no-state-change-no-notes) in the pitfalls guide for the recommended pattern.
 
 ## How transactions differ from EVM transactions
 

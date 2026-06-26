@@ -55,7 +55,7 @@ A key-value store associated with an account. Made up of storage slots.
 
 ### MultiSig
 
-A multi-signature account on Miden that requires a configurable threshold (N-of-M) of authorized signers to approve transactions before execution. MultiSig workflows are coordinated through [Miden Guardian](./miden-guardian/).
+A multi-signature account on Miden that requires a configurable threshold (N-of-M) of authorized signers to approve transactions before execution. MultiSig workflows are coordinated through [Miden Guardian](./miden-guardian/index.md).
 
 ## Notes & assets
 
@@ -125,11 +125,11 @@ A data structure that represents the basic unit of computation and storage in Mi
 
 ### Miden Guardian
 
-Infrastructure built by OpenZeppelin for managing private account state on Miden. Guardian provides a server and client SDKs for backing up, syncing, and coordinating state across devices and parties without trust assumptions. See the [Miden Guardian documentation](./miden-guardian/).
+Infrastructure built by OpenZeppelin for managing private account state on Miden. Guardian provides a server and client SDKs for backing up, syncing, and coordinating state across devices and parties without trust assumptions. See the [Miden Guardian documentation](./miden-guardian/index.md).
 
 ### Canonicalization
 
-The background process by which [Miden Guardian](./miden-guardian/) promotes candidate deltas to canonical status by verifying them against the Miden network.
+The background process by which [Miden Guardian](./miden-guardian/index.md) promotes candidate deltas to canonical status by verifying them against the Miden network.
 
 ### Delta
 
@@ -137,7 +137,7 @@ A Delta represents the changes between two states `s` and `s'`. Applying a Delta
 
 ### Delta Proposal
 
-A coordination mechanism in [Miden Guardian](./miden-guardian/) that allows multiple signers to propose, review, and co-sign state changes before they are promoted to a canonical delta.
+A coordination mechanism in [Miden Guardian](./miden-guardian/index.md) that allows multiple signers to propose, review, and co-sign state changes before they are promoted to a canonical delta.
 
 ### Threshold Signature
 

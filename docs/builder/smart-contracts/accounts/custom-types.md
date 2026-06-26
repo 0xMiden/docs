@@ -6,7 +6,7 @@ description: "Export custom structs and enums for use in public component method
 
 # Custom Types
 
-When public [component](./components) methods use custom structs or enums, those types must be annotated with `#[export_type]` so the compiler can include them in the component's public API. Types used only internally (in private methods or local variables) don't need this annotation.
+When public [component](./components.md) methods use custom structs or enums, those types must be annotated with `#[export_type]` so the compiler can include them in the component's public API. Types used only internally (in private methods or local variables) don't need this annotation.
 
 :::tip
 If you forget `#[export_type]` on a public API type, the compiler will emit an error telling you to add it.

@@ -6,7 +6,7 @@ description: "Write transaction scripts with #[tx_script] to orchestrate multi-n
 
 # Transaction Scripts
 
-A transaction script is a top-level function that runs once per transaction, after all note scripts have executed. Use it to orchestrate logic that spans multiple consumed notes — moving assets from the account vault into output notes, calling account methods via [cross-component calls](../cross-component-calls), or running anything that must happen after all note scripts finish.
+A transaction script is a top-level function that runs once per transaction, after all note scripts have executed. Use it to orchestrate logic that spans multiple consumed notes — moving assets from the account vault into output notes, calling account methods via [cross-component calls](../cross-component-calls.md), or running anything that must happen after all note scripts finish.
 
 ## `#[tx_script]` signature
 
@@ -94,11 +94,11 @@ This script uses the advice map to pass structured input data. The caller encode
 :::
 
 :::tip
-`adv_push_mapvaln` and `adv_load_preimage` are part of the advice provider — the mechanism for supplying auxiliary data to a transaction. See [Advice Provider](./advice-provider) for the full function reference.
+`adv_push_mapvaln` and `adv_load_preimage` are part of the advice provider — the mechanism for supplying auxiliary data to a transaction. See [Advice Provider](./advice-provider.md) for the full function reference.
 :::
 
 ## Related
 
-- [Transaction Context](./transaction-context) — `tx` module (block info, note commitments, expiration)
-- [Cross-Component Calls](../cross-component-calls) — how `&mut Account` works in tx scripts
-- [Reading Notes](../notes/reading-notes) — reading input notes by index inside tx scripts
+- [Transaction Context](./transaction-context.md) — `tx` module (block info, note commitments, expiration)
+- [Cross-Component Calls](../cross-component-calls.md) — how `&mut Account` works in tx scripts
+- [Reading Notes](../notes/reading-notes.md) — reading input notes by index inside tx scripts

@@ -32,19 +32,19 @@ An interactive browser environment for writing, compiling, and executing Miden A
 </CardGrid>
 
 <Callout variant="tip" title="When to graduate from the Playground">
-The Playground shines for learning MASM and for quick prototyping. For anything bigger than a snippet — components, storage, note dispatch, transaction flows — move to a `miden new` Rust project locally. See [your first smart contract](../get-started/your-first-smart-contract) for the handoff.
+The Playground shines for learning MASM and for quick prototyping. For anything bigger than a snippet — components, storage, note dispatch, transaction flows — move to a `miden new` Rust project locally. See [your first smart contract](../get-started/your-first-smart-contract/index.md) for the handoff.
 </Callout>
 
 ## Related
 
 <CardGrid cols={3}>
-  <Card title="First smart contract" href="../get-started/your-first-smart-contract" eyebrow="Tutorial">
+  <Card title="First smart contract" docId="builder/get-started/your-first-smart-contract/index" eyebrow="Tutorial">
     Install the toolchain and build + deploy a counter contract in Rust.
   </Card>
-  <Card title="MASM in v0.14" href="../migration/masm-changes" eyebrow="v0.14">
+  <Card title="MASM in v0.14" docId="builder/migration/masm-changes" eyebrow="v0.14">
     New `word(...)` / `event(...)` constants, `std::math::u128`, and other MASM-level deltas.
   </Card>
-  <Card title="Smart contracts reference" href="../smart-contracts" eyebrow="Reference">
+  <Card title="Smart contracts reference" docId="builder/smart-contracts/index" eyebrow="Reference">
     Accounts, notes, transactions, and the Rust SDK surface.
   </Card>
 </CardGrid>

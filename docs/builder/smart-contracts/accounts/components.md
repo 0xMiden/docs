@@ -6,7 +6,7 @@ description: "Define Miden account components using the #[component] macro — s
 
 # Components
 
-Components are the building blocks of Miden accounts. Each component defines a [storage](./storage) layout, exposes public methods, and can be composed with other components on the same account — for example, a wallet component + an auth component + custom logic. This modularity lets you reuse a wallet component across many accounts and test or upgrade components independently.
+Components are the building blocks of Miden accounts. Each component defines a [storage](./storage.md) layout, exposes public methods, and can be composed with other components on the same account — for example, a wallet component + an auth component + custom logic. This modularity lets you reuse a wallet component across many accounts and test or upgrade components independently.
 
 ## The `#[component]` macro
 
@@ -118,7 +118,7 @@ pub fn do_something(&mut self) {
 
 ### Supported parameter and return types
 
-Public methods can use SDK types (`Felt`, `Word`, `Asset`, `AccountId`, `NoteIdx`) and custom types annotated with [`#[export_type]`](./custom-types).
+Public methods can use SDK types (`Felt`, `Word`, `Asset`, `AccountId`, `NoteIdx`) and custom types annotated with [`#[export_type]`](./custom-types.md).
 
 ## Auto-generated methods
 
@@ -165,7 +165,7 @@ self.compute_storage_commitment() -> Word
 // ... and more (see API Reference)
 ```
 
-For the full list of auto-generated methods, see [Account Operations](./account-operations). To export your own types for use in public method signatures, see [Custom Types](./custom-types).
+For the full list of auto-generated methods, see [Account Operations](./account-operations.md). To export your own types for use in public method signatures, see [Custom Types](./custom-types.md).
 
 :::info API Reference
 Full API docs on docs.rs: [`miden`](https://docs.rs/miden/latest/miden/) (top-level — `#[component]` macro)

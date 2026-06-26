@@ -20,7 +20,7 @@ Use the Rust APIs to construct standard notes in client or transaction-building 
 | MINT | A faucet is minting fungible tokens into a note. | `MintNote` | `miden::standards::notes::mint` |
 | BURN | A faucet is burning fungible tokens returned through a note. | `BurnNote` | `miden::standards::notes::burn` |
 
-For the note model itself, start with [What are Notes?](../notes/introduction). This page focuses on how the standards fit into builder workflows.
+For the note model itself, start with [What are Notes?](../notes/introduction.md). This page focuses on how the standards fit into builder workflows.
 
 ```rust title="Create a public P2ID note"
 use miden_protocol::Word;
@@ -101,7 +101,7 @@ The Rust types live under `miden_standards::note`. The MASM scripts live under `
 
 ## Related pages
 
-- [Standard Note Types](../notes/note-types) - more detail on P2ID, P2IDE, and SWAP
-- [Output Notes](../notes/output-notes) - creating output notes from transactions
-- [Note Scripts](../notes/note-scripts) - writing custom note scripts
+- [Standard Note Types](../notes/note-types.md) - more detail on P2ID, P2IDE, and SWAP
+- [Output Notes](../notes/output-notes.md) - creating output notes from transactions
+- [Note Scripts](../notes/note-scripts.md) - writing custom note scripts
 - [`miden-standards` note source](https://github.com/0xMiden/protocol/tree/next/crates/miden-standards/src/note) - current implementation

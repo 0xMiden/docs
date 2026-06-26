@@ -78,7 +78,7 @@ This guide is for:
 - **Smart contract authors** writing MASM or using protocol APIs
 - **App developers** using the protocol, standards, or client crates
 
-If you're starting fresh on v0.15, you can skip this guide and go directly to the [Get Started guide](../get-started).
+If you're starting fresh on v0.15, you can skip this guide and go directly to the [Get Started guide](../get-started/index.md).
 :::
 
 ---
@@ -129,16 +129,16 @@ Work through these sections in order for a complete migration:
 
 | Section | Topics |
 |---------|--------|
-| [1. Imports & Dependencies](./imports-dependencies) | Crate bumps, package.json, MSRV 1.93, no round-trip of 0.14 artifacts |
-| [2. Hashing, SMT & Crypto Changes](./hashing-stack) | Poseidon2-domain-separated SMT leaves, `miden-crypto` 0.25 renames, `PartialSmt` / `LargeSmt` / 0.24 API breaks |
-| [3. Account Changes](./account-changes) | `AccountType` removed/renamed, network-account allowlist, `procedure_root!`, typed roots |
-| [4. Note Changes](./note-changes) | `NoteDetailsCommitment`, `PartialNoteMetadata`, multiple attachments, 1-bit `NoteType`, nullifier change, PSWAP |
-| [5. Assets, Vault & Faucet](./asset-vault-faucet) | `AssetAmount`, unified `FungibleFaucet`, `AssetVaultKey`, `AssetComposition` |
-| [6. Transaction Changes](./transaction-changes) | `fee_faucet_id`, `TransactionScriptRoot`, `ProvenBatch::new_unchecked` |
-| [7. Client Changes](./client-changes) | `GetAccount` surface, `sync_nullifiers`, `TokenPolicyManager`, Web/React/CLI changes |
-| [8. MASM Changes](./masm-changes) | `metadata_into_*` renames, trimmed kernel outputs, `adv_push.N` removed |
-| [9. VM & Assembler Changes](./vm-assembler) | Sync-first execution, `prove_sync`, stricter assembly, MAST wire format `0.0.3` |
-| [10. Rust SDK & Compiler Changes](./rust-sdk-compiler) | `#[component]` trait + storage struct, required `miden-project.toml`, explicit `#[account(...)]`, v0.15 tx-kernel bindings |
+| [1. Imports & Dependencies](./01-imports-dependencies.md) | Crate bumps, package.json, MSRV 1.93, no round-trip of 0.14 artifacts |
+| [2. Hashing, SMT & Crypto Changes](./02-hashing-stack.md) | Poseidon2-domain-separated SMT leaves, `miden-crypto` 0.25 renames, `PartialSmt` / `LargeSmt` / 0.24 API breaks |
+| [3. Account Changes](./03-account-changes.md) | `AccountType` removed/renamed, network-account allowlist, `procedure_root!`, typed roots |
+| [4. Note Changes](./04-note-changes.md) | `NoteDetailsCommitment`, `PartialNoteMetadata`, multiple attachments, 1-bit `NoteType`, nullifier change, PSWAP |
+| [5. Assets, Vault & Faucet](./05-asset-vault-faucet.md) | `AssetAmount`, unified `FungibleFaucet`, `AssetVaultKey`, `AssetComposition` |
+| [6. Transaction Changes](./06-transaction-changes.md) | `fee_faucet_id`, `TransactionScriptRoot`, `ProvenBatch::new_unchecked` |
+| [7. Client Changes](./07-client-changes.md) | `GetAccount` surface, `sync_nullifiers`, `TokenPolicyManager`, Web/React/CLI changes |
+| [8. MASM Changes](./08-masm-changes.md) | `metadata_into_*` renames, trimmed kernel outputs, `adv_push.N` removed |
+| [9. VM & Assembler Changes](./09-vm-assembler.md) | Sync-first execution, `prove_sync`, stricter assembly, MAST wire format `0.0.3` |
+| [10. Rust SDK & Compiler Changes](./10-rust-sdk-compiler.md) | `#[component]` trait + storage struct, required `miden-project.toml`, explicit `#[account(...)]`, v0.15 tx-kernel bindings |
 
 ---
 

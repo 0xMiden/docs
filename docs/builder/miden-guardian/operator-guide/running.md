@@ -103,4 +103,4 @@ cargo run -p guardian-server --features postgres --bin server
 | `PUT /delta/proposal`         | Signed headers    |
 | `/dashboard/accounts*`        | Dashboard session |
 
-Signed requests carry three headers: `x-pubkey`, `x-signature`, and `x-timestamp`. Timestamps must be within ±5 minutes of server time and strictly greater than the last value the server saw for that public key — see [Authentication failures](./troubleshooting#authentication-failures) if requests are being rejected.
+Signed requests carry three headers: `x-pubkey`, `x-signature`, and `x-timestamp`. Timestamps must be within ±5 minutes of server time and strictly greater than the last value the server saw for that public key — see [Authentication failures](./troubleshooting.md#authentication-failures) if requests are being rejected.

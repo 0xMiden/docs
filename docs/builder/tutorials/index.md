@@ -11,7 +11,7 @@ Hands-on walkthroughs for building on Miden. Every tutorial pairs with runnable 
 ## Pick a path
 
 <CardGrid cols={3}>
-  <Card title="Miden Bank" href="./miden-bank/" eyebrow="Walkthrough · Rust">
+  <Card title="Miden Bank" docId="builder/tutorials/miden-bank/index" eyebrow="Walkthrough · Rust">
     A 9-part curriculum — build a complete banking application covering components, storage, note scripts, cross-component calls, and output notes.
   </Card>
   <Card title="Recipes" href="./recipes/rust/" eyebrow="Cookbook · Rust & Web">
@@ -28,19 +28,19 @@ Hands-on walkthroughs for building on Miden. Every tutorial pairs with runnable 
 ## Development helpers
 
 <CardGrid cols={3}>
-  <Card title="Testing with MockChain" href="./helpers/testing" eyebrow="Helper">
+  <Card title="Testing with MockChain" docId="builder/tutorials/helpers/testing" eyebrow="Helper">
     Test your contracts against MockChain for local simulation.
   </Card>
-  <Card title="Debugging" href="./helpers/debugging" eyebrow="Helper">
+  <Card title="Debugging" docId="builder/tutorials/helpers/debugging" eyebrow="Helper">
     Interpret errors and debug common issues.
   </Card>
-  <Card title="Common pitfalls" href="./helpers/pitfalls" eyebrow="Helper">
+  <Card title="Common pitfalls" docId="builder/tutorials/helpers/pitfalls" eyebrow="Helper">
     Avoid known issues and limitations.
   </Card>
 </CardGrid>
 
 ## Prerequisites
 
-- [Install the Miden toolchain](../get-started/setup/installation) with `midenup`.
+- [Install the Miden toolchain](../get-started/setup/installation.md) with `midenup`.
 - Basic familiarity with Rust (or TypeScript for the client examples).
-- Understanding of the [core concepts](../smart-contracts/) — accounts, notes, transactions.
+- Understanding of the [core concepts](../smart-contracts/index.md) — accounts, notes, transactions.

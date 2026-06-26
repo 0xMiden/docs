@@ -15,10 +15,10 @@ The Miden client manages accounts, builds and executes transactions, produces ze
   <Card title="Rust" href="./rust-client/" eyebrow="Rust · SDK + CLI">
     Native Rust library and CLI. Best for services, proving infrastructure, tests, scripting, and local exploration.
   </Card>
-  <Card title="TypeScript" href="./web-client/" eyebrow="TypeScript · Browser">
+  <Card title="TypeScript" docId="builder/tools/clients/web-client/index" eyebrow="TypeScript · Browser">
     `@miden-sdk/miden-sdk` — Rust compiled to WebAssembly with a typed TypeScript API. Browser, Node, Electron, service workers.
   </Card>
-  <Card title="React" href="./react-sdk/" eyebrow="React · Hooks">
+  <Card title="React" docId="builder/tools/clients/react-sdk/index" eyebrow="React · Hooks">
     `@miden-sdk/react` — `MidenProvider` + hooks (`useMiden`, `useAccount`, `useSend`, …) wrapping the Web SDK.
   </Card>
 </CardGrid>
@@ -43,13 +43,13 @@ The Miden client manages accounts, builds and executes transactions, produces ze
 ## Shared topics
 
 <CardGrid cols={2}>
-  <Card title="Local node testing" href="./local-node-testing" eyebrow="Dev loop">
+  <Card title="Local node testing" docId="builder/tools/clients/local-node-testing" eyebrow="Dev loop">
     Run a local node, point Rust and web clients at localhost, import genesis accounts, and debug local transaction state.
   </Card>
   <Card title="Common errors" href="./common-errors" eyebrow="Diagnostics">
     Errors, diagnostic output, and recovery patterns shared across all surfaces.
   </Card>
-  <Card title="Tutorials" href="../../tutorials/" eyebrow="Walkthroughs">
+  <Card title="Tutorials" docId="builder/tutorials/index" eyebrow="Walkthroughs">
     End-to-end walkthroughs using each client surface — Miden Bank, recipes, helpers.
   </Card>
 </CardGrid>

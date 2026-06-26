@@ -11,10 +11,10 @@ Accounts, notes, and transactions — authored in Rust, compiled to MASM, proved
 ## Start here
 
 <CardGrid cols={2}>
-  <Card title="Get started" href="./get-started" eyebrow="Install & run">
+  <Card title="Get started" docId="builder/get-started/index" eyebrow="Install & run">
     Install midenup, create a wallet, and send your first transaction — in under ten minutes.
   </Card>
-  <Card title="Your first smart contract" href="./get-started/your-first-smart-contract" eyebrow="Tutorial">
+  <Card title="Your first smart contract" docId="builder/get-started/your-first-smart-contract/index" eyebrow="Tutorial">
     Walk through writing, proving, and deploying a counter contract in Rust.
   </Card>
 </CardGrid>
@@ -22,16 +22,16 @@ Accounts, notes, and transactions — authored in Rust, compiled to MASM, proved
 ## Build
 
 <CardGrid cols={2}>
-  <Card title="Smart contracts" href="./smart-contracts" eyebrow="Reference">
+  <Card title="Smart contracts" docId="builder/smart-contracts/index" eyebrow="Reference">
     Accounts, notes, storage, components, transactions — the full Rust SDK surface.
   </Card>
-  <Card title="Tutorials" href="./tutorials" eyebrow="Walkthroughs">
+  <Card title="Tutorials" docId="builder/tutorials/index" eyebrow="Walkthroughs">
     Real-world examples: the Miden Bank, private multisig, custom note scripts.
   </Card>
-  <Card title="Development helpers" href="./tutorials#development-helpers" eyebrow="How-to">
+  <Card title="Development helpers" docId="builder/tutorials/index" hash="#development-helpers" eyebrow="How-to">
     Testing, debugging, and common pitfalls when writing Miden programs.
   </Card>
-  <Card title="Tools" href="./tools" eyebrow="Clients & CLI">
+  <Card title="Tools" docId="builder/tools/index" eyebrow="Clients & CLI">
     Rust, Web, and React SDKs · playground · block explorer · CLI.
   </Card>
 </CardGrid>
@@ -39,13 +39,13 @@ Accounts, notes, and transactions — authored in Rust, compiled to MASM, proved
 ## Ship
 
 <CardGrid cols={2}>
-  <Card title="Migration" href="./migration" eyebrow="v0.13 → v0.14">
+  <Card title="Migration" docId="builder/migration/index" eyebrow="v0.13 → v0.14">
     Breaking changes, renames, and new features across accounts, notes, transactions, MASM, and the client.
   </Card>
-  <Card title="Miden Guardian" href="./miden-guardian" eyebrow="Account state">
+  <Card title="Miden Guardian" docId="builder/miden-guardian/index" eyebrow="Account state">
     Backup, sync, and coordinate private account state across devices.
   </Card>
-  <Card title="Private multisig" href="./private-multisig" eyebrow="Solutions">
+  <Card title="Private multisig" docId="builder/private-multisig/index" eyebrow="Solutions">
     Multi-party threshold signature workflows built on Miden.
   </Card>
 </CardGrid>
@@ -53,10 +53,10 @@ Accounts, notes, and transactions — authored in Rust, compiled to MASM, proved
 ## Reference
 
 <CardGrid cols={2}>
-  <Card title="FAQ" href="./faq" eyebrow="Questions">
+  <Card title="FAQ" docId="builder/faq" eyebrow="Questions">
     Frequently asked questions about Miden.
   </Card>
-  <Card title="Glossary" href="./glossary" eyebrow="Terminology">
+  <Card title="Glossary" docId="builder/glossary" eyebrow="Terminology">
     Key terms and definitions used throughout the docs.
   </Card>
 </CardGrid>

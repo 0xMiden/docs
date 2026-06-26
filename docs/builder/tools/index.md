@@ -14,10 +14,10 @@ Developer tools for building on and interacting with the Miden network. Use the 
   <Card title="Rust client" href="./clients/rust-client/" eyebrow="Rust · SDK">
     Full-featured Rust library for Miden layer 2 integration — accounts, transactions, notes, proving.
   </Card>
-  <Card title="Web SDK" href="./clients/web-client/" eyebrow="TypeScript · SDK">
+  <Card title="Web SDK" docId="builder/tools/clients/web-client/index" eyebrow="TypeScript · SDK">
     Browser-based client for managing accounts and transactions from a web app.
   </Card>
-  <Card title="React SDK" href="./clients/react-sdk/" eyebrow="React · SDK">
+  <Card title="React SDK" docId="builder/tools/clients/react-sdk/index" eyebrow="React · SDK">
     Hooks and components for Miden dApps.
   </Card>
 </CardGrid>
@@ -25,19 +25,19 @@ Developer tools for building on and interacting with the Miden network. Use the 
 ## Toolchain + environments
 
 <CardGrid cols={3}>
-  <Card title="midenup" href="./midenup" eyebrow="Toolchain installer">
+  <Card title="midenup" docId="builder/tools/midenup" eyebrow="Toolchain installer">
     Install and switch between Miden toolchain channels — VM, compiler, client, stdlib, kernel — from a unified `miden` command.
   </Card>
-  <Card title="Playground" href="./playground" eyebrow="Browser">
+  <Card title="Playground" docId="builder/tools/playground" eyebrow="Browser">
     Interactive environment for writing and testing Miden Assembly programs.
   </Card>
-  <Card title="Network" href="./network" eyebrow="Testnet · Services">
+  <Card title="Network" docId="builder/tools/network" eyebrow="Testnet · Services">
     Live Miden testnet endpoints — status, block explorer (MidenScan), RPC, faucet, remote prover.
   </Card>
-  <Card title="Note Transport" href="./note-transport/" eyebrow="Private notes · Relay">
+  <Card title="Note Transport" docId="builder/tools/note-transport/index" eyebrow="Private notes · Relay">
     Offchain relay service for delivering private note payloads between senders and recipients.
   </Card>
-  <Card title="Bridging" href="./bridging/" eyebrow="Interop · Testnets">
+  <Card title="Bridging" docId="builder/tools/bridging/index" eyebrow="Interop · Testnets">
     Testnet bridge tooling and interoperability guides, starting with the mock 1Click bridge sandbox.
   </Card>
 </CardGrid>

@@ -88,7 +88,7 @@ let note_type = data[1];
 // ...
 ```
 
-See [Transaction Scripts](./transaction-scripts) for the full `basic-wallet-tx-script` example.
+See [Transaction Scripts](./transaction-scripts.md) for the full `basic-wallet-tx-script` example.
 
 ## Writing to the advice map
 
@@ -119,7 +119,7 @@ adv_insert_mem(key, start_addr, end_addr);
 
 ## Requesting a Falcon signature
 
-`emit_falcon_sig_to_stack` emits an `AUTH_REQUEST_EVENT` that instructs the host to push a Falcon512 signature onto the advice stack. This is typically used in [authentication components](../accounts/authentication) before calling `rpo_falcon512_verify`.
+`emit_falcon_sig_to_stack` emits an `AUTH_REQUEST_EVENT` that instructs the host to push a Falcon512 signature onto the advice stack. This is typically used in [authentication components](../accounts/authentication.md) before calling `rpo_falcon512_verify`.
 
 ```rust
 use miden::intrinsics::advice::emit_falcon_sig_to_stack;
@@ -135,6 +135,6 @@ Full API docs on docs.rs: [`miden::intrinsics::advice`](https://docs.rs/miden/la
 
 ## Related
 
-- [Authentication](../accounts/authentication) — Falcon512 signature verification (over Poseidon2) and nonce management
-- [Transaction Scripts](./transaction-scripts) — executing logic in the transaction context
-- [Transaction Context](./transaction-context) — overview of transaction execution
+- [Authentication](../accounts/authentication.md) — Falcon512 signature verification (over Poseidon2) and nonce management
+- [Transaction Scripts](./transaction-scripts.md) — executing logic in the transaction context
+- [Transaction Context](./transaction-context.md) — overview of transaction execution

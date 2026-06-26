@@ -14,13 +14,13 @@ Private note contents are not published onchain. The chain stores note commitmen
 ## Start here
 
 <CardGrid cols={3}>
-  <Card title="Design" href="./design" eyebrow="Architecture">
+  <Card title="Design" docId="builder/tools/note-transport/design" eyebrow="Architecture">
     How the node stores notes, assigns cursors, routes by tag, and handles current protocol boundaries.
   </Card>
-  <Card title="Operators" href="./operators" eyebrow="Run a node">
+  <Card title="Operators" docId="builder/tools/note-transport/operators" eyebrow="Run a node">
     CLI flags, Docker Compose, telemetry, storage, ports, retention, and production cautions.
   </Card>
-  <Card title="Users" href="./users" eyebrow="gRPC API">
+  <Card title="Users" docId="builder/tools/note-transport/users" eyebrow="gRPC API">
     Request and response shapes for send, fetch, stream, stats, plus the recommended client sync pattern.
   </Card>
 </CardGrid>
