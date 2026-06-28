@@ -643,8 +643,9 @@
    width proportionally. */
 .theme-doc-markdown table,
 article table {
-  display: table;
+  display: block;
   width: 100%;
+  max-width: 100%;
   min-width: 100%;
   table-layout: auto;
   border: 1px solid var(--color-border);
@@ -654,7 +655,9 @@ article table {
   border-spacing: 0;
   margin: 1.5rem 0;
   box-shadow: var(--shadow-sm);
-  overflow: hidden; /* clip content at the rounded corners */
+  overflow-x: auto;
+  overflow-y: hidden;
+  -webkit-overflow-scrolling: touch;
 }
 
 /* Narrow trailing columns (common pattern — "Part" numbers, short
@@ -724,17 +727,6 @@ article tbody tr:hover {
 article td code {
   font-size: 13px;
   padding: 1px 4px;
-}
-
-@media (max-width: 768px) {
-  .theme-doc-markdown table,
-  article table {
-    display: block;
-    max-width: 100%;
-    overflow-x: auto;
-    overflow-y: hidden;
-    -webkit-overflow-scrolling: touch;
-  }
 }
 
 /* ==========================================

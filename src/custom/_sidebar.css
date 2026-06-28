@@ -11,6 +11,7 @@
 /* Main docs content area - wider to fill space */
 .theme-doc-markdown {
   max-width: 100%; /* Use full available width */
+  min-width: 0;
 }
 
 /* ThemeClassNames.docs.docSidebarMenu */
