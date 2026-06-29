@@ -9,7 +9,7 @@ description: "Miden testnet endpoints — status, explorer, RPC, faucet, remote 
 Public Miden testnet services — explorer, RPC, faucet, remote prover, and status. The canonical live inventory lives at [status.testnet.miden.io](https://status.testnet.miden.io/); the page below is an editorial overview that won't go stale as new endpoints ship.
 
 <Callout variant="info" title="Devnet">
-The same services exist on devnet under the `devnet` subdomain — e.g., `status.devnet.miden.io`, `devnet.midenscan.com`. Swap `testnet` → `devnet` in any URL on this page to point at devnet instead.
+The same services exist on devnet under the `devnet` subdomain — e.g., `status.devnet.miden.io`, `faucet.devnet.miden.io`, `devnet.midenscan.com`. Swap `testnet` → `devnet` in any URL on this page to point at devnet instead.
 </Callout>
 
 <CardGrid cols={2}>
@@ -27,8 +27,8 @@ The same services exist on devnet under the `devnet` subdomain — e.g., `status
   <Card title="RPC" eyebrow="Submit · Query">
     gRPC endpoint the node exposes for submitting proven transactions and querying account / note / block state. Clients connect here by default; see [status.testnet.miden.io](https://status.testnet.miden.io/) for the current URL.
   </Card>
-  <Card title="Faucet" eyebrow="Test assets">
-    Dispenses test assets (testnet MID and fungible test tokens) to the account ID you specify. Check status for the current faucet endpoint.
+  <Card title="Faucet ↗" href="https://faucet.testnet.miden.io/" eyebrow="Test assets">
+    Dispenses test assets (testnet MID and fungible test tokens) to the account ID you specify. Open [faucet.testnet.miden.io](https://faucet.testnet.miden.io/) to mint, or check the status page for the current endpoint.
   </Card>
   <Card title="Remote prover" eyebrow="Delegated proving">
     Off-loads proof generation to a hosted prover when the client doesn't have the compute for client-side proving. Opt in via the client's `proverUrl` option.
