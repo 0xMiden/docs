@@ -17,7 +17,7 @@ In Miden's private account model, account state lives client-side. The chain sto
 - Proposals and signatures need an offchain coordination surface.
 - Without a shared state view, participants risk divergent state or stale approvals.
 
-The [Miden Guardian](../miden-guardian/) solves this by acting as the coordination server for multisig accounts — keeping signers synchronized, managing proposal workflows, and ensuring all parties work from the same canonical state.
+The [Miden Guardian](../miden-guardian/index.md) solves this by acting as the coordination server for multisig accounts — keeping signers synchronized, managing proposal workflows, and ensuring all parties work from the same canonical state.
 
 ## How it works
 
@@ -57,13 +57,13 @@ sequenceDiagram
 ## Learn more
 
 <CardGrid cols={3}>
-  <Card title="Core concepts" href="./core-concepts" eyebrow="Under the hood">
+  <Card title="Core concepts" docId="builder/private-multisig/core-concepts" eyebrow="Under the hood">
     Transaction lifecycle, key architecture, and offline fallback.
   </Card>
-  <Card title="Rust SDK" href="./rust-sdk" eyebrow="miden-multisig-client">
+  <Card title="Rust SDK" docId="builder/private-multisig/rust-sdk" eyebrow="miden-multisig-client">
     Rust SDK for building multisig workflows.
   </Card>
-  <Card title="TypeScript SDK" href="./typescript-sdk" eyebrow="@openzeppelin/miden-multisig-client">
+  <Card title="TypeScript SDK" docId="builder/private-multisig/typescript-sdk" eyebrow="@openzeppelin/miden-multisig-client">
     TypeScript SDK for building multisig workflows.
   </Card>
 </CardGrid>

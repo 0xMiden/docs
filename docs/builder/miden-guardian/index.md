@@ -55,22 +55,22 @@ Guardian has an explicit trust boundary:
 ## Learn more
 
 <CardGrid cols={2}>
-  <Card title="Architecture" href="./core-concepts/architecture" eyebrow="Core concepts">
+  <Card title="Architecture" docId="builder/miden-guardian/core-concepts/architecture" eyebrow="Core concepts">
     Roles, trust boundaries, state flow, and failure behavior.
   </Card>
-  <Card title="Data structures" href="./core-concepts/data-structures" eyebrow="Core concepts">
+  <Card title="Data structures" docId="builder/miden-guardian/core-concepts/data-structures" eyebrow="Core concepts">
     State, deltas, commitments, and delta proposals.
   </Card>
-  <Card title="Components" href="./core-concepts/components" eyebrow="Core concepts">
+  <Card title="Components" docId="builder/miden-guardian/core-concepts/components" eyebrow="Core concepts">
     API, authentication, storage, and other server components.
   </Card>
-  <Card title="Security" href="./core-concepts/security" eyebrow="Core concepts">
+  <Card title="Security" docId="builder/miden-guardian/core-concepts/security" eyebrow="Core concepts">
     Trust model, integrity guarantees, and edge cases.
   </Card>
-  <Card title="Operator guide" href="./operator-guide/running" eyebrow="Run it">
+  <Card title="Operator guide" docId="builder/miden-guardian/operator-guide/running" eyebrow="Run it">
     How to run, deploy, and troubleshoot a Guardian server.
   </Card>
-  <Card title="Private multisig" href="../private-multisig/" eyebrow="Solutions">
+  <Card title="Private multisig" docId="builder/private-multisig/index" eyebrow="Solutions">
     Multi-party threshold signature workflows powered by Guardian.
   </Card>
 </CardGrid>

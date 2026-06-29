@@ -43,7 +43,7 @@ let bal: AssetAmount = vault.get_balance(key)?;
 
 ### Summary
 
-The separate `BasicFungibleFaucet` and `NetworkFungibleFaucet` components were merged into a single **`FungibleFaucet`** component, and its old `FungibleFaucetBuilder` was replaced with a `bon`‑generated builder (`FungibleFaucet::builder()`). The constructor accepts a structured `TokenName` plus optional token‑metadata fields and an `AssetAmount` `max_supply`. A companion `FungibleTokenMetadata` component exposes the metadata via MASM getters. For the end‑to‑end client construction recipe (with `TokenPolicyManager`), see [(Rust) `FungibleFaucet` builder + `TokenPolicyManager`](./client-changes#rust-fungiblefaucet-builder--tokenpolicymanager-construction).
+The separate `BasicFungibleFaucet` and `NetworkFungibleFaucet` components were merged into a single **`FungibleFaucet`** component, and its old `FungibleFaucetBuilder` was replaced with a `bon`‑generated builder (`FungibleFaucet::builder()`). The constructor accepts a structured `TokenName` plus optional token‑metadata fields and an `AssetAmount` `max_supply`. A companion `FungibleTokenMetadata` component exposes the metadata via MASM getters. For the end‑to‑end client construction recipe (with `TokenPolicyManager`), see [(Rust) `FungibleFaucet` builder + `TokenPolicyManager`](./07-client-changes.md#rust-fungiblefaucet-builder--tokenpolicymanager-construction).
 
 ### Affected Code
 
@@ -73,7 +73,7 @@ let faucet = FungibleFaucet::builder()
 
 A new **`AssetComposition`** enum (`None`, `Fungible`, `Custom`) discriminates assets, and the asset vault key's metadata byte now encodes the composition (plus the asset‑callback flag). `AssetVaultKey::new(asset_id, faucet_id, composition, callback_flag)` is the general constructor; `AssetVaultKey::new_fungible(faucet_id, callback_flag)` is the fungible shortcut. (`Custom` composition is reserved and currently rejected.)
 
-**What composition means:** it describes how two instances of the same asset combine in a vault — `None` (non‑fungible: instances never merge), `Fungible` (instances merge by summing amounts), and `Custom` (reserved for faucet‑defined logic; rejected at construction today). Because composition is carried in the key's metadata byte rather than derived from the faucet ID, the vault key is self‑describing. Read it back with `AssetVaultKey::composition()` and the callback flag with `AssetVaultKey::callback_flag()`. See the [asset encoding reference](../../reference/protocol/asset#encoding) and [composition reference](../../reference/protocol/asset#composition) for the full layout, and [MASM Changes](./masm-changes#asset-vault-key-composition) for the procedure‑level effects.
+**What composition means:** it describes how two instances of the same asset combine in a vault — `None` (non‑fungible: instances never merge), `Fungible` (instances merge by summing amounts), and `Custom` (reserved for faucet‑defined logic; rejected at construction today). Because composition is carried in the key's metadata byte rather than derived from the faucet ID, the vault key is self‑describing. Read it back with `AssetVaultKey::composition()` and the callback flag with `AssetVaultKey::callback_flag()`. See the [asset encoding reference](../../reference/protocol/asset#encoding) and [composition reference](../../reference/protocol/asset#composition) for the full layout, and [MASM Changes](./08-masm-changes.md#asset-vault-key-composition) for the procedure‑level effects.
 
 ### Migration Steps
 

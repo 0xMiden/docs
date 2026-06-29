@@ -605,6 +605,6 @@ See the complete test implementations in the [miden-bank repository](https://git
 
 ## Next Steps
 
-- **[Debugging Guide](./debugging)** - Troubleshoot common issues
-- **[Common Pitfalls](./pitfalls)** - Avoid known gotchas
-- **[Miden Bank Tutorial](../miden-bank/)** - See testing in action
+- **[Debugging Guide](./debugging.md)** - Troubleshoot common issues
+- **[Common Pitfalls](./pitfalls.md)** - Avoid known gotchas
+- **[Miden Bank Tutorial](../miden-bank/index.md)** - See testing in action

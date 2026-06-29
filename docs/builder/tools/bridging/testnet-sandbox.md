@@ -95,7 +95,7 @@ make sepolia-reset
 
 The `/demo/*` and `/lab` endpoints in the sandbox are local helpers. App
 integrations should use only the `/v0/*` endpoints described in the
-[API reference](./api-reference).
+[API reference](./api-reference.md).
 
 ## Run live testnet evidence
 

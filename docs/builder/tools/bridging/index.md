@@ -24,15 +24,15 @@ mainnet funds.
 ## Start here
 
 <CardGrid cols={3}>
-  <Card title="Testnet sandbox" href="./testnet-sandbox" eyebrow="Sepolia + Miden testnet">
+  <Card title="Testnet sandbox" docId="builder/tools/bridging/testnet-sandbox" eyebrow="Sepolia + Miden testnet">
     Run the mock 1Click Bridge API locally and reproduce the Sepolia-to-Miden
     and Miden-to-Sepolia testing flow.
   </Card>
-  <Card title="Bridge flows" href="./flows" eyebrow="Diagrams">
+  <Card title="Bridge flows" docId="builder/tools/bridging/flows" eyebrow="Diagrams">
     Understand the actors, solver role, public Miden notes, and inbound/outbound
     lifecycle.
   </Card>
-  <Card title="API reference" href="./api-reference" eyebrow="/v0">
+  <Card title="API reference" docId="builder/tools/bridging/api-reference" eyebrow="/v0">
     Integration shape for `/v0/tokens`, `/v0/quote`, `/v0/deposit/submit`, and
     `/v0/status`.
   </Card>
@@ -58,4 +58,4 @@ Use these docs when you need to:
 
 For core account, note, and transaction concepts, start with the Smart Contracts
 section instead. For testnet RPC, explorer, faucet, and remote prover endpoints,
-see [Network](../network).
+see [Network](../network.md).

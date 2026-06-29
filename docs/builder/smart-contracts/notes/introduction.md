@@ -23,13 +23,13 @@ Every note has four parts:
 | **Storage** | Custom data stored with the note that the script can read at consumption time (e.g., a target account ID, an expiration block) |
 | **Metadata** | Sender ID, note tag (for discovery routing), and auxiliary data |
 
-The **recipient** is a cryptographic hash that encodes who can consume the note. When creating notes programmatically (via [`output_note::create`](./output-notes#create-a-note)), you compute a `Recipient` from the note's serial number, script root, and storage commitment:
+The **recipient** is a cryptographic hash that encodes who can consume the note. When creating notes programmatically (via [`output_note::create`](./output-notes.md#create-a-note)), you compute a `Recipient` from the note's serial number, script root, and storage commitment:
 
 ```
 recipient = hash(hash(hash(serial_num, [0;4]), script_root), storage_commitment)
 ```
 
-Only someone who knows these values can construct a valid consumption proof. See [Computing a Recipient](./output-notes#computing-a-recipient) for the SDK API.
+Only someone who knows these values can construct a valid consumption proof. See [Computing a Recipient](./output-notes.md#computing-a-recipient) for the SDK API.
 
 ## The two-transaction model
 
@@ -63,7 +63,7 @@ Notes come in two visibility modes:
 
 Private notes provide stronger privacy guarantees — the network can't even see what assets a note carries — but they require the sender and recipient to have a communication channel outside the protocol.
 
-Miden provides built-in note patterns (P2ID, P2IDE, SWAP) for common transfer scenarios — see [Standard Note Types](./note-types). You can also write fully custom note scripts for arbitrary consumption logic.
+Miden provides built-in note patterns (P2ID, P2IDE, SWAP) for common transfer scenarios — see [Standard Note Types](./note-types.md). You can also write fully custom note scripts for arbitrary consumption logic.
 
 ## How notes differ from EVM transfers
 

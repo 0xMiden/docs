@@ -92,7 +92,7 @@ When proof generation fails:
 3. No state changes occur
 4. The client receives an error describing the failure
 
-The last row is enforced at end-of-execution by the VM kernel rather than mid-execution: a transaction that mutates no account state (storage, vault, or nonce) **and** consumes no notes is rejected. The Rust client also catches this case before submission as `TransactionRequestError::NoInputNotesNorAccountChange`. See [Empty Transaction](../../tutorials/helpers/pitfalls#empty-transaction-no-state-change-no-notes) for the recommended pattern.
+The last row is enforced at end-of-execution by the VM kernel rather than mid-execution: a transaction that mutates no account state (storage, vault, or nonce) **and** consumes no notes is rejected. The Rust client also catches this case before submission as `TransactionRequestError::NoInputNotesNorAccountChange`. See [Empty Transaction](../../tutorials/helpers/pitfalls.md#empty-transaction-no-state-change-no-notes) for the recommended pattern.
 
 ## Example: ManagedWallet
 
@@ -125,7 +125,7 @@ impl ManagedWallet {
 }
 ```
 
-To move assets out of an account, create [output notes](../notes/output-notes) with `output_note::add_asset`. For signature verification and nonce management, see [Authentication](./authentication).
+To move assets out of an account, create [output notes](../notes/output-notes.md) with `output_note::add_asset`. For signature verification and nonce management, see [Authentication](./authentication.md).
 
 :::info API Reference
 Full API docs on docs.rs: [`miden`](https://docs.rs/miden/latest/miden/)

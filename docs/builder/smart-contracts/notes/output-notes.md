@@ -54,7 +54,7 @@ Returns a `NoteMetadata` struct (not a raw `Word`):
 let metadata: NoteMetadata = output_note::get_metadata(note_idx);
 ```
 
-See [Reading Notes — Note metadata](./reading-notes#note-metadata) for the `NoteMetadata` struct definition.
+See [Reading Notes — Note metadata](./reading-notes.md#note-metadata) for the `NoteMetadata` struct definition.
 
 ## Note attachments
 

@@ -6,7 +6,7 @@ description: "Common patterns and security considerations for Miden smart contra
 
 # Patterns
 
-Security considerations and common patterns for Miden smart contracts. For runnable examples, see the [compiler examples directory](https://github.com/0xMiden/compiler/tree/next/examples) and the [Miden Bank Tutorial](../tutorials/miden-bank/).
+Security considerations and common patterns for Miden smart contracts. For runnable examples, see the [compiler examples directory](https://github.com/0xMiden/compiler/tree/next/examples) and the [Miden Bank Tutorial](../tutorials/miden-bank/index.md).
 
 ## Access control
 
@@ -16,7 +16,7 @@ Unlike Solidity, account component procedures cannot check "who is calling me." 
 - **Account components** rely on authentication components (Falcon512, ECDSA) which the transaction kernel invokes automatically in the epilogue
 :::
 
-For account-level access control, Miden uses **authentication components** rather than manual sender checks. The transaction kernel calls the account's `auth` procedure automatically during the transaction epilogue — if the signature is invalid, the entire transaction fails. See [Authentication](./accounts/authentication) for the full pattern.
+For account-level access control, Miden uses **authentication components** rather than manual sender checks. The transaction kernel calls the account's `auth` procedure automatically during the transaction epilogue — if the signature is invalid, the entire transaction fails. See [Authentication](./accounts/authentication.md) for the full pattern.
 
 For note-level access control, note scripts can check who created the note using `active_note::get_sender()`. The protocol-level `ownable` standard (`miden-standards/asm/standards/access/ownable.masm`) provides `verify_owner`, `get_owner`, `transfer_ownership`, and `renounce_ownership` procedures.
 
@@ -24,7 +24,7 @@ For note-level access control, note scripts can check who created the note using
 
 Use `tx::get_block_number()` to enforce cooldown periods between actions. Store the last action block number in a `Value` storage slot, then compare against the current block number before allowing the next action.
 
-See [Transaction Context](./transactions/transaction-context) for the available block and transaction info functions.
+See [Transaction Context](./transactions/transaction-context.md) for the available block and transaction info functions.
 
 ## Security
 
@@ -41,7 +41,7 @@ When an assertion fails, proof generation fails and the transaction is rejected 
 
 ### Replay protection
 
-Every state-changing transaction must increment the nonce. The auth component handles this automatically — see [Authentication](./accounts/authentication).
+Every state-changing transaction must increment the nonce. The auth component handles this automatically — see [Authentication](./accounts/authentication.md).
 
 ### Safe arithmetic
 
@@ -55,7 +55,7 @@ let elapsed = current_block.saturating_sub(last_block);
 let elapsed = current_block - last_block;
 ```
 
-For Felt arithmetic, values wrap modulo the prime field (no overflow panic), but the result may not be what you expect if you're treating Felts as integers. See [Types — Felt](./types#felt--field-elements) for details.
+For Felt arithmetic, values wrap modulo the prime field (no overflow panic), but the result may not be what you expect if you're treating Felts as integers. See [Types — Felt](./types.md#felt--field-elements) for details.
 
 ### Anti-patterns
 

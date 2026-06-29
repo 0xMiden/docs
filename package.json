@@ -14,6 +14,9 @@
     "generate:og": "node scripts/generate-og-images.mjs",
     "write-translations": "docusaurus write-translations",
     "write-heading-ids": "docusaurus write-heading-ids",
+    "check:doc-links": "node scripts/normalize-doc-links.mjs",
+    "normalize-doc-links": "node scripts/normalize-doc-links.mjs --fix",
+    "normalize-doc-links:all": "node scripts/normalize-doc-links.mjs --fix --all",
     "typecheck": "tsc"
   },
   "dependencies": {

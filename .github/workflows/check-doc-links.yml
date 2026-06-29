@@ -1,0 +1,31 @@
+name: Check Doc Links
+
+# Fails a PR when current docs (docs/) contain browser-relative internal links
+# that should be source-tree-relative .md / Card docId links. Run
+# `npm run normalize-doc-links` locally to fix. Scoped to docs/ only;
+# versioned_docs snapshots are healed at deploy time, not validated here.
+on:
+  pull_request:
+    paths:
+      - "docs/**"
+      - "scripts/normalize-doc-links.mjs"
+      - ".github/workflows/check-doc-links.yml"
+
+jobs:
+  check-doc-links:
+    runs-on: ubuntu-latest
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v4
+
+      - name: Setup Node
+        uses: actions/setup-node@v4
+        with:
+          node-version: 20
+          cache: "npm"
+
+      - name: Install deps
+        run: npm install --frozen-lockfile
+
+      - name: Check doc links
+        run: npm run check:doc-links

@@ -85,7 +85,7 @@ eq.COMPOSITION_FUNGIBLE
 2. To branch on the asset type, call `asset::key_to_composition` and compare against the `COMPOSITION_*` constants instead of inspecting raw bits.
 3. No change is needed for `asset::key_to_faucet_id`, `asset::key_into_faucet_id`, `asset::key_to_asset_id`, or `asset::key_into_asset_id` — their names and stack effects are unchanged. Only code that **hand-decodes** the metadata byte is affected by the bit-layout shift; callers using these helper procs are not.
 
-See [Assets, Vault & Faucet](./asset-vault-faucet) for the matching Rust-side `AssetComposition` / `AssetVaultKey` changes.
+See [Assets, Vault & Faucet](./05-asset-vault-faucet.md) for the matching Rust-side `AssetComposition` / `AssetVaultKey` changes.
 
 ---
 

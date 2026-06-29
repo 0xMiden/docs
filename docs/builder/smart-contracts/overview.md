@@ -7,10 +7,10 @@ description: "Miden's execution model, account structure, note system, and trans
 # What is a Miden Smart Contract
 
 :::info Concepts apply to both authoring paths
-This page describes Miden's execution model — accounts, notes, transactions, and lifecycle. The concepts apply regardless of whether you author contracts in MASM (the mainnet path) or the Rust SDK (in active development). Code examples on this page use Rust; for the MASM path, see [MASM Smart Contracts](./masm/).
+This page describes Miden's execution model — accounts, notes, transactions, and lifecycle. The concepts apply regardless of whether you author contracts in MASM (the mainnet path) or the Rust SDK (in active development). Code examples on this page use Rust; for the MASM path, see [MASM Smart Contracts](./masm/index.md).
 :::
 
-Miden is a zero-knowledge layer 2 where transactions execute on the client and only a cryptographic proof is submitted to the network. Every entity — wallets, contracts, faucets — is an account with code, storage, a vault, and a nonce. Assets move between accounts through notes, which act as programmable UTXOs. This page describes the execution model, account structure, note system, and transaction lifecycle. For a hands-on walkthrough, see the [Miden Bank Tutorial](../tutorials/miden-bank/).
+Miden is a zero-knowledge layer 2 where transactions execute on the client and only a cryptographic proof is submitted to the network. Every entity — wallets, contracts, faucets — is an account with code, storage, a vault, and a nonce. Assets move between accounts through notes, which act as programmable UTXOs. This page describes the execution model, account structure, note system, and transaction lifecycle. For a hands-on walkthrough, see the [Miden Bank Tutorial](../tutorials/miden-bank/index.md).
 
 ## What makes Miden different
 
@@ -33,7 +33,7 @@ Miden runs **MASM** (Miden Assembly) — the VM's native instruction set. There 
 MASM → ZK Circuit → Proof
 ```
 
-You write MASM directly and build it into a `.masp` package (Miden Assembly Package). This is what mainnet supports for production today. See [MASM Smart Contracts](./masm/).
+You write MASM directly and build it into a `.masp` package (Miden Assembly Package). This is what mainnet supports for production today. See [MASM Smart Contracts](./masm/index.md).
 
 **Rust** (in active development):
 
@@ -41,7 +41,7 @@ You write MASM directly and build it into a `.masp` package (Miden Assembly Pack
 Rust → Wasm → MASM → ZK Circuit → Proof
 ```
 
-The Miden compiler (`cargo-miden`) compiles your `#![no_std]` Rust to WebAssembly, then translates it to MASM. The output is the same `.masp` package, so both paths share the same execution model and the same [Miden Standards](./standards/) library.
+The Miden compiler (`cargo-miden`) compiles your `#![no_std]` Rust to WebAssembly, then translates it to MASM. The output is the same `.masp` package, so both paths share the same execution model and the same [Miden Standards](./standards/index.md) library.
 
 When a transaction executes, the Miden VM runs the MASM and produces a zero-knowledge proof of correct execution. The output of `cargo miden build` (Rust) or the MASM build tooling is a `.masp` file containing the compiled MASM and metadata.
 
@@ -76,7 +76,7 @@ impl MyWallet {
 
 Each component defines its own storage layout and public methods. The `#[component]` macro generates the necessary WIT (WebAssembly Interface Type) definitions for cross-component interoperability.
 
-See [Components](./accounts/components) for full details.
+See [Components](./accounts/components.md) for full details.
 
 ## Notes as UTXOs
 
@@ -135,7 +135,7 @@ If the assertion fails, the ZK circuit **cannot produce a valid proof**. This me
 
 This is fundamentally different from Ethereum's `revert` — there's no onchain transaction that fails. The proof simply doesn't exist if the execution is invalid.
 
-A separate failure mode is the [empty transaction](../tutorials/helpers/pitfalls#empty-transaction-no-state-change-no-notes) — a transaction that completes without mutating account state or consuming a note is also rejected, since Miden refuses to admit transactions with no observable effect.
+A separate failure mode is the [empty transaction](../tutorials/helpers/pitfalls.md#empty-transaction-no-state-change-no-notes) — a transaction that completes without mutating account state or consuming a note is also rejected, since Miden refuses to admit transactions with no observable effect.
 
 ## Account types
 
@@ -154,23 +154,23 @@ Miden supports four account types, set at deployment time. The same types are us
 
 | Section | When to use |
 |---|---|
-| [MASM Smart Contracts](./masm/) | Production contracts for mainnet today |
-| [Rust SDK](./rust/) | Prototyping today; long-term default once it ships v1 |
-| [Miden Standards](./standards/) | Reusable building blocks callable from either path |
+| [MASM Smart Contracts](./masm/index.md) | Production contracts for mainnet today |
+| [Rust SDK](./rust/index.md) | Prototyping today; long-term default once it ships v1 |
+| [Miden Standards](./standards/index.md) | Reusable building blocks callable from either path |
 
 **Topic guides** (concepts apply regardless of authoring language):
 
 | Topic | Description |
 |---|---|
-| [Components](./accounts/components) | Reusable code modules with storage and exported interfaces |
-| [Storage](./accounts/storage) | Up to 255 slots of `Value` or `StorageMap` |
-| [Custom Types](./accounts/custom-types) | Exported structs/enums for public APIs |
-| [Account Operations](./accounts/account-operations) | Read/write account state and vault |
+| [Components](./accounts/components.md) | Reusable code modules with storage and exported interfaces |
+| [Storage](./accounts/storage.md) | Up to 255 slots of `Value` or `StorageMap` |
+| [Custom Types](./accounts/custom-types.md) | Exported structs/enums for public APIs |
+| [Account Operations](./accounts/account-operations.md) | Read/write account state and vault |
 | [Notes](./notes/) | Programmable UTXOs for asset transfers |
 | [Transactions](./transactions/) | Transaction context, scripts, and the advice provider |
-| [Authentication](./accounts/authentication) | RPO-Falcon512 signatures and replay protection |
-| [Cross-Component Calls](./cross-component-calls) | Inter-component communication |
-| [Types](./types) | Felt, Word, Asset — the VM's native types |
-| [Patterns](./patterns) | Access control, rate limiting, spending limits, anti-patterns |
+| [Authentication](./accounts/authentication.md) | RPO-Falcon512 signatures and replay protection |
+| [Cross-Component Calls](./cross-component-calls.md) | Inter-component communication |
+| [Types](./types.md) | Felt, Word, Asset — the VM's native types |
+| [Patterns](./patterns.md) | Access control, rate limiting, spending limits, anti-patterns |
 
-Ready to start building? The [Miden Bank Tutorial](../tutorials/miden-bank/) is a hands-on walkthrough (currently written against the Rust SDK; the concepts translate to MASM).
+Ready to start building? The [Miden Bank Tutorial](../tutorials/miden-bank/index.md) is a hands-on walkthrough (currently written against the Rust SDK; the concepts translate to MASM).

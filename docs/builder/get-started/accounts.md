@@ -113,7 +113,7 @@ To run the code examples in this guide, you'll need to set up a development envi
 
 ### Rust Environment
 
-If you already created `my-test-project` during [installation](./setup/installation#rust-project), you can reuse it. Otherwise, create a new project:
+If you already created `my-test-project` during [installation](./setup/installation.md#rust-project), you can reuse it. Otherwise, create a new project:
 
 ```bash title=">_ Terminal"
 miden new my-project
@@ -134,7 +134,7 @@ cargo run --bin demo --release
 
 ### TypeScript Environment
 
-If you already created `miden-app` during [installation](./setup/installation#typescript-project), you can reuse it. Otherwise, scaffold a new Vite vanilla-ts project:
+If you already created `miden-app` during [installation](./setup/installation.md#typescript-project), you can reuse it. Otherwise, scaffold a new Vite vanilla-ts project:
 
 ```bash title=">_ Terminal"
 npm create vite@latest miden-app -- --template vanilla-ts
@@ -165,7 +165,7 @@ npm run dev
 Open the dev-server URL in the browser and watch the devtools console for output.
 
 :::tip
-For detailed frontend setup guidance (React, wallets, UI), see the [Tutorials section](../tutorials/).
+For detailed frontend setup guidance (React, wallets, UI), see the [Tutorials section](../tutorials/index.md).
 :::
 
 ## Creating Accounts Programmatically
@@ -406,6 +406,6 @@ Faucet account ID: 0xde0ba31282f7522046d3d4af40722b
 - **BasicFungibleFaucet**: Enables token minting capabilities
 - **AuthSingleSig**: Handles cryptographic authentication (Falcon512 or ECDSA via the `AuthScheme` enum)
 
-Now that you understand how to create accounts and faucets, you're ready to learn about Miden's unique transaction model. Continue to [Notes & Transactions](./notes) to explore how assets move between accounts using notes.
+Now that you understand how to create accounts and faucets, you're ready to learn about Miden's unique transaction model. Continue to [Notes & Transactions](./notes.md) to explore how assets move between accounts using notes.
 
 ---

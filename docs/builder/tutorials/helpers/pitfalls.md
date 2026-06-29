@@ -541,7 +541,7 @@ let request = TransactionRequestBuilder::new()
 ```
 
 :::tip Standard auth handles this for you
-Most account templates run an authentication procedure that calls `incr_nonce()` on every transaction. If your account uses `BasicWallet`, `IncrNonceAuthComponent`, or any auth component that increments the nonce, you only hit this pitfall in transaction-script-only flows that skip the auth path. See [Authentication](../../smart-contracts/accounts/authentication) for details.
+Most account templates run an authentication procedure that calls `incr_nonce()` on every transaction. If your account uses `BasicWallet`, `IncrNonceAuthComponent`, or any auth component that increments the nonce, you only hit this pitfall in transaction-script-only flows that skip the auth path. See [Authentication](../../smart-contracts/accounts/authentication.md) for details.
 :::
 
 ### Why this exists
@@ -550,7 +550,7 @@ A Miden transaction commits to a state delta plus a set of consumed notes. A tra
 
 :::info See also
 - Client-side error catalog: [`TransactionRequestError::NoInputNotesNorAccountChange`](../../tools/clients/common-errors)
-- Failure modes table: [Account Operations](../../smart-contracts/accounts/account-operations#when-proof-generation-fails)
+- Failure modes table: [Account Operations](../../smart-contracts/accounts/account-operations.md#when-proof-generation-fails)
 :::
 
 ---
@@ -575,6 +575,6 @@ See these patterns in context in the [miden-bank repository](https://github.com/
 
 ## Next Steps
 
-- **[Debugging Guide](./debugging)** - Troubleshoot errors
-- **[Testing Guide](./testing)** - MockChain patterns
-- **[Miden Bank Tutorial](../miden-bank/)** - See these patterns in context
+- **[Debugging Guide](./debugging.md)** - Troubleshoot errors
+- **[Testing Guide](./testing.md)** - MockChain patterns
+- **[Miden Bank Tutorial](../miden-bank/index.md)** - See these patterns in context

@@ -64,7 +64,7 @@ fn build_wallet_account() -> Result<(), Box<dyn std::error::Error>> {
 }
 ```
 
-For authentication details, see [Authentication](../accounts/authentication). For how component methods are authored in Rust, see [Components](../accounts/components).
+For authentication details, see [Authentication](../accounts/authentication.md). For how component methods are authored in Rust, see [Components](../accounts/components.md).
 
 ## Check note compatibility
 
@@ -95,6 +95,6 @@ Reach for MASM directly when you are implementing low-level behavior, integratin
 
 ## Related pages
 
-- [Standard notes](./standard-notes) - which account interfaces each standard note expects
-- [Faucets and policies](./faucets-and-policies) - using faucet and mint policy components
+- [Standard notes](./standard-notes.md) - which account interfaces each standard note expects
+- [Faucets and policies](./faucets-and-policies.md) - using faucet and mint policy components
 - [`miden-standards` account source](https://github.com/0xMiden/protocol/tree/next/crates/miden-standards/src/account) - current implementation

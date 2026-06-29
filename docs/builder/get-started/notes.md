@@ -57,7 +57,7 @@ This approach provides several advantages over direct transfers:
 
 ## Set Up Development Environment
 
-To run the code examples in this guide, you'll need to set up a development environment. If you haven't already, follow the setup instructions in the [Accounts](./accounts#set-up-development-environment) guide.
+To run the code examples in this guide, you'll need to set up a development environment. If you haven't already, follow the setup instructions in the [Accounts](./accounts.md#set-up-development-environment) guide.
 
 ## Minting Tokens
 

@@ -46,7 +46,7 @@ Hard-coding testnet URLs in client configs is fine for demos, but the Miden ops 
 
 <Steps>
 
-**Install the toolchain** — `midenup` pulls the client, CLI, and compiler in one step. See [Installation](../get-started/setup/installation).
+**Install the toolchain** — `midenup` pulls the client, CLI, and compiler in one step. See [Installation](../get-started/setup/installation.md).
 
 **Point the client at testnet** — default config targets the testnet RPC, so `miden new` projects work out of the box.
 
@@ -61,7 +61,7 @@ Hard-coding testnet URLs in client configs is fine for demos, but the Miden ops 
 ## Related
 
 <CardGrid cols={2}>
-  <Card title="Deploy your first contract" href="../get-started/your-first-smart-contract/deploy" eyebrow="Tutorial">
+  <Card title="Deploy your first contract" docId="builder/get-started/your-first-smart-contract/deploy" eyebrow="Tutorial">
     End-to-end walkthrough — client → RPC → MidenScan verification.
   </Card>
   <Card title="Miden node" href="/reference" eyebrow="Architecture">

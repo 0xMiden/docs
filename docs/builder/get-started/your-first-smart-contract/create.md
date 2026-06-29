@@ -260,6 +260,6 @@ The counter example demonstrates a complete interaction pattern: the account con
 
 ## Next Steps
 
-Now that you understand the contract code structure, let's move on to [deploying your contract](./deploy) and learn how the integration folder enables interaction with your contracts on the Miden network.
+Now that you understand the contract code structure, let's move on to [deploying your contract](./deploy.md) and learn how the integration folder enables interaction with your contracts on the Miden network.
 
 ---

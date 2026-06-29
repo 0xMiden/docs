@@ -25,22 +25,22 @@ Key concepts you'll encounter:
 Follow these guides in order:
 
 <CardGrid cols={2}>
-  <Card title="Installation" href="./setup/installation" eyebrow="1. Set up">
+  <Card title="Installation" docId="builder/get-started/setup/installation" eyebrow="1. Set up">
     Install the Miden toolchain with `midenup`.
   </Card>
-  <Card title="CLI basics" href="./setup/cli-basics" eyebrow="2. CLI">
+  <Card title="CLI basics" docId="builder/get-started/setup/cli-basics" eyebrow="2. CLI">
     Essential Miden CLI commands — create a wallet and mint your first tokens.
   </Card>
-  <Card title="Accounts" href="./accounts" eyebrow="3. Programmatic">
+  <Card title="Accounts" docId="builder/get-started/accounts" eyebrow="3. Programmatic">
     Create and manage Miden accounts programmatically in Rust and TypeScript.
   </Card>
-  <Card title="Notes & transactions" href="./notes" eyebrow="4. Transfers">
+  <Card title="Notes & transactions" docId="builder/get-started/notes" eyebrow="4. Transfers">
     Miden's note-based transaction model for private asset transfers.
   </Card>
-  <Card title="Read storage" href="./read-storage" eyebrow="5. Query">
+  <Card title="Read storage" docId="builder/get-started/read-storage" eyebrow="5. Query">
     Query account storage data and interact with deployed smart contracts.
   </Card>
-  <Card title="Your first smart contract" href="./your-first-smart-contract" eyebrow="6. Build">
+  <Card title="Your first smart contract" docId="builder/get-started/your-first-smart-contract/index" eyebrow="6. Build">
     Build, test, and deploy a smart contract on Miden using Rust.
   </Card>
 </CardGrid>
