@@ -6,7 +6,9 @@ pagination_next: null
 
 # Build on Miden
 
-Accounts, notes, and transactions — authored in Rust, compiled to MASM, proved client-side.
+Miden is a zero-knowledge layer 2 where every account is an independent state machine and state is private by default. You author accounts, notes, and transactions in Rust, compile them to Miden Assembly (MASM), and prove them client-side — the network verifies each proof without ever seeing your private state.
+
+This is the developer's entry point. **New to Miden?** Start with [Get started](./get-started) to install the toolchain and send your first transaction, then build [Your first smart contract](./get-started/your-first-smart-contract), and dip into the [Reference](../reference) when you want to know how it all works underneath. Already oriented? Jump straight to any section below.
 
 ## Start here
 
@@ -18,6 +20,10 @@ Accounts, notes, and transactions — authored in Rust, compiled to MASM, proved
     Walk through writing, proving, and deploying a counter contract in Rust.
   </Card>
 </CardGrid>
+
+<Callout variant="tip" title="Testnet & faucet">
+Building against the public testnet? Grab free test assets from the [faucet](https://faucet.testnet.miden.io/), and find every public endpoint — RPC, block explorer, status — on the [Network](./tools/network) page.
+</Callout>
 
 ## Build
 
