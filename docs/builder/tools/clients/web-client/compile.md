@@ -175,7 +175,6 @@ const script = await client.compile.txScript({
 ```typescript
 import {
   MidenClient,
-  AccountType,
   AuthSecretKey,
   StorageSlot,
 } from "@miden-sdk/miden-sdk";
@@ -194,7 +193,6 @@ const seed = crypto.getRandomValues(new Uint8Array(32));
 const auth = AuthSecretKey.rpoFalconWithRNG(seed);
 
 const contract = await client.accounts.create({
-  type: AccountType.RegularAccountImmutableCode,
   seed,
   auth,
   components: [component],

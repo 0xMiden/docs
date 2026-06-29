@@ -55,13 +55,13 @@ anyhow = "1.0"
 tokio = { version = "1", features = ["rt-multi-thread", "macros"] }
 
 # Miden dependencies
-cargo-miden = { version = "0.7" }
-miden-client = { version = "0.13", features = ["tonic", "testing"] }
-miden-client-sqlite-store = { version = "0.13", package = "miden-client-sqlite-store" }
-miden-core = { version = "0.20" }
-miden-standards = { version = "0.13", default-features = false, features = ["testing"] }
-miden-testing = "0.13"
-miden-mast-package = { version = "0.20", default-features = false }
+cargo-miden = { version = "0.8" }
+miden-client = { version = "0.15", features = ["tonic", "testing"] }
+miden-client-sqlite-store = { version = "0.15", package = "miden-client-sqlite-store" }
+miden-core = { version = "0.23" }
+miden-standards = { version = "0.15", default-features = false, features = ["testing"] }
+miden-testing = "0.15"
+miden-mast-package = { version = "0.23", default-features = false }
 rand = { version = "0.9" }
 ```
 
@@ -132,12 +132,16 @@ async fn my_test() -> anyhow::Result<()> {
 Faucets mint assets for testing:
 
 ```rust
-// Create a faucet with 1,000,000 total supply, decimals = 10
+use miden_client::auth::AuthSchemeId;
+
+// Create a faucet with 1,000,000 max supply and 100 initial tokens
 let faucet = builder.add_existing_basic_faucet(
-    Auth::BasicAuth,
+    Auth::BasicAuth {
+        auth_scheme: AuthSchemeId::Falcon512Poseidon2,
+    },
     "TEST",           // Token symbol
-    1_000_000,        // Total supply
-    Some(10),         // Decimals
+    1_000_000,        // Max supply
+    Some(100),        // Initial token supply
 )?;
 ```
 
@@ -147,10 +151,13 @@ Create accounts with initial assets:
 
 ```rust
 use miden_client::asset::FungibleAsset;
+use miden_client::auth::AuthSchemeId;
 
 // Create a wallet with 100 tokens from the faucet
 let sender = builder.add_existing_wallet_with_assets(
-    Auth::BasicAuth,
+    Auth::BasicAuth {
+        auth_scheme: AuthSchemeId::Falcon512Poseidon2,
+    },
     [FungibleAsset::new(faucet.id(), 100)?.into()],
 )?;
 ```
@@ -160,20 +167,18 @@ let sender = builder.add_existing_wallet_with_assets(
 For accounts with custom components, create configuration helpers:
 
 ```rust title="integration/src/helpers.rs"
-use miden_client::account::{AccountStorageMode, AccountType, StorageSlot};
+use miden_client::account::{AccountType, StorageSlot};
 
 #[derive(Clone)]
 pub struct AccountCreationConfig {
     pub account_type: AccountType,
-    pub storage_mode: AccountStorageMode,
     pub storage_slots: Vec<StorageSlot>,
 }
 
 impl Default for AccountCreationConfig {
     fn default() -> Self {
         Self {
-            account_type: AccountType::RegularAccountImmutableCode,
-            storage_mode: AccountStorageMode::Public,
+            account_type: AccountType::Public,
             storage_slots: vec![],
         }
     }
@@ -253,6 +258,7 @@ impl Default for NoteCreationConfig {
 ```rust
 use miden_client::asset::{Asset, FungibleAsset};
 use miden_client::note::NoteAssets;
+use miden_client::transaction::RawOutputNote;
 
 // Build note script
 let deposit_note_package = Arc::new(build_project_in_dir(
@@ -276,7 +282,7 @@ let deposit_note = create_testing_note_from_package(
 )?;
 
 // Add to MockChain
-builder.add_output_note(OutputNote::Full(deposit_note.clone()));
+builder.add_output_note(RawOutputNote::Full(deposit_note.clone()));
 ```
 
 ### Creating Notes with Inputs
@@ -368,7 +374,7 @@ let executed_tx = tx_context.execute().await?;
 When your contract creates output notes, specify them:
 
 ```rust
-use miden_client::transaction::OutputNote;
+use miden_client::transaction::RawOutputNote;
 
 // Build the expected output note
 let expected_note = Note::new(
@@ -379,7 +385,7 @@ let expected_note = Note::new(
 
 let tx_context = mock_chain
     .build_tx_context(account.id(), &[input_note.id()], &[])?
-    .extend_expected_output_notes(vec![OutputNote::Full(expected_note)])
+    .extend_expected_output_notes(vec![RawOutputNote::Full(expected_note)])
     .build()?;
 ```
 
@@ -471,8 +477,9 @@ use integration::helpers::{
 use miden_client::{
     account::{StorageMap, StorageSlot, StorageSlotName},
     asset::{Asset, FungibleAsset},
+    auth::AuthSchemeId,
     note::NoteAssets,
-    transaction::{OutputNote, TransactionScript},
+    transaction::{RawOutputNote, TransactionScript},
     Felt, Word,
 };
 use miden_testing::{Auth, MockChain};
@@ -484,9 +491,18 @@ async fn deposit_test() -> anyhow::Result<()> {
     let mut builder = MockChain::builder();
 
     // 2. Create faucet and sender
-    let faucet = builder.add_existing_basic_faucet(Auth::BasicAuth, "TEST", 1000, Some(10))?;
+    let faucet = builder.add_existing_basic_faucet(
+        Auth::BasicAuth {
+            auth_scheme: AuthSchemeId::Falcon512Poseidon2,
+        },
+        "TEST",
+        1000,
+        Some(100),
+    )?;
     let sender = builder.add_existing_wallet_with_assets(
-        Auth::BasicAuth,
+        Auth::BasicAuth {
+            auth_scheme: AuthSchemeId::Falcon512Poseidon2,
+        },
         [FungibleAsset::new(faucet.id(), 100)?.into()],
     )?;
 
@@ -535,7 +551,7 @@ async fn deposit_test() -> anyhow::Result<()> {
 
     // 6. Add to builder and build chain
     builder.add_account(bank_account.clone())?;
-    builder.add_output_note(OutputNote::Full(deposit_note.clone()));
+    builder.add_output_note(RawOutputNote::Full(deposit_note.clone()));
     let mut mock_chain = builder.build()?;
 
     // 7. Initialize bank

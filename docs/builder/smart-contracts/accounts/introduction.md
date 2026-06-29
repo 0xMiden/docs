@@ -28,14 +28,19 @@ The network doesn't store the full account state. Instead, it stores cryptograph
 On Ethereum, a smart contract is a single monolithic unit of code deployed to an address. On Miden, accounts are composed of **components** — reusable modules that each contribute their own storage layout and exported procedures.
 
 ```rust
-use miden::{component, Asset};
+use miden::{component, component_storage, Asset};
+
+#[component_storage]
+struct MyWalletStorage;
 
 #[component]
-struct MyWallet;
+trait MyWallet {
+    fn receive_asset(&mut self, asset: Asset);
+}
 
 #[component]
-impl MyWallet {
-    pub fn receive_asset(&mut self, asset: Asset) {
+impl MyWallet for MyWalletStorage {
+    fn receive_asset(&mut self, asset: Asset) {
         self.add_asset(asset);
     }
 }
@@ -45,21 +50,14 @@ An account can have multiple components. For example, a DeFi account might combi
 
 ## Account types
 
-Accounts are configured by type and storage mode:
+Accounts are configured with `AccountType`, which controls state visibility:
 
 | Type | Description |
 |------|-------------|
-| `RegularAccountUpdatableCode` | Standard account — code can be updated after deployment |
-| `RegularAccountImmutableCode` | Account with fixed code — cannot be changed after deployment |
-| `FungibleFaucet` | Mints and burns fungible tokens |
-| `NonFungibleFaucet` | Mints and burns non-fungible tokens (NFTs) |
+| `AccountType::Public` | Full state is stored onchain and visible to everyone — suitable for shared protocols like DEXs and faucets |
+| `AccountType::Private` | Only a state commitment is stored onchain — the actual data stays with the account owner |
 
-Storage mode controls privacy:
-
-| Mode | Description |
-|------|-------------|
-| **Public** | Full state is stored onchain and visible to everyone — suitable for shared protocols like DEXs and faucets |
-| **Private** | Only a state commitment is stored onchain — the actual data stays with the account owner |
+Wallet, contract, and faucet roles are determined by the account's components and options, not by separate account-type enum variants. For example, a fungible faucet is a public or private account that includes the `FungibleFaucet` component and token policy configuration.
 
 ## How accounts differ from EVM contracts
 
@@ -70,4 +68,3 @@ Storage mode controls privacy:
 | **Code structure** | Monolithic contract deployed to an address | Multiple reusable components composed into one account |
 | **Identity** | Wallets are EOAs, contracts are separate | Everything is an account — wallets are smart contracts |
 | **Failure** | `revert` consumes gas, leaves an onchain trace | Proof cannot be generated — no onchain trace, no cost |
-

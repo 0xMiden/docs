@@ -99,8 +99,7 @@ async fn counter_test() -> anyhow::Result<()> {
     let count_storage_key = Word::from([0u32, 0, 0, 1]);
     let initial_count = Word::default();
 
-    // The slot name is constructed as
-    // `miden::component::[to_underscore(Cargo.toml:package.metadata.component.package)]::[field_name]`
+    // Use the slot name generated for the component's manifest namespace and field name.
     let counter_storage_slot =
         StorageSlotName::new("miden::component::miden_counter_account::count_map").unwrap();
     let storage_slots = vec![StorageSlot::with_map(

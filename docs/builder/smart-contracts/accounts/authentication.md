@@ -8,7 +8,7 @@ description: "Authentication component pattern and nonce management for Miden ac
 
 Miden uses digital signatures for transaction authentication. Because transactions execute on the client rather than onchain validators, the system needs a way to prove that a transaction was authorized by the account owner. Without authentication, anyone could construct a valid proof that transfers assets out of an account. The nonce prevents replay attacks — without it, a valid proof could be resubmitted to execute the same state change twice. For details on the cryptographic primitives, see [Cryptography](./cryptography).
 
-v0.14 unifies the previous per-scheme components (`AuthFalcon512Rpo`, `AuthEcdsaK256Keccak`, …) into a single scheme-agnostic [`AuthSingleSig`](https://docs.rs/miden-standards/latest/miden_standards/account/auth/struct.AuthSingleSig.html) component that takes an `AuthScheme` enum (`Falcon512Poseidon2` or `EcdsaK256Keccak`). The native hash function is Poseidon2, and the Falcon-512 verifier MASM module is `miden::core::crypto::dsa::falcon512_poseidon2`.
+v0.15 uses a single scheme-agnostic [`AuthSingleSig`](https://docs.rs/miden-standards/latest/miden_standards/account/auth/struct.AuthSingleSig.html) component for single-signature accounts. It takes an auth scheme identifier such as `Falcon512Poseidon2` or `EcdsaK256Keccak`. The native hash function is Poseidon2, and the Falcon-512 verifier MASM module is `miden::core::crypto::dsa::falcon512_poseidon2`.
 
 ## How authentication works
 
@@ -33,17 +33,17 @@ On the client side, attach `AuthSingleSig` via `AccountBuilder::with_auth_compon
 
 ```rust
 use miden_client::{
-    account::{AccountBuilder, AccountStorageMode, AccountType, component::BasicWallet},
-    auth::{AuthSchemeId, AuthSecretKey, AuthSingleSig},
+    account::{AccountBuilder, AccountType, component::BasicWallet},
+    auth::{AuthSchemeId, AuthSingleSig},
 };
+use miden_protocol::{account::auth::PublicKeyCommitment, Word};
 
-let key_pair = AuthSecretKey::new_falcon512_poseidon2_with_rng(client.rng());
+let public_key = PublicKeyCommitment::from(Word::default());
 
 let account = AccountBuilder::new(seed)
-    .account_type(AccountType::RegularAccountUpdatableCode)
-    .storage_mode(AccountStorageMode::Public)
+    .account_type(AccountType::Public)
     .with_auth_component(AuthSingleSig::new(
-        key_pair.public_key().to_commitment(),
+        public_key,
         AuthSchemeId::Falcon512Poseidon2,
     ))
     .with_component(BasicWallet)
@@ -60,15 +60,20 @@ If you need authentication logic beyond `AuthSingleSig` / `AuthMultisig`, you ca
 #![no_std]
 #![feature(alloc_error_handler)]
 
-use miden::{component, Word};
+use miden::{auth_script, component, component_storage, Word};
+
+#[component_storage]
+struct AuthComponentStorage;
 
 #[component]
-struct AuthComponent;
-
-#[component]
-impl AuthComponent {
+trait AuthComponent {
     #[auth_script]
-    pub fn verify(&self, _arg: Word) {
+    fn verify(&mut self, _arg: Word);
+}
+
+#[component]
+impl AuthComponent for AuthComponentStorage {
+    fn verify(&mut self, _arg: Word) {
         // Custom authentication checks go here.
         //
         // Returning normally = authentication succeeded.
@@ -78,8 +83,6 @@ impl AuthComponent {
     }
 }
 ```
-
-The kernel also increments the nonce automatically as part of the `@auth_script` contract — you do not need to call `self.incr_nonce()` from inside the procedure for replay protection.
 
 ## Nonce management
 

@@ -47,14 +47,11 @@ Every Miden account contains these core components:
 
 ```rust
 pub struct MidenAccount {
-    /// Immutable, 120-bit ID encoding type, storage mode and version.
+    /// Immutable, 120-bit ID encoding account visibility and version.
     pub id: [u8; 15],
 
-    /// Determines mutability of the account (immutable, mutable).
+    /// Determines whether account state is public or private.
     pub account_type: AccountType,
-
-    /// Storage placement preference (public/private).
-    pub storage_mode: StorageMode,
 
     /// Root commitment of the account CODE (MAST root).
     pub code_commitment: [u8; 32],
@@ -74,7 +71,7 @@ pub struct MidenAccount {
     /// Accounts are composed by merging components (e.g. wallet component + an auth component).
     pub components: Vec<ComponentDescriptor>,
 
-    /// Authentication procedure metadata (e.g. "RpoFalcon512").
+    /// Authentication procedure metadata (e.g. "Falcon512Poseidon2").
     pub authentication: AuthenticationDescriptor,
 }
 ```
@@ -83,16 +80,14 @@ pub struct MidenAccount {
 
 ```rust
 pub enum AccountType {
-    // Faucet that can issue fungible assets
-    FungibleFaucet = 2,
-    // Faucet that can issue non-fungible assets
-    NonFungibleFaucet = 3,
-    // Regular account with immutable code
-    RegularAccountImmutableCode = 0,
-    /// Regular account with updateable code
-    RegularAccountUpdatableCode = 1,
+    /// Account state is held privately by the owner.
+    Private,
+    /// Account state is visible onchain.
+    Public,
 }
 ```
+
+Wallet, faucet, and custom-contract roles come from the account's components and creation options, not from the account ID.
 
 **Storage Modes:**
 
@@ -139,7 +134,7 @@ If you already created `miden-app` during [installation](./setup/installation#ty
 ```bash title=">_ Terminal"
 npm create vite@latest miden-app -- --template vanilla-ts
 cd miden-app
-npm install @miden-sdk/miden-sdk
+npm install @miden-sdk/miden-sdk@^0.15.0
 ```
 
 For each code example, save the TypeScript snippet as `src/demo.ts` (overwriting the previous one as you progress):
@@ -176,7 +171,7 @@ Let's start by creating accounts using the Miden client libraries:
 use miden_client::{
     account::{
         component::{AuthScheme, AuthSingleSig, BasicWallet},
-        AccountBuilder, AccountStorageMode, AccountType,
+        AccountBuilder, AccountType,
     },
     auth::AuthSecretKey,
     builder::ClientBuilder,
@@ -220,8 +215,7 @@ async fn main() -> anyhow::Result<()> {
     let key_pair = AuthSecretKey::new_falcon512_poseidon2();
 
     let builder = AccountBuilder::new(init_seed)
-        .account_type(AccountType::RegularAccountUpdatableCode)
-        .storage_mode(AccountStorageMode::Public)
+        .account_type(AccountType::Public)
         .with_auth_component(AuthSingleSig::new(
             key_pair.public_key().to_commitment(),
             AuthScheme::Falcon512Poseidon2,
@@ -242,7 +236,7 @@ async fn main() -> anyhow::Result<()> {
 ```
 
 ```typescript title="src/demo.ts"
-import { MidenClient, AccountType } from "@miden-sdk/miden-sdk";
+import { MidenClient } from "@miden-sdk/miden-sdk";
 
 export async function demo() {
     // Initialize client to connect with the Miden Testnet.
@@ -252,8 +246,7 @@ export async function demo() {
 
     // Create a new wallet account.
     const wallet = await client.accounts.create({
-        type: AccountType.MutableWallet, // Standard wallet with upgradeable code
-        storage: "public",               // Public: account state is visible onchain
+        storage: "public", // Public: account state is visible onchain
     });
 
     console.log("Account ID:", wallet.id().toString());
@@ -281,17 +274,21 @@ Before we can work with tokens, we need a source of tokens. Let's create a fungi
 ```rust title="integration/src/bin/faucet.rs"
 use miden_client::{
     account::{
-        component::{AuthScheme, AuthSingleSig, BasicFungibleFaucet},
-        AccountBuilder, AccountStorageMode, AccountType,
+        component::{
+            AccessControl, AuthScheme, BurnPolicyConfig, FungibleFaucet, MintPolicyConfig,
+            PolicyRegistration, TokenName, TokenPolicyManager, TransferPolicy,
+            create_fungible_faucet,
+        },
+        AccountType,
     },
-    asset::TokenSymbol,
     auth::AuthSecretKey,
     builder::ClientBuilder,
     keystore::{FilesystemKeyStore, Keystore},
     rpc::{Endpoint, GrpcClient},
-    Felt,
 };
 use miden_client_sqlite_store::ClientBuilderSqliteExt;
+use miden_protocol::asset::{AssetAmount, TokenSymbol};
+use miden_standards::AuthMethod;
 use rand::RngCore;
 use std::sync::Arc;
 
@@ -329,22 +326,36 @@ async fn main() -> anyhow::Result<()> {
     // Faucet parameters
     let symbol = TokenSymbol::new("TEST")?;
     let decimals = 8;
-    let max_supply = Felt::new(1_000_000);
+    let max_supply = AssetAmount::from(1_000_000u32);
 
     // Generate key pair
     let key_pair = AuthSecretKey::new_falcon512_poseidon2();
 
-    // Build the account
-    let builder = AccountBuilder::new(init_seed)
-        .account_type(AccountType::FungibleFaucet)
-        .storage_mode(AccountStorageMode::Public)
-        .with_auth_component(AuthSingleSig::new(
-            key_pair.public_key().to_commitment(),
-            AuthScheme::Falcon512Poseidon2,
-        ))
-        .with_component(BasicFungibleFaucet::new(symbol, decimals, max_supply)?);
-
-    let faucet_account = builder.build()?;
+    // Build the faucet account
+    let faucet = FungibleFaucet::builder()
+        .name(TokenName::new("Test Token")?)
+        .symbol(symbol)
+        .decimals(decimals)
+        .max_supply(max_supply)
+        .build()?;
+    let policies = TokenPolicyManager::new()
+        .with_mint_policy(MintPolicyConfig::AllowAll, PolicyRegistration::Active)?
+        .with_burn_policy(BurnPolicyConfig::AllowAll, PolicyRegistration::Active)?
+        .with_send_policy(TransferPolicy::AllowAll, PolicyRegistration::Active)?
+        .with_receive_policy(TransferPolicy::AllowAll, PolicyRegistration::Active)?;
+    let faucet_account = create_fungible_faucet(
+        init_seed,
+        faucet,
+        AccountType::Public,
+        AuthMethod::SingleSig {
+            approver: (
+                key_pair.public_key().to_commitment(),
+                AuthScheme::Falcon512Poseidon2,
+            ),
+        },
+        AccessControl::AuthControlled,
+        policies,
+    )?;
 
     client.add_account(&faucet_account, false).await?;
     keystore.add_key(&key_pair, faucet_account.id()).await?;
@@ -356,7 +367,7 @@ async fn main() -> anyhow::Result<()> {
 ```
 
 ```typescript title="src/demo.ts"
-import { MidenClient, AccountType } from "@miden-sdk/miden-sdk";
+import { MidenClient } from "@miden-sdk/miden-sdk";
 
 export async function demo() {
     // Initialize client to connect with the Miden Testnet.
@@ -368,7 +379,7 @@ export async function demo() {
 
     // Create a fungible token faucet.
     const faucet = await client.accounts.create({
-        type: AccountType.FungibleFaucet,
+        type: 0, // Fungible faucet
         symbol: "TEST",
         decimals,
         maxSupply,
@@ -392,8 +403,8 @@ Faucet account ID: 0xde0ba31282f7522046d3d4af40722b
 
 **Account Types:**
 
-- **Regular Accounts**: Standard smart contract wallets that can hold assets and execute custom logic
-- **Faucet Accounts**: Specialized accounts with minting permissions for tokens
+- **Public Accounts**: Account state is fully transparent and visible onchain
+- **Private Accounts**: Only cryptographic commitments are stored onchain, with full state maintained privately
 
 **Storage Modes:**
 
@@ -403,7 +414,8 @@ Faucet account ID: 0xde0ba31282f7522046d3d4af40722b
 **Modular Components:**
 
 - **BasicWallet**: Provides asset management functionality
-- **BasicFungibleFaucet**: Enables token minting capabilities
+- **FungibleFaucet**: Provides token metadata and minting behavior
+- **TokenPolicyManager**: Configures mint, burn, send, and receive policies
 - **AuthSingleSig**: Handles cryptographic authentication (Falcon512 or ECDSA via the `AuthScheme` enum)
 
 Now that you understand how to create accounts and faucets, you're ready to learn about Miden's unique transaction model. Continue to [Notes & Transactions](./notes) to explore how assets move between accounts using notes.

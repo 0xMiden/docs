@@ -23,13 +23,13 @@ Every note has four parts:
 | **Storage** | Custom data stored with the note that the script can read at consumption time (e.g., a target account ID, an expiration block) |
 | **Metadata** | Sender ID, note tag (for discovery routing), and auxiliary data |
 
-The **recipient** is a cryptographic hash that encodes who can consume the note. When creating notes programmatically (via [`output_note::create`](./output-notes#create-a-note)), you compute a `Recipient` from the note's serial number, script root, and storage commitment:
+The **recipient** is a Poseidon2 hash that encodes who can consume the note. When creating notes programmatically (via [`output_note::create`](./output-notes#create-a-note)), you compute a `Recipient` from the note's serial number, script root, and storage commitment:
 
 ```
 recipient = hash(hash(hash(serial_num, [0;4]), script_root), storage_commitment)
 ```
 
-Only someone who knows these values can construct a valid consumption proof. See [Computing a Recipient](./output-notes#computing-a-recipient) for the SDK API.
+Only someone who knows these values can construct a valid consumption proof. See [Computing a Recipient](./output-notes#computing-a-recipient) for the protocol helpers.
 
 ## The two-transaction model
 
@@ -74,4 +74,3 @@ Miden provides built-in note patterns (P2ID, P2IDE, SWAP) for common transfer sc
 | **Programmability** | Token contracts control transfer logic | Each note carries its own script with custom conditions |
 | **Failure** | Revert onchain, gas consumed | Proof can't be generated — no onchain trace |
 | **Parallelism** | Transfers contend for contract state | Notes are independent — unlimited parallel creation |
-

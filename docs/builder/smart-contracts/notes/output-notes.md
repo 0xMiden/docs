@@ -1,7 +1,7 @@
 ---
 title: "Output Notes"
 sidebar_position: 4
-description: "Create output notes, attach assets, set attachments, and compute recipients."
+description: "Create output notes, attach assets, add attachments, and compute recipients."
 ---
 
 # Output Notes
@@ -48,54 +48,44 @@ let recipient: Recipient = output_note::get_recipient(note_idx);
 
 ### Note metadata
 
-Returns a `NoteMetadata` struct (not a raw `Word`):
+Returns note metadata:
 
 ```rust
 let metadata: NoteMetadata = output_note::get_metadata(note_idx);
 ```
 
-See [Reading Notes — Note metadata](./reading-notes#note-metadata) for the `NoteMetadata` struct definition.
+On the v0.15 protocol side, `NoteMetadata` combines `PartialNoteMetadata` (sender, note type, tag) with attachment headers and the attachments commitment. See [Reading Notes — Note metadata](./reading-notes#note-metadata) for details.
 
 ## Note attachments
 
-Notes can carry auxiliary data as attachments. The attachment API uses `Felt`-typed discriminants to select the scheme and kind:
+Notes can carry auxiliary data as attachments. The attachment API uses a `Felt`-typed scheme identifier; the payload shape is selected by the function:
 
 ```rust
-// Full form — specify scheme, kind, and payload
-output_note::set_attachment(note_idx, attachment_scheme, attachment_kind, attachment_word);
-
-// Word attachment — a single Word of inline data
-output_note::set_word_attachment(note_idx, attachment_scheme, word_data);
-
-// Array attachment — a commitment to data stored in the advice map
-output_note::set_array_attachment(note_idx, attachment_scheme, commitment_word);
+// Single-word attachment; the helper hashes and inserts the word.
+output_note::add_word_attachment(note_idx, attachment_scheme, word_data);
 ```
 
 
-**Word attachments** store data directly in the note. **Array attachments** store a commitment (hash) to larger data that lives in the advice map — the consumer must have access to the corresponding advice map entries to read the full data.
+Use `add_attachment` when you already have an attachment commitment and the raw data is present in the advice map. Use `add_attachment_from_memory` for multi-word data that should be hashed and inserted from memory. Attachments are committed into note metadata, and the consumer must have access to the corresponding advice map entries to read the full data.
 
 ## Computing a Recipient
 
-When creating notes programmatically, you need a `Recipient` to pass to `output_note::create`. The `Recipient` is a hash that encodes the note script and inputs, ensuring only someone who knows these values can consume the note.
+When creating notes programmatically, you need a `Recipient` to pass to `output_note::create`. The `Recipient` is a hash that encodes the note script and storage commitment, ensuring only someone who knows these values can consume the note.
 
-```rust
-use miden::{Recipient, Digest};
+The protocol computation is:
 
-let recipient = Recipient::compute(
-    serial_num,       // Word: unique serial number for this note
-    script_digest,    // Digest: hash of the note script
-    inputs,           // Vec<Felt>: note inputs (e.g., target account ID)
-);
+```
+recipient = hash(hash(hash(serial_num, [0;4]), script_root), storage_commitment)
 ```
 
-The computation is: `hash(hash(hash(serial_num, [0;4]), script_root), inputs_commitment)`. `script_digest` and `script_root` refer to the same value — the hash of the note script program. The formula uses `script_root`; the Rust parameter is named `script_digest`.
+`script_root` is the hash of the note script program, and `storage_commitment` is the commitment to the note's storage values. MASM authors can use `note::compute_recipient` for an existing storage commitment or `note::compute_and_store_recipient` when the raw storage values should also be inserted into the advice map.
 
 ## Example: creating and funding a note
 
 A complete flow for creating a note inside an account component:
 
 ```rust
-use miden::{output_note, Asset, Tag, NoteType, Recipient, Digest};
+use miden::{output_note, Asset, NoteType, Recipient, Tag};
 
 pub fn send_assets(recipient: Recipient, asset: Asset, tag: Tag) {
     // 1. Create the note

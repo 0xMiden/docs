@@ -10,27 +10,33 @@ Components are the building blocks of Miden accounts. Each component defines a [
 
 ## The `#[component]` macro
 
-Apply `#[component]` to both a struct definition and its impl block:
+A component has three Rust pieces: a `#[component_storage]` struct for storage fields, a `#[component]` trait for the public interface, and a `#[component] impl Trait for Storage` block for behavior:
 
 ```rust
-use miden::{component, felt, Felt, StorageMap, Word};
+use miden::{component, component_storage, felt, Felt, StorageMap, Word};
 
-#[component]
-struct CounterContract {
+#[component_storage]
+struct CounterContractStorage {
     #[storage(description = "counter contract storage map")]
-    count_map: StorageMap,
+    count_map: StorageMap<Word, Felt>,
 }
 
 #[component]
-impl CounterContract {
-    pub fn get_count(&self) -> Felt {
-        let key = Word::from_u64_unchecked(0, 0, 0, 1);
-        self.count_map.get(&key)
+trait CounterContract {
+    fn get_count(&self) -> Felt;
+    fn increment_count(&mut self) -> Felt;
+}
+
+#[component]
+impl CounterContract for CounterContractStorage {
+    fn get_count(&self) -> Felt {
+        let key = Word::new([felt!(0), felt!(0), felt!(0), felt!(1)]);
+        self.count_map.get(key)
     }
 
-    pub fn increment_count(&mut self) -> Felt {
-        let key = Word::from_u64_unchecked(0, 0, 0, 1);
-        let current_value: Felt = self.count_map.get(&key);
+    fn increment_count(&mut self) -> Felt {
+        let key = Word::new([felt!(0), felt!(0), felt!(0), felt!(1)]);
+        let current_value: Felt = self.count_map.get(key);
         let new_value = current_value + felt!(1);
         self.count_map.set(key, new_value);
         new_value
@@ -38,51 +44,74 @@ impl CounterContract {
 }
 ```
 
-The macro generates:
+The macros generate:
 
 1. **Public API exports** describing the component's callable methods
 2. **Storage metadata** mapping slot names to slot IDs (derived from the component package + field name)
 3. **Runtime bindings** for the Miden execution environment
 
-## Struct definition
+## Project manifest
 
-The struct defines the component's storage layout:
+Every account component crate also needs a `miden-project.toml` next to `Cargo.toml`:
+
+```toml title="miden-project.toml"
+[package]
+name = "counter-contract"
+version = "0.1.0"
+
+[lib]
+kind = "account-component"
+namespace = "miden:counter-contract/counter-contract@0.1.0"
+
+[dependencies]
+miden-core = "*"
+miden-protocol = "*"
+```
+
+The namespace interface segment must match the kebab-cased `#[component]` trait name. If this component calls another account or exposes generated WIT to a note script, add that dependency to both `[dependencies]` and `[package.metadata.miden.dependencies]`.
+
+## Storage struct
+
+The storage struct defines the component's storage layout:
 
 ```rust
-#[component]
-struct MyContract {
+use miden::{component_storage, StorageMap, StorageValue, Word};
+
+#[component_storage]
+struct MyContractStorage {
     #[storage(description = "owner account identifier")]
-    owner: Value,
+    owner: StorageValue<Word>,
 
     #[storage(description = "user balances")]
-    balances: StorageMap,
+    balances: StorageMap<Word, Word>,
 }
 ```
 
 ### Storage fields
 
-Each field must be either `Value` (single-slot) or `StorageMap` (map-slot), annotated with `#[storage]`:
+Each field must be either `StorageValue<T>` (single-slot) or `StorageMap<K, V>` (map-slot), annotated with `#[storage]`:
 
 ```rust
 #[storage(description = "human-readable description")]
-field_name: Value,
+field_name: StorageValue<Word>,
 
 #[storage(description = "human-readable description")]
-field_name: StorageMap,
+field_name: StorageMap<Word, Word>,
 ```
 
-The `description` is optional and becomes part of the generated metadata. Slot IDs are derived from the component package name (from `[package.metadata.component]`) and the field name, so **renaming a field changes the slot ID**. Ordering does not matter, and `slot(N)` is not supported.
+The `description` is optional and becomes part of the generated metadata. Slot IDs are derived from the component package name and the field name, so **renaming a field changes the slot ID**. Ordering does not matter, and `slot(N)` is not supported.
 
-## Impl block — methods
+## Trait and impl block — methods
+
+Declare public methods on the `#[component]` trait, then implement that trait for the storage struct.
 
 ### Read methods (`&self`)
 
 Methods that take `&self` are **read-only** — they can query storage and account state but cannot modify anything:
 
 ```rust
-pub fn get_balance(&self, depositor: AccountId) -> Felt {
-    let key = Word::from([depositor.prefix, depositor.suffix, felt!(0), felt!(0)]);
-    self.balances.get(&key)
+fn get_balance(&self, depositor: AccountId) -> Felt {
+    self.balances.get(depositor)
 }
 ```
 
@@ -91,7 +120,7 @@ pub fn get_balance(&self, depositor: AccountId) -> Felt {
 Methods that take `&mut self` can **modify state** — write to storage, add/remove assets, create notes:
 
 ```rust
-pub fn deposit(&mut self, asset: Asset) {
+fn deposit(&mut self, asset: Asset) {
     self.add_asset(asset);
 }
 ```
@@ -102,17 +131,22 @@ Read methods (`&self`) produce proofs that don't include state transitions. Writ
 
 ### Private methods
 
-Methods without `pub` are private — they can be called from other methods in the same component but are not exported:
+Helpers that are not declared on the `#[component]` trait are private. Define them on the storage struct with a normal inherent impl, then call them from the component trait implementation:
 
 ```rust
-fn require_initialized(&self) {
-    let state: Word = self.initialized.read();
-    assert!(state[0] == felt!(1));
+impl MyContractStorage {
+    fn require_initialized(&self) {
+        let state: Word = self.initialized.get();
+        assert!(state[0] == felt!(1));
+    }
 }
 
-pub fn do_something(&mut self) {
-    self.require_initialized();
-    // ...
+#[component]
+impl MyContract for MyContractStorage {
+    fn do_something(&mut self) {
+        self.require_initialized();
+        // ...
+    }
 }
 ```
 
@@ -152,8 +186,8 @@ self.get_id() -> AccountId
 // Get the account nonce
 self.get_nonce() -> Felt
 
-// Get fungible asset balance for a faucet
-self.get_balance(faucet_id: AccountId) -> Felt
+// Get fungible asset balance for an asset key
+self.get_balance(asset_key: Word) -> Felt
 
 // Check non-fungible asset ownership
 self.has_non_fungible_asset(asset: Asset) -> bool

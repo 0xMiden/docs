@@ -30,13 +30,15 @@ const client = await MidenClient.createMock();
 The mock chain does not create blocks automatically — advance it with `proveBlock()` after each transaction batch. Between `proveBlock()` and subsequent reads, call `client.sync()` to hydrate the store.
 
 ```typescript
-import { MidenClient, AccountType } from "@miden-sdk/miden-sdk";
+import { MidenClient, type AccountTypeValue } from "@miden-sdk/miden-sdk";
+
+const FUNGIBLE_FAUCET: AccountTypeValue = 0;
 
 const client = await MidenClient.createMock();
 
 const wallet = await client.accounts.create();
 const faucet = await client.accounts.create({
-  type: AccountType.FungibleFaucet,
+  type: FUNGIBLE_FAUCET,
   symbol: "TEST",
   decimals: 8,
   maxSupply: 10_000_000n,
@@ -81,8 +83,8 @@ if (client.usesMockChain()) {
   client.proveBlock();
 }
 
-const chainBytes     = client.serializeMockChain();
-const transportBytes = client.serializeMockNoteTransportNode();
+const chainBytes     = await client.serializeMockChain();
+const transportBytes = await client.serializeMockNoteTransportNode();
 ```
 
 | Method | Purpose |
@@ -100,8 +102,8 @@ Serialize the state of a running mock client, then restore it in a new client. U
 // Setup: create client, advance chain, fund accounts, etc.
 const setup = await MidenClient.createMock();
 // ...
-const chainState     = setup.serializeMockChain();
-const transportState = setup.serializeMockNoteTransportNode();
+const chainState     = await setup.serializeMockChain();
+const transportState = await setup.serializeMockNoteTransportNode();
 setup.terminate();
 
 // In a test, restore from the snapshot

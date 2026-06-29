@@ -45,7 +45,7 @@ Building against the public testnet? Grab free test assets from the [faucet](htt
 ## Ship
 
 <CardGrid cols={2}>
-  <Card title="Migration" href="./migration" eyebrow="v0.13 → v0.14">
+  <Card title="Migration" href="./migration" eyebrow="v0.14 → v0.15">
     Breaking changes, renames, and new features across accounts, notes, transactions, MASM, and the client.
   </Card>
   <Card title="Miden Guardian" href="./miden-guardian" eyebrow="Account state">

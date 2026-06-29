@@ -447,11 +447,11 @@ let note_type = Felt::new(2);  // Private note
 
 ### Problem
 
-When creating P2ID (Pay-to-ID) output notes, you need the script's MAST root. The v0.13 pattern of hardcoding the digest is fragile — it hashes under RPO, which v0.14 replaced with Poseidon2, and any future change to the P2ID script invalidates the constant silently.
+When creating P2ID (Pay-to-ID) output notes, you need the script's MAST root. The old v0.13 pattern of hardcoding the digest is fragile — it hashed under RPO, which v0.14 replaced with Poseidon2, and any future change to the P2ID script invalidates the constant silently.
 
-### Solution (v0.14)
+### Solution (v0.15)
 
-Carry the P2ID script root on the initiating note's storage and read it at runtime instead of hardcoding a value. This is the pattern used in the v0.14 `miden-bank` example:
+Carry the P2ID script root on the initiating note's storage and read it at runtime instead of hardcoding a value. This is the pattern used in the current `miden-bank` example:
 
 ```rust title="contracts/bank-account/src/lib.rs"
 // The withdraw-request note encodes the P2ID script root at storage slots
@@ -470,13 +470,14 @@ On the client side, compute the script root dynamically from the standard P2ID n
 
 ```rust
 use miden_client::note::P2idNote;
+use miden_client::Word;
 
-// v0.14: ask miden-standards for the current P2ID script, take its MAST root.
-let p2id_script_root: Word = P2idNote::script().root();
+// v0.15: script roots are typed NoteScriptRoot values; convert when a Word is needed.
+let p2id_script_root: Word = P2idNote::script().root().into();
 ```
 
 :::info Why Not Hardcode
-The native hash function changed from RPO to Poseidon2 in v0.14, so every MAST root — including the P2ID script's — is different from v0.13. Any hardcoded digest from v0.13 will fail a script-root check against v0.14. Reading the root from `P2idNote::script().root()` (or the active note's storage for onchain code) keeps the contract resilient to future script changes.
+The native hash function changed from RPO to Poseidon2 in v0.14, so every MAST root — including the P2ID script's — is different from v0.13. Any hardcoded digest from v0.13 will fail a script-root check on current releases. Reading the root from `P2idNote::script().root()` (or the active note's storage for onchain code) keeps the contract resilient to future script changes.
 :::
 
 ---

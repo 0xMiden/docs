@@ -161,16 +161,16 @@ Once we have the compiled packages, we convert them into deployable accounts and
 
 ```rust
 // Configure initial storage for the counter account
-let count_storage_key = Word::from([Felt::new(0), Felt::new(0), Felt::new(0), Felt::new(1)]);
-let initial_count = Word::from([Felt::new(0), Felt::new(0), Felt::new(0), Felt::new(0)]);
+let count_storage_key = Word::from([0u32, 0, 0, 1]);
+let count_storage_map_key = StorageMapKey::new(count_storage_key);
+let initial_count = Word::default();
 
-// The slot name is constructed as:
-// `miden::component::[to_underscore(Cargo.toml:package.metadata.component.package)]::[field_name]`
+// Use the slot name generated for the component's manifest namespace and field name.
 let counter_storage_slot =
     StorageSlotName::new("miden::component::miden_counter_account::count_map").unwrap();
 let storage_slots = vec![StorageSlot::with_map(
     counter_storage_slot.clone(),
-    StorageMap::with_entries([(count_storage_key, initial_count)]).unwrap(),
+    StorageMap::with_entries([(count_storage_map_key, initial_count)]).unwrap(),
 )];
 let counter_cfg = AccountCreationConfig {
     storage_slots,
@@ -193,10 +193,10 @@ The `create_account_from_package()` function:
 - Combines it with the provided configuration (storage, settings, etc.)
 - Creates a deployable Miden account that can be used in transactions
 
-**Important**: Accounts that use storage must have their storage slots specified when instantiating the account. In v0.13, storage slots are identified by name rather than index. The slot name follows the pattern `miden::component::<package_name>::<field_name>`. We define the storage configuration with:
+**Important**: Accounts that use storage must have their storage slots specified when instantiating the account. In the v0.15-aligned SDK, storage slots are identified by name rather than index. The slot name follows the pattern `miden::component::<package_name>::<field_name>`. We define the storage configuration with:
 
 - A named `StorageMap` slot (`miden::component::miden_counter_account::count_map`)
-- The counter key `[0, 0, 0, 1]` with initial value `[0, 0, 0, 0]` (representing count = 0)
+- The counter key `[0, 0, 0, 1]`, wrapped as a `StorageMapKey`, with initial value `[0, 0, 0, 0]` (representing count = 0)
 
 This pre-initialization ensures the account's storage is properly configured before deployment.
 
@@ -216,7 +216,7 @@ let counter_note = create_note_from_package(
 
 // Publish the note to the network
 let note_publish_request = TransactionRequestBuilder::new()
-    .own_output_notes(vec![OutputNote::Full(counter_note.clone())])
+    .own_output_notes(vec![counter_note.clone()])
     .build()
     .context("Failed to build note publish transaction request")?;
 ```

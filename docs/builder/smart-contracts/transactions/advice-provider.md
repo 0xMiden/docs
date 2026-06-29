@@ -79,7 +79,7 @@ let num_felts = adv_push_mapvaln(key);
 // 2. Convert to a Felt count of words and load the preimage (length must be word-aligned)
 let num_felts_u64 = num_felts.as_canonical_u64();
 assert_eq(Felt::from_u32((num_felts_u64 % 4) as u32), felt!(0));
-let num_words = Felt::new(num_felts_u64 / 4);
+let num_words = Felt::new(num_felts_u64 / 4).unwrap();
 let data: Vec<Felt> = adv_load_preimage(num_words, key);
 
 // 3. Index into the data by field position

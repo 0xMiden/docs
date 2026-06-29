@@ -32,7 +32,7 @@ rustc --version
 <summary>Expected output</summary>
 
 ```text
-rustc 1.92.0-nightly (fa3155a64 2025-09-30)
+rustc 1.93.0-nightly (fa3155a64 2025-09-30)
 ```
 
 </details>
@@ -184,7 +184,7 @@ The TypeScript examples use the [`@miden-sdk/miden-sdk`](https://www.npmjs.com/p
 ```bash title=">_ Terminal"
 npm create vite@latest miden-app -- --template vanilla-ts
 cd miden-app
-npm install @miden-sdk/miden-sdk
+npm install @miden-sdk/miden-sdk@^0.15.0
 ```
 
 Open `src/main.ts` and replace its contents with a simple entry point that calls your demo:

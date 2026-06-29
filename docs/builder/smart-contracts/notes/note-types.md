@@ -42,7 +42,7 @@ P2idNote::create(
     target,       // AccountId: the only account that can consume this note
     assets,       // Vec<Asset>: assets to attach
     note_type,    // NoteType: Public or Private
-    attachment,   // NoteAttachment: auxiliary data
+    attachments,  // NoteAttachments: auxiliary data
     rng,          // &mut impl FeltRng
 ) -> Result<Note, NoteError>
 ```
@@ -53,7 +53,7 @@ P2idNote::create(
 | `target` | `AccountId` | The only account that can consume this note |
 | `assets` | `Vec<Asset>` | Assets to attach to the note |
 | `note_type` | `NoteType` | `Public` or `Private` |
-| `attachment` | `NoteAttachment` | Auxiliary data for the note |
+| `attachments` | `NoteAttachments` | Auxiliary data for the note |
 | `rng` | `&mut impl FeltRng` | Random number generator |
 
 ## P2IDE (Pay to ID with Expiration)
@@ -94,7 +94,7 @@ P2ideNote::create(
     P2ideNoteStorage::new(target, reclaim_height, timelock_height),
     assets,                                               // Vec<Asset>: assets to attach
     note_type,                                            // NoteType: Public or Private
-    attachment,                                           // NoteAttachment: auxiliary data
+    attachments,                                          // NoteAttachments: auxiliary data
     rng,                                                  // &mut impl FeltRng
 ) -> Result<Note, NoteError>
 ```
@@ -107,7 +107,7 @@ P2ideNote::create(
 | `timelock_height` | `Option<BlockNumber>` | Block height before which note can't be consumed; `None` = no timelock (set on `P2ideNoteStorage`) |
 | `assets` | `Vec<Asset>` | Assets to attach to the note |
 | `note_type` | `NoteType` | `Public` or `Private` |
-| `attachment` | `NoteAttachment` | Auxiliary data for the note |
+| `attachments` | `NoteAttachments` | Auxiliary data for the note |
 | `rng` | `&mut impl FeltRng` | Random number generator |
 
 ## SWAP (Atomic Exchange)
@@ -139,9 +139,8 @@ SwapNote::create(
     offered_asset,
     requested_asset,
     swap_note_type,
-    swap_note_attachment,
+    swap_note_attachments,
     payback_note_type,
-    payback_note_attachment,
     rng,
 ) -> Result<(Note, NoteDetails), NoteError>
 ```
@@ -152,14 +151,13 @@ SwapNote::create(
 | `offered_asset` | `Asset` | Asset the note carries (what the consumer receives) |
 | `requested_asset` | `Asset` | Asset the consumer must provide in return |
 | `swap_note_type` | `NoteType` | `Public` or `Private` for the SWAP note |
-| `swap_note_attachment` | `NoteAttachment` | Auxiliary data for the SWAP note |
+| `swap_note_attachments` | `NoteAttachments` | Auxiliary data for the SWAP note |
 | `payback_note_type` | `NoteType` | `Public` or `Private` for the P2ID payback note |
-| `payback_note_attachment` | `NoteAttachment` | Auxiliary data for the payback note |
 | `rng` | `&mut impl FeltRng` | Random number generator |
 
 Returns a tuple of `(Note, NoteDetails)` — the SWAP note to submit and the expected payback note details (for tracking).
 
-`NoteAttachment` is defined in the `miden-standards` crate (not the core `miden` SDK). It wraps the attachment data that gets set on output notes — see [note attachments](./output-notes#note-attachments) for the underlying SDK API.
+`NoteAttachments` is defined in `miden-protocol`. Use `NoteAttachments::empty()` when the note does not need auxiliary data — see [note attachments](./output-notes#note-attachments) for the underlying SDK API.
 
 ## More note types
 

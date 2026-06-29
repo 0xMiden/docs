@@ -117,6 +117,7 @@ For a signing service that doesn't have a prebuilt provider — internal HSM, ha
 
 ```tsx
 import { SignerContext, type SignerContextValue } from "@miden-sdk/react";
+import { AccountStorageMode } from "@miden-sdk/miden-sdk";
 
 const signer: SignerContextValue = {
   name: "MyWallet",
@@ -124,8 +125,7 @@ const signer: SignerContextValue = {
   isConnected: true,
   accountConfig: {
     publicKeyCommitment: userPublicKeyCommitment, // Uint8Array
-    storageMode: "private",
-    accountType: "RegularAccountUpdatableCode",
+    storageMode: AccountStorageMode.private(),
   },
   signCb: async (pubKey, signingInputs) => {
     // Route to your signing service
@@ -158,14 +158,16 @@ Attach application-specific components — compiled from `.masp` packages, e.g. 
 
 ```tsx
 import { type SignerAccountConfig } from "@miden-sdk/react";
-import { AccountComponent } from "@miden-sdk/miden-sdk";
+import {
+  AccountComponent,
+  AccountStorageMode,
+} from "@miden-sdk/miden-sdk";
 
 const myDexComponent: AccountComponent = await loadCompiledComponent();
 
 const accountConfig: SignerAccountConfig = {
   publicKeyCommitment: userPublicKeyCommitment,
-  accountType: "RegularAccountUpdatableCode",
-  storageMode: "private",
+  storageMode: AccountStorageMode.private(),
   customComponents: [myDexComponent],
 };
 ```
