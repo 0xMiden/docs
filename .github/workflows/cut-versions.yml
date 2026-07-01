@@ -140,7 +140,10 @@ jobs:
             repo="$1"; ref="$2"; path="$3"
             echo "Checking out $repo @ $ref → $path"
             git clone "https://github.com/$repo" "$path"
-            (cd "$path" && git fetch --depth 1 origin "$ref" && git checkout "$ref")
+            # Checkout FETCH_HEAD (not "$ref") so non-default branches work too — a bare
+            # `git checkout refs/heads/<branch>` fails after an explicit shallow fetch
+            # because the branch only lands in FETCH_HEAD, not refs/heads/. Tags/SHAs work here too.
+            (cd "$path" && git fetch --depth 1 origin "$ref" && git checkout --detach FETCH_HEAD)
           }
           checkout_ref "${REPO_NODE}"      "${{ steps.manifest.outputs.miden_node_ref }}"      vendor/node
           checkout_ref "${REPO_VM}"        "${{ steps.manifest.outputs.miden_vm_ref }}"        vendor/miden-vm
