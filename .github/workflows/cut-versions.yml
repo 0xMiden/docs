@@ -33,6 +33,8 @@ on:
       miden_client_ref: { required: false }
       compiler_ref: { required: false }
       miden_tutorials_ref: { required: false }
+      guardian_ref: { required: false }
+      note_transport_ref: { required: false }
 
   # Auto-run when manifest changes on a branch (NOT main — prevents re-triggering on merge)
   push:
@@ -53,6 +55,8 @@ jobs:
       REPO_CLIENT: 0xMiden/miden-client
       REPO_COMPILER: 0xMiden/compiler
       REPO_TUTORIALS: 0xMiden/tutorials
+      REPO_GUARDIAN: OpenZeppelin/guardian
+      REPO_NOTE_TRANSPORT: 0xMiden/note-transport-service
     steps:
       - name: Checkout aggregator
         uses: actions/checkout@v4
@@ -94,6 +98,8 @@ jobs:
             miden_client_ref:    getRef(process.env.INPUT_MIDEN_CLIENT_REF,    refs['miden-client']),
             compiler_ref:  getRef(process.env.INPUT_COMPILER_REF,  refs['compiler']),
             miden_tutorials_ref: getRef(process.env.INPUT_MIDEN_TUTORIALS_REF, refs['tutorials']),
+            guardian_ref:        getRef(process.env.INPUT_GUARDIAN_REF,        refs['guardian']),
+            note_transport_ref:  getRef(process.env.INPUT_NOTE_TRANSPORT_REF,  refs['note-transport']),
           };
 
           if (!out.version_label) {
@@ -124,6 +130,8 @@ jobs:
           validate "${REPO_CLIENT}"    "${{ steps.manifest.outputs.miden_client_ref }}"
           validate "${REPO_COMPILER}"  "${{ steps.manifest.outputs.compiler_ref }}"
           validate "${REPO_TUTORIALS}" "${{ steps.manifest.outputs.miden_tutorials_ref }}"
+          validate "${REPO_GUARDIAN}"       "${{ steps.manifest.outputs.guardian_ref }}"
+          validate "${REPO_NOTE_TRANSPORT}" "${{ steps.manifest.outputs.note_transport_ref }}"
 
       - name: Checkout sources at validated refs
         run: |
@@ -132,7 +140,10 @@ jobs:
             repo="$1"; ref="$2"; path="$3"
             echo "Checking out $repo @ $ref → $path"
             git clone "https://github.com/$repo" "$path"
-            (cd "$path" && git fetch --depth 1 origin "$ref" && git checkout "$ref")
+            # Checkout FETCH_HEAD (not "$ref") so non-default branches work too — a bare
+            # `git checkout refs/heads/<branch>` fails after an explicit shallow fetch
+            # because the branch only lands in FETCH_HEAD, not refs/heads/. Tags/SHAs work here too.
+            (cd "$path" && git fetch --depth 1 origin "$ref" && git checkout --detach FETCH_HEAD)
           }
           checkout_ref "${REPO_NODE}"      "${{ steps.manifest.outputs.miden_node_ref }}"      vendor/node
           checkout_ref "${REPO_VM}"        "${{ steps.manifest.outputs.miden_vm_ref }}"        vendor/miden-vm
@@ -140,6 +151,8 @@ jobs:
           checkout_ref "${REPO_CLIENT}"    "${{ steps.manifest.outputs.miden_client_ref }}"    vendor/miden-client
           checkout_ref "${REPO_COMPILER}"  "${{ steps.manifest.outputs.compiler_ref }}"  vendor/compiler
           checkout_ref "${REPO_TUTORIALS}" "${{ steps.manifest.outputs.miden_tutorials_ref }}" vendor/tutorials
+          checkout_ref "${REPO_GUARDIAN}"       "${{ steps.manifest.outputs.guardian_ref }}"       vendor/guardian
+          checkout_ref "${REPO_NOTE_TRANSPORT}" "${{ steps.manifest.outputs.note_transport_ref }}" vendor/note-transport-service
 
       # ============================================================
       # v0.4 IA: Aggregate into nested structure (TEMPORARY)
@@ -265,6 +278,24 @@ jobs:
             echo "Synced miden-client (rust-client, img, theme, common-errors, _category_) → docs/builder/tools/clients"
           fi
 
+          # Guardian → docs/builder/miden-guardian (raw OZ markdown; transform-ingest via the script).
+          # The script self-cleans the target but preserves the authored index.md, which we then
+          # restore from HEAD. Strip refs/tags|heads prefix so the script's GitHub-blob links are clean.
+          if [ -d "vendor/guardian/docs" ]; then
+            GREF="${{ steps.manifest.outputs.guardian_ref }}"; GREF="${GREF#refs/tags/}"; GREF="${GREF#refs/heads/}"
+            node scripts/ingest-guardian.mjs vendor/guardian/docs docs/builder/miden-guardian "$GREF"
+            git checkout HEAD -- docs/builder/miden-guardian/index.md 2>/dev/null || true
+            echo "Synced guardian → docs/builder/miden-guardian"
+          fi
+
+          # Note transport service → docs/builder/tools/note-transport (full sync)
+          if [ -d "vendor/note-transport-service/docs/external/src" ]; then
+            rm -rf docs/builder/tools/note-transport
+            mkdir -p docs/builder/tools/note-transport
+            cp -r vendor/note-transport-service/docs/external/src/* docs/builder/tools/note-transport/
+            echo "Synced note-transport-service → docs/builder/tools/note-transport"
+          fi
+
           echo "Content aggregation complete. Final docs structure:"
           ls -la docs/
           echo "Reference subdirs:"
@@ -286,6 +317,9 @@ jobs:
       - name: Clean up (delete vendor and ingested docs)
         run: |
           rm -rf vendor
+          # Guardian: remove ingested subdirs (keep authored index.md); note-transport (fully ingested)
+          rm -rf docs/builder/miden-guardian/getting-started docs/builder/miden-guardian/architecture docs/builder/miden-guardian/guides docs/builder/miden-guardian/operations docs/builder/miden-guardian/reference docs/builder/miden-guardian/runbooks
+          rm -rf docs/builder/tools/note-transport
           # Clean v0.4 nested paths
           rm -rf docs/reference/protocol
           rm -rf docs/reference/miden-vm
