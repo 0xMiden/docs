@@ -16,7 +16,7 @@ When you build a component with `miden build`, the compiler generates an interfa
 counter-contract (component)
     → generates interface
         → counter-note imports the interface
-            → calls counter_contract::get_count()
+            → calls account.get_count()
 ```
 
 ## Using `#[note]` macros (recommended)
@@ -24,8 +24,10 @@ counter-contract (component)
 The simplest way to make cross-component calls from note scripts is through the `#[note]` macro with an `Account` parameter:
 
 ```rust
-use crate::bindings::Account;
-use miden::{active_note, Asset};
+use miden::{account, active_note, note, Word};
+
+#[account(basic_wallet::BasicWallet)]
+pub struct Wallet;
 
 #[note]
 struct P2idNote;
@@ -33,7 +35,7 @@ struct P2idNote;
 #[note]
 impl P2idNote {
     #[note_script]
-    pub fn run(self, _arg: Word, account: &mut Account) {
+    pub fn run(self, _arg: Word, account: &mut Wallet) {
         // Iterate over the note's assets and transfer each to the account
         for asset in active_note::get_assets() {
             account.receive_asset(asset);
@@ -44,95 +46,71 @@ impl P2idNote {
 
 The `_arg: Word` parameter is the note's first input Word, passed automatically when the note is consumed. It's unused in this example (prefixed with `_`), but note scripts can use it for recipient-specific data like expected account IDs or amounts.
 
-The `Account` type is auto-generated from the bindings of the dependent component. Its methods correspond to the component's public methods.
+The `#[account(...)]` wrapper declares which generated WIT interface the script will call. Its methods correspond to the referenced component's public methods.
 
-## Using `generate!()` directly
+## Calling foreign accounts
 
-For more control (e.g., calling multiple components), use `miden::generate!()` to manually generate bindings:
+The same `#[account(...)]` wrapper can call a different account through foreign procedure invocation (FPI). Construct it with the target `AccountId`, then call the imported methods:
 
-```rust title="cross-ctx-note/src/lib.rs"
-#![no_std]
-#![feature(alloc_error_handler)]
+```rust
+use miden::{account, AccountId, Felt};
 
-#[global_allocator]
-static ALLOC: miden::BumpAlloc = miden::BumpAlloc::new();
+#[account(counter_account::CounterContract)]
+struct CounterAccount;
 
-use miden::*;
-
-miden::generate!();
-bindings::export!(MyNote);
-
-use bindings::{
-    exports::miden::base::note_script::Guest,
-    miden::cross_ctx_account::foo::process_felt,
-};
-
-struct MyNote;
-
-impl Guest for MyNote {
-    fn run(_arg: Word) {
-        let input = Felt::from_u32(11);
-        let output = process_felt(input);
-        assert_eq!(output, felt!(53));
-    }
+fn read_foreign_count(counter_account_id: AccountId) -> Felt {
+    let counter = CounterAccount::new(counter_account_id);
+    counter.get_count()
 }
 ```
 
 Key points:
-- `miden::generate!()` generates the `bindings` module from component interfaces
-- `bindings::export!(MyNote)` registers `MyNote` as the implementation
-- `process_felt` is imported from the `cross-ctx-account` component
-- The import path follows the package structure: `bindings::miden::cross_ctx_account::foo::process_felt`
+- The `#[account(package::Interface)]` path names the exported WIT interface, not just the package.
+- An account parameter in a note or transaction script refers to the transaction's native account.
+- `AccountWrapper::new(account_id)` creates a foreign account caller routed through FPI.
 
-## Cargo.toml configuration
+## Project manifest configuration
 
-Cross-component calls require two dependency declarations:
+Cross-component calls require dependency declarations in `miden-project.toml`.
 
-### 1. Miden dependencies (for `cargo-miden` linking)
+### 1. Package dependency
+
+```toml
+[dependencies]
+miden-core = "*"
+miden-protocol = "*"
+basic-wallet = { path = "../basic-wallet" }
+```
+
+This tells the compiler where to find the component package.
+
+### 2. Generated WIT dependency
 
 ```toml
 [package.metadata.miden.dependencies]
-"miden:basic-wallet" = { path = "../basic-wallet" }
-```
-
-This tells `cargo-miden` where to find the component for linking.
-
-### 2. Component dependencies (for binding generation)
-
-```toml
-[package.metadata.component.target.dependencies]
-"miden:basic-wallet" = { path = "../basic-wallet/target/generated-wit/" }
+basic-wallet = { wit = "../basic-wallet/target/generated-wit/" }
 ```
 
 This points to the generated interface files used to create Rust bindings.
 
 ### Complete example
 
-```toml title="counter-note/Cargo.toml"
+```toml title="counter-note/miden-project.toml"
 [package]
 name = "counter-note"
 version = "0.1.0"
-edition = "2024"
 
 [lib]
-crate-type = ["cdylib"]
+kind = "note"
+namespace = "miden:counter-note/counter-note@0.1.0"
 
 [dependencies]
-miden = { path = "../../sdk/sdk" }
+miden-core = "*"
+miden-protocol = "*"
+counter-account = { path = "../counter-account" }
 
-[package.metadata.miden]
-project-kind = "note-script"
-
-[package.metadata.component]
-package = "miden:counter-note"
-
-# Miden dependency — the component we want to call
 [package.metadata.miden.dependencies]
-"miden:counter-contract" = { path = "../counter-contract" }
-
-# Component dependency — generated interface for binding generation
-[package.metadata.component.target.dependencies]
-"miden:counter-account" = { path = "../counter-contract/target/generated-wit/" }
+counter-account = { wit = "../counter-account/target/generated-wit/" }
 ```
 
 :::info Build order matters
@@ -145,10 +123,10 @@ The dependent component must be built first so its interface files exist. Build 
 #![no_std]
 #![feature(alloc_error_handler)]
 
-use miden::*;
+use miden::{account, note, Felt, Word};
 
-// Import the counter contract's generated bindings
-use crate::bindings::miden::counter_contract::counter_contract;
+#[account(counter_account::CounterContract)]
+pub struct CounterAccount;
 
 #[note]
 struct CounterNote;
@@ -156,16 +134,16 @@ struct CounterNote;
 #[note]
 impl CounterNote {
     #[note_script]
-    pub fn run(self, _arg: Word) {
+    pub fn run(self, _arg: Word, account: &mut CounterAccount) {
         // Call get_count() on the counter contract component
-        let initial_value = counter_contract::get_count();
+        let initial_value = account.get_count();
 
         // Call increment_count() — modifies the account's storage
-        counter_contract::increment_count();
+        account.increment_count();
 
         // Verify the count increased
         let expected_value = initial_value + Felt::from_u32(1);
-        let final_value = counter_contract::get_count();
+        let final_value = account.get_count();
         assert_eq!(final_value, expected_value);
     }
 }
@@ -175,10 +153,10 @@ impl CounterNote {
 
 | Pattern | Use when |
 |---------|----------|
-| `#[note]` with `&mut Account` | Note needs to call a single account component's methods |
-| `generate!()` + `Guest` trait | Note needs to call multiple components or needs full control |
-| Direct module imports | Calling specific functions from a known component interface |
+| `#[note]` with `&mut AccountWrapper` | Note needs to call the native account's component methods |
+| `AccountWrapper::new(account_id)` | Component, note, or transaction script needs to call a foreign account through FPI |
+| Multiple `#[account(...)]` wrappers | A script needs to call multiple known component interfaces |
 
 :::info API Reference
-Full API docs on docs.rs: [`miden`](https://docs.rs/miden/latest/miden/) (`generate!()` macro)
+Full API docs on docs.rs: [`miden`](https://docs.rs/miden/latest/miden/) (`#[account]`, `#[note]`, and `#[component]` macros)
 :::

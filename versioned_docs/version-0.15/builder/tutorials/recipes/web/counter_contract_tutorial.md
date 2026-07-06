@@ -1,0 +1,448 @@
+---
+title: 'Incrementing the Count of the Counter Contract'
+sidebar_position: 5
+---
+
+_Using the Miden client to interact with a custom smart contract_
+
+## Overview
+
+In this tutorial, we will deploy a custom counter smart contract and increment its count using the Miden client. Each run creates a fresh counter account, deploys it to the network, and immediately calls its `increment_count` procedure via a transaction script — so the final count is always `1`.
+
+This tutorial provides a foundational understanding of building and interacting with custom smart contracts on Miden.
+
+## What we'll cover
+
+- Deploying a custom smart contract on Miden from a web client
+- Calling procedures in an account from a transaction script
+
+## Prerequisites
+
+- Node `v20` or greater
+- Familiarity with TypeScript
+- `yarn`
+
+This tutorial assumes you have a basic understanding of Miden assembly. To quickly get up to speed with Miden assembly (MASM), please play around with running basic Miden assembly programs in the [Miden playground](https://0xmiden.github.io/examples/).
+
+## Step 1: Initialize your Next.js project
+
+1. Create a new Next.js app with TypeScript:
+
+   ```bash
+   npx create-next-app@latest miden-web-app --typescript
+   ```
+
+   Hit enter for all terminal prompts.
+
+2. Change into the project directory:
+
+   ```bash
+   cd miden-web-app
+   ```
+
+3. Install the Miden SDK:
+   ```bash
+   yarn add @miden-sdk/miden-sdk@0.15.2
+   ```
+
+**NOTE!**: Be sure to add the `--webpack` command to your `package.json` when running the `dev script`. The dev script should look like this:
+
+`package.json`
+
+```json
+  "scripts": {
+    "dev": "next dev --webpack",
+    ...
+  }
+```
+
+## Step 2: Edit the `app/page.tsx` file:
+
+Add the following code to the `app/page.tsx` file. This code defines the main page of our web application:
+
+```tsx
+'use client';
+import { useState } from 'react';
+import { incrementCounterContract } from '../lib/incrementCounterContract';
+
+export default function Home() {
+  const [isIncrementCounter, setIsIncrementCounter] = useState(false);
+
+  const handleIncrementCounterContract = async () => {
+    setIsIncrementCounter(true);
+    await incrementCounterContract();
+    setIsIncrementCounter(false);
+  };
+
+  return (
+    <main className="min-h-screen flex items-center justify-center bg-gradient-to-br from-gray-900 via-gray-800 to-black text-slate-800 dark:text-slate-100">
+      <div className="text-center">
+        <h1 className="text-4xl font-semibold mb-4">Miden Web App</h1>
+        <p className="mb-6">
+          Open your browser console to see Miden client logs.
+        </p>
+
+        <div className="max-w-sm w-full bg-gray-800/20 border border-gray-600 rounded-2xl p-6 mx-auto flex flex-col gap-4">
+          <button
+            onClick={handleIncrementCounterContract}
+            className="w-full px-6 py-3 text-lg cursor-pointer bg-transparent border-2 border-orange-600 text-white rounded-lg transition-all hover:bg-orange-600 hover:text-white"
+          >
+            {isIncrementCounter
+              ? 'Working...'
+              : 'Tutorial #3: Increment Counter Contract'}
+          </button>
+        </div>
+      </div>
+    </main>
+  );
+}
+```
+
+## Step 3: Write the MASM Counter Contract
+
+The counter contract code lives in a separate `.masm` file. Create a `lib/masm/` directory and add the contract file:
+
+```bash
+mkdir -p lib/masm
+```
+
+Create the file `lib/masm/counter_contract.masm` with the following Miden Assembly code:
+
+```masm
+use miden::protocol::active_account
+use miden::protocol::native_account
+use miden::core::word
+use miden::core::sys
+
+const COUNTER_SLOT = word("miden::tutorials::counter")
+
+#! Inputs:  []
+#! Outputs: [count]
+pub proc get_count
+    push.COUNTER_SLOT[0..2] exec.active_account::get_item
+    # => [count]
+
+    exec.sys::truncate_stack
+    # => [count]
+end
+
+#! Inputs:  []
+#! Outputs: []
+pub proc increment_count
+    push.COUNTER_SLOT[0..2] exec.active_account::get_item
+    # => [count]
+
+    add.1
+    # => [count+1]
+
+    push.COUNTER_SLOT[0..2] exec.native_account::set_item
+    # => []
+
+    exec.sys::truncate_stack
+    # => []
+end
+```
+
+Also create `lib/masm/masm.d.ts` so TypeScript recognizes `.masm` imports:
+
+```ts
+declare module '*.masm' {
+  const content: string;
+  export default content;
+}
+```
+
+## Step 4: Configure Your Bundler to Import `.masm` Files
+
+Add an `asset/source` webpack rule so `.masm` files are imported as plain text strings.
+
+Open `next.config.ts` and add the following rule inside the `webpack` callback:
+
+```ts
+webpack: (config, { isServer }) => {
+  // ... existing WASM config ...
+
+  // Import .masm files as strings
+  config.module.rules.push({
+    test: /\.masm$/,
+    type: "asset/source",
+  });
+
+  return config;
+},
+```
+
+:::tip Other bundlers
+
+- **Vite:** use the `?raw` suffix — `import code from './masm/counter_contract.masm?raw'`
+- **Other bundlers / no bundler:** use `fetch()` at runtime — `const code = await fetch('/masm/counter_contract.masm').then(r => r.text())`
+  :::
+
+## Step 5: Incrementing the Count of the Counter Contract
+
+Create the file `lib/incrementCounterContract.ts`:
+
+```bash
+touch lib/incrementCounterContract.ts
+```
+
+Copy and paste the following code into the `lib/incrementCounterContract.ts` file:
+
+```ts
+// lib/incrementCounterContract.ts
+import counterContractCode from './masm/counter_contract.masm';
+import {
+  AuthSecretKey,
+  StorageMode,
+  StorageSlot,
+  StorageResult,
+  MidenClient,
+} from '@miden-sdk/miden-sdk/lazy';
+
+export async function incrementCounterContract(): Promise<void> {
+  if (typeof window === 'undefined') {
+    console.warn('webClient() can only run in the browser');
+    return;
+  }
+
+  // Wait for the WASM module to finish initializing before touching any
+  // wasm-bindgen type (see setup_guide.md "Entry points: eager vs lazy").
+  await MidenClient.ready();
+
+  const nodeEndpoint = 'https://rpc.testnet.miden.io';
+  const client = await MidenClient.create({ rpcUrl: nodeEndpoint });
+  console.log('Current block number: ', (await client.sync()).blockNum());
+
+  const counterSlotName = 'miden::tutorials::counter';
+
+  // Compile the counter component
+  const counterAccountComponent = await client.compile.component({
+    code: counterContractCode,
+    slots: [StorageSlot.emptyValue(counterSlotName)],
+  });
+
+  const walletSeed = new Uint8Array(32);
+  crypto.getRandomValues(walletSeed);
+
+  const auth = AuthSecretKey.rpoFalconWithRNG(walletSeed);
+
+  // Create the counter contract account
+  const account = await client.accounts.create({
+    storage: StorageMode.Public,
+    seed: walletSeed,
+    auth,
+    components: [counterAccountComponent],
+  });
+
+  // Building the transaction script which will call the counter contract
+  const txScriptCode = `
+    use external_contract::counter_contract
+    begin
+    call.counter_contract::increment_count
+    end
+`;
+
+  const script = await client.compile.txScript({
+    code: txScriptCode,
+    libraries: [
+      {
+        namespace: 'external_contract::counter_contract',
+        code: counterContractCode,
+      },
+    ],
+  });
+
+  // Executing the transaction script against the counter contract — this
+  // deploys the counter and runs `increment_count` in a single transaction.
+  await client.transactions.execute({
+    account,
+    script,
+  });
+
+  console.log('Counter contract ID:', account.id().toString());
+
+  // Logging the count of the counter contract we just incremented
+  const counter = await client.accounts.get(account);
+
+  // `getItem()` is typed to return a low-level `Word`, but at runtime the SDK
+  // wraps the slot in a `StorageResult` whose `toBigInt()` reads the first
+  // felt — the count. The cast reflects that runtime type.
+  const count = counter?.storage().getItem(counterSlotName) as unknown as
+    | StorageResult
+    | undefined;
+
+  const counterValue = Number(count!.toBigInt());
+
+  console.log('Count: ', counterValue);
+}
+```
+
+To run the code above in our frontend, run the following command:
+
+```
+yarn dev
+```
+
+Open the browser console and click the button "Increment Counter Contract".
+
+This is what you should see in the browser console (block number and account
+ID will vary with live testnet state; the tutorial deploys a fresh counter and
+increments it exactly once before reading, so the final count is always `1`):
+
+```
+Current block number:  <testnet block>
+Counter contract ID: <testnet_account_id>
+Count:  1
+```
+
+## Miden Assembly Counter Contract Explainer
+
+#### Here's a breakdown of what the `get_count` procedure does:
+
+1. Pushes the slot ID prefix and suffix for `miden::tutorials::counter` onto the stack.
+2. Calls `active_account::get_item` with the slot ID.
+3. Calls `sys::truncate_stack` to truncate the stack to size 16.
+4. The value returned from `active_account::get_item` is still on the stack and will be returned when this procedure is called.
+
+#### Here's a breakdown of what the `increment_count` procedure does:
+
+1. Pushes the slot ID prefix and suffix for `miden::tutorials::counter` onto the stack.
+2. Calls `active_account::get_item` with the slot ID.
+3. Pushes `1` onto the stack.
+4. Adds `1` to the count value returned from `active_account::get_item`.
+5. Pushes the slot ID prefix and suffix again so we can write the updated count.
+6. Calls `native_account::set_item` which saves the incremented count to storage.
+7. Calls `sys::truncate_stack` to truncate the stack to size 16.
+
+```masm
+use miden::protocol::active_account
+use miden::protocol::native_account
+use miden::core::word
+use miden::core::sys
+
+const COUNTER_SLOT = word("miden::tutorials::counter")
+
+#! Inputs:  []
+#! Outputs: [count]
+pub proc get_count
+    push.COUNTER_SLOT[0..2] exec.active_account::get_item
+    # => [count]
+
+    exec.sys::truncate_stack
+    # => [count]
+end
+
+#! Inputs:  []
+#! Outputs: []
+pub proc increment_count
+    push.COUNTER_SLOT[0..2] exec.active_account::get_item
+    # => [count]
+
+    add.1
+    # => [count+1]
+
+    push.COUNTER_SLOT[0..2] exec.native_account::set_item
+    # => []
+
+    exec.sys::truncate_stack
+    # => []
+end
+```
+
+**Note**: _It's a good habit to add comments below each line of MASM code with the expected stack state. This improves readability and helps with debugging._
+
+### Authentication Component
+
+**Important**: All accounts must have an authentication component. For smart contracts that do not require authentication (like our counter contract), we use a `NoAuth` component.
+
+This `NoAuth` component allows any user to interact with the smart contract without requiring signature verification.
+
+**Note**: _Adding the `account::incr_nonce` to a state changing procedure allows any user to call the procedure._
+
+### Compiling the account component
+
+Use `client.compile.component()` to compile MASM code and its storage slots into an `AccountComponent`. Each call creates a fresh compiler instance so compilations are fully independent:
+
+```ts
+const counterAccountComponent = await client.compile.component({
+  code: counterContractCode,
+  slots: [StorageSlot.emptyValue(counterSlotName)],
+});
+```
+
+### Creating the contract account
+
+Use `client.accounts.create()` to build and register the contract. Passing `components` makes this a contract account, so no account type is needed — `storage` selects visibility (`StorageMode.Public` here). You must supply a `seed` (for deterministic ID derivation) and a raw `AuthSecretKey` — the client stores the key automatically:
+
+```ts
+const auth = AuthSecretKey.rpoFalconWithRNG(walletSeed);
+
+const account = await client.accounts.create({
+  storage: StorageMode.Public,
+  seed: walletSeed,
+  auth,
+  components: [counterAccountComponent],
+});
+```
+
+### Compiling and executing the custom script
+
+Use `client.compile.txScript()` to compile a transaction script. Pass any needed libraries inline — the client links them dynamically:
+
+```ts
+const script = await client.compile.txScript({
+  code: txScriptCode,
+  libraries: [
+    {
+      namespace: 'external_contract::counter_contract',
+      code: counterContractCode,
+    },
+  ],
+});
+```
+
+Then execute it with `client.transactions.execute()`:
+
+```ts
+await client.transactions.execute({
+  account,
+  script,
+});
+```
+
+### Custom script
+
+This is the Miden assembly script that calls the `increment_count` procedure during the transaction.
+
+```masm
+use external_contract::counter_contract
+
+begin
+    call.counter_contract::increment_count
+end
+```
+
+### Running the example
+
+To run a full working example navigate to the `web-client` directory in the [miden-tutorials](https://github.com/0xMiden/miden-tutorials/) repository and run the web application example:
+
+```bash
+cd web-client
+yarn install
+yarn start
+```
+
+### Resetting the `MidenClientDB`
+
+The Miden webclient stores account and note data in the browser. If you get errors such as "Failed to build MMR", then you should reset the Miden webclient store. When switching between Miden networks such as from localhost to testnet be sure to reset the browser store. To clear the account and node data in the browser, paste this code snippet into the browser console:
+
+```javascript
+(async () => {
+  const dbs = await indexedDB.databases();
+  for (const db of dbs) {
+    await indexedDB.deleteDatabase(db.name);
+    console.log(`Deleted database: ${db.name}`);
+  }
+  console.log('All databases deleted.');
+})();
+```

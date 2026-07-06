@@ -40,7 +40,7 @@ use miden_client::{
     builder::ClientBuilder,
     keystore::FilesystemKeyStore,
     rpc::{Endpoint, GrpcClient},
-    Felt, Word,
+    Word,
 };
 use miden_client_sqlite_store::ClientBuilderSqliteExt;
 use std::sync::Arc;
@@ -90,7 +90,7 @@ async fn main() -> anyhow::Result<()> {
     let slot_name = StorageSlotName::new(
         "miden::component::miden_counter_account::count_map"
     )?;
-    let count_key = Word::from([Felt::new(0), Felt::new(0), Felt::new(0), Felt::new(1)]);
+    let count_key = Word::from([0u32, 0, 0, 1]);
     let count = counter_account
         .storage()
         .get_map_item(&slot_name, count_key)?;
@@ -146,6 +146,7 @@ use miden_client::{
     rpc::{Endpoint, GrpcClient},
 };
 use miden_client_sqlite_store::ClientBuilderSqliteExt;
+use miden_protocol::asset::{AssetCallbackFlag, AssetVaultKey};
 use std::sync::Arc;
 
 #[tokio::main]
@@ -190,9 +191,11 @@ async fn main() -> anyhow::Result<()> {
         .ok_or_else(|| anyhow::anyhow!("Account not found"))?
         .try_into()?;
 
-    let balance = alice_account
-        .vault()
-        .get_balance(faucet_account_id)?;
+    let balance_key = AssetVaultKey::new_fungible(
+        faucet_account_id,
+        AssetCallbackFlag::Disabled,
+    );
+    let balance = alice_account.vault().get_balance(balance_key)?;
 
     println!("Alice's TEST token balance: {:?}", balance);
 

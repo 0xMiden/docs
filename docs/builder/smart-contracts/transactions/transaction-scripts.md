@@ -13,7 +13,7 @@ A transaction script is a top-level function that runs once per transaction, aft
 ```rust
 // With account access
 #[tx_script]
-fn run(arg: Word, account: &mut Account) { ... }
+fn run(arg: Word, account: &mut Wallet) { ... }
 
 // Without account access
 #[tx_script]
@@ -25,15 +25,28 @@ fn run(arg: Word) { ... }
 | Function name | Must be `run` (enforced by the macro) |
 | Return type | `()` |
 | Required arg | One `Word` (the script argument, passed by the transaction executor) |
-| Optional arg | `&Account` or `&mut Account` |
+| Optional arg | `&AccountWrapper` or `&mut AccountWrapper`, where `AccountWrapper` is declared with `#[account(package::Interface)]` |
 | Generics | Not allowed |
 | Async | Not allowed |
 
-## Cargo.toml
+## miden-project.toml
 
 ```toml
-[package.metadata.miden]
-project-kind = "transaction-script"
+[package]
+name = "basic-wallet-tx-script"
+version = "0.1.0"
+
+[lib]
+kind = "tx-script"
+namespace = "miden:basic-wallet-tx-script/basic-wallet-tx-script@0.1.0"
+
+[dependencies]
+miden-core = "*"
+miden-protocol = "*"
+basic-wallet = { path = "../basic-wallet" }
+
+[package.metadata.miden.dependencies]
+basic-wallet = { wit = "../basic-wallet/target/generated-wit/" }
 ```
 
 ## Example: basic-wallet-tx-script
@@ -52,9 +65,10 @@ This example reads note parameters from the advice map and creates an output not
 // extern crate alloc;
 // use alloc::vec::Vec;
 
-use miden::{intrinsics::advice::{adv_load_preimage, adv_push_mapvaln}, *};
+use miden::{account, adv_load_preimage, intrinsics::advice::adv_push_mapvaln, *};
 
-use crate::bindings::Account;
+#[account(basic_wallet::BasicWallet)]
+pub struct Wallet;
 
 // Input layout constants
 const TAG_INDEX: usize = 0;
@@ -65,11 +79,11 @@ const ASSET_START: usize = 6;
 const ASSET_END: usize = 10;
 
 #[tx_script]
-fn run(arg: Word, account: &mut Account) {
+fn run(arg: Word, account: &mut Wallet) {
     let num_felts = adv_push_mapvaln(arg.clone());
-    let num_felts_u64 = num_felts.as_u64();
+    let num_felts_u64 = num_felts.as_canonical_u64();
     assert_eq!(Felt::from_u32((num_felts_u64 % 4) as u32), felt!(0));
-    let num_words = Felt::from_u64_unchecked(num_felts_u64 / 4);
+    let num_words = Felt::new(num_felts_u64 / 4).unwrap();
     let commitment = arg;
     let input = adv_load_preimage(num_words, commitment);
     let tag = input[TAG_INDEX];

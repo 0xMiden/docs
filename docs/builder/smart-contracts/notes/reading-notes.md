@@ -53,20 +53,23 @@ let serial_num: Word = active_note::get_serial_number();
 
 ### Note metadata
 
-`get_metadata()` returns a `NoteMetadata` struct containing the note's attachment and header:
+`get_metadata()` returns note metadata:
 
 ```rust
 let metadata: NoteMetadata = active_note::get_metadata();
 ```
 
-`NoteMetadata` has two fields:
+On the v0.15 protocol side, user-facing note metadata is `PartialNoteMetadata`:
 
 ```rust
-pub struct NoteMetadata {
-    pub attachment: Word,  // auxiliary data attached to the note
-    pub header: Word,      // metadata header (sender, tag, etc.)
+pub struct PartialNoteMetadata {
+    sender: AccountId,
+    note_type: NoteType,
+    tag: NoteTag,
 }
 ```
+
+The full `NoteMetadata` wraps that partial metadata together with attachment headers and an attachments commitment. Its encoded metadata word has four felts: sender suffix plus type/version, sender prefix, tag, and attachment schemes.
 
 ## `input_note` — querying notes by index
 
@@ -108,7 +111,7 @@ Unlike `active_note::get_storage()` which returns the full `Vec<Felt>` of storag
 
 ### Note metadata
 
-Returns the same `NoteMetadata` struct as `active_note`:
+Returns the same metadata shape as `active_note`:
 
 ```rust
 let metadata: NoteMetadata = input_note::get_metadata(note_idx);

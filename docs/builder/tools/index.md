@@ -34,7 +34,7 @@ Developer tools for building on and interacting with the Miden network. Use the 
   <Card title="Network" docId="builder/tools/network" eyebrow="Testnet · Services">
     Live Miden testnet endpoints — status, block explorer (MidenScan), RPC, faucet, remote prover.
   </Card>
-  <Card title="Note Transport" docId="builder/tools/note-transport/index" eyebrow="Private notes · Relay">
+  <Card title="Note Transport" href="./note-transport/" eyebrow="Private notes · Relay">
     Offchain relay service for delivering private note payloads between senders and recipients.
   </Card>
   <Card title="Bridging" docId="builder/tools/bridging/index" eyebrow="Interop · Testnets">

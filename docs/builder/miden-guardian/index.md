@@ -55,20 +55,20 @@ Guardian has an explicit trust boundary:
 ## Learn more
 
 <CardGrid cols={2}>
-  <Card title="Architecture" docId="builder/miden-guardian/core-concepts/architecture" eyebrow="Core concepts">
-    Roles, trust boundaries, state flow, and failure behavior.
+  <Card title="Concepts" href="./getting-started/concepts" eyebrow="Understand">
+    What Guardian is and is not, the custody model, and the trust boundary.
   </Card>
-  <Card title="Data structures" docId="builder/miden-guardian/core-concepts/data-structures" eyebrow="Core concepts">
-    State, deltas, commitments, and delta proposals.
+  <Card title="Quickstart" href="./getting-started/quickstart" eyebrow="Get started">
+    A Guardian running locally in under 60 seconds with one command.
   </Card>
-  <Card title="Components" docId="builder/miden-guardian/core-concepts/components" eyebrow="Core concepts">
-    API, authentication, storage, and other server components.
+  <Card title="Service architecture" href="./architecture/services" eyebrow="Understand">
+    The server modules, storage modes, and the dashboard subsystem.
   </Card>
-  <Card title="Security" docId="builder/miden-guardian/core-concepts/security" eyebrow="Core concepts">
-    Trust model, integrity guarantees, and edge cases.
+  <Card title="Production guide" href="./operations/production" eyebrow="Operate">
+    Readiness, configuration, and the path to a production deployment.
   </Card>
-  <Card title="Operator guide" docId="builder/miden-guardian/operator-guide/running" eyebrow="Run it">
-    How to run, deploy, and troubleshoot a Guardian server.
+  <Card title="Guides" href="./guides/overview" eyebrow="How-to">
+    End-to-end Compose walkthroughs: signers, dashboard, observability, TLS.
   </Card>
   <Card title="Private multisig" docId="builder/private-multisig/index" eyebrow="Solutions">
     Multi-party threshold signature workflows powered by Guardian.

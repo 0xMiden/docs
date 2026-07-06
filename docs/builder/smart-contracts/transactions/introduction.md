@@ -81,4 +81,4 @@ A separate failure mode is the **empty transaction**: a transaction that runs to
 | **Privacy** | All inputs, state reads, and call traces are public | Network sees only the proof and state commitments |
 | **Failure** | Onchain revert, gas consumed, visible trace | Proof can't be generated — no onchain trace, no cost |
 | **Parallelism** | Transactions touching same state must serialize | Single-account scope enables parallel execution |
-| **Authentication** | `msg.sender` set by protocol | Falcon512 signatures verified inside the transaction |
+| **Authentication** | `msg.sender` set by protocol | Falcon-512 Poseidon2 signatures verified inside the transaction |

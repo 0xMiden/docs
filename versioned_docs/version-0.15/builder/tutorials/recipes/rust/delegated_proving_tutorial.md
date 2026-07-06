@@ -1,0 +1,207 @@
+---
+title: "Delegated Proving"
+sidebar_position: 12
+---
+
+# Delegated Proving
+
+_Using delegated proving to minimize transaction proving times on computationally constrained devices_
+
+## Overview
+
+In this tutorial we will cover how to use delegated proving with the Miden Rust client to minimize the time it takes to generate a valid transaction proof. In the code below, we will create an account, mint tokens from a faucet, then send the tokens to another account using delegated proving.
+
+## Prerequisites
+
+This tutorial assumes you have basic familiarity with the Miden Rust client.
+
+## What we'll cover
+
+- Explaining what "delegated proving" is and its pros and cons
+- How to use delegated proving with the Rust client
+
+## What is Delegated Proving?
+
+Before diving into our code example, let's clarify what "delegated proving" means.
+
+Delegated proving is the process of outsourcing the ZK proof generation of your transaction to a third party. For certain computationally constrained devices such as mobile phones and web browser environments, generating ZK proofs might take too long to ensure an acceptable user experience. Devices that do not have the computational resources to generate Miden proofs in under 1-2 seconds can use delegated proving to provide a more responsive user experience.
+
+_How does it work?_ When a user choses to use delegated proving, they send off their locally executed transaction to a dedicated server. This dedicated server generates the ZK proof for the executed transaction and sends the proof back to the user. Proving a transaction with delegated proving is trustless, meaning if the delegated prover is malicious, they could not compromise the security of the account that is submitting a transaction to be processed by the delegated prover.
+
+The only downside of using delegated proving is that it reduces the privacy of the account that uses delegated proving, because the delegated prover would have knowledge of the inputs to the transaction that is being proven. For example, it would not be advisable to use delegated proving in the case of our "How to Create a Custom Note" tutorial, since the note we create requires knowledge of a hash preimage to redeem the assets in the note. Using delegated proving would reveal the hash preimage to the server running the delegated proving service.
+
+Anyone can run their own delegated prover server. If you are building a product on Miden, it may make sense to run your own delegated prover server for your users. To run your own delegated proving server, follow the instructions here: https://crates.io/crates/miden-remote-prover.
+
+To keep this tutorial runnable without external services, the code below uses a local prover. The
+flow is the same if you swap in `RemoteTransactionProver` and point it at your delegated prover.
+
+## Step 1: Initialize your repository
+
+Create a new Rust repository for your Miden project and navigate to it with the following command:
+
+```bash
+cargo new miden-delegated-proving-app
+cd miden-delegated-proving-app
+```
+
+Add the following dependencies to your `Cargo.toml` file:
+
+```toml
+[dependencies]
+miden-client = { version = "0.15", features = ["testing", "tonic"] }
+miden-client-sqlite-store = { version = "0.15", package = "miden-client-sqlite-store" }
+miden-protocol = { version = "0.15" }
+rand = { version = "0.9" }
+tokio = { version = "1.46", features = ["rt-multi-thread", "net", "macros", "fs"] }
+```
+
+## Step 2: Initialize the client and prover and construct transactions
+
+Similarly to previous tutorials, we must instantiate the client.
+We construct a `LocalTransactionProver` for this walkthrough.
+
+```rust no_run
+use miden_client::auth::AuthSecretKey;
+use miden_client::auth::{AuthSchemeId, AuthSingleSig};
+use rand::RngCore;
+use std::{path::PathBuf, sync::Arc};
+
+use miden_client::{
+    account::component::BasicWallet,
+    builder::ClientBuilder,
+    keystore::{FilesystemKeyStore, Keystore},
+    rpc::{Endpoint, GrpcClient},
+    transaction::{
+        LocalTransactionProver,
+        ProvingOptions,
+        TransactionProver,
+        TransactionRequestBuilder,
+    },
+    ClientError,
+};
+use miden_client_sqlite_store::ClientBuilderSqliteExt;
+use miden_client::account::{AccountBuilder, AccountType};
+
+#[tokio::main]
+async fn main() -> Result<(), ClientError> {
+    // Initialize client
+    let endpoint = Endpoint::testnet();
+    let timeout_ms = 10_000;
+    let rpc_client = Arc::new(GrpcClient::new(&endpoint, timeout_ms));
+
+    // Initialize keystore
+    let keystore_path = PathBuf::from("./keystore");
+    let keystore = Arc::new(FilesystemKeyStore::new(keystore_path).unwrap());
+
+    let store_path = PathBuf::from("./store.sqlite3");
+
+    let mut client = ClientBuilder::new()
+        .rpc(rpc_client)
+        .sqlite_store(store_path)
+        .authenticator(keystore.clone())
+        .in_debug_mode(true.into())
+        .build()
+        .await?;
+
+    let sync_summary = client.sync_state().await.unwrap();
+    println!("Latest block: {}", sync_summary.block_num);
+
+    // Create Alice's account
+    let mut init_seed = [0_u8; 32];
+    client.rng().fill_bytes(&mut init_seed);
+
+    let key_pair = AuthSecretKey::new_falcon512_poseidon2_with_rng(client.rng());
+
+    let alice_account = AccountBuilder::new(init_seed)
+        .account_type(AccountType::Private)
+        .with_auth_component(AuthSingleSig::new(key_pair.public_key().to_commitment(), AuthSchemeId::Falcon512Poseidon2))
+        .with_component(BasicWallet)
+        .build()
+        .unwrap();
+
+    client.add_account(&alice_account, false).await?;
+    keystore.add_key(&key_pair, alice_account.id()).await.unwrap();
+
+    // -------------------------------------------------------------------------
+    // Setup the local tx prover
+    // -------------------------------------------------------------------------
+    let local_tx_prover = LocalTransactionProver::new(ProvingOptions::default());
+    let tx_prover: Arc<dyn TransactionProver> = Arc::new(local_tx_prover);
+
+    // We use a dummy transaction request to showcase delegated proving.
+    // The only effect of this tx should be increasing Alice's nonce.
+    println!("Alice nonce initial: {:?}", alice_account.nonce());
+    let script_code = "begin push.1 drop end";
+    let tx_script = client
+        .code_builder()
+        .compile_tx_script(script_code)
+        .unwrap();
+
+    let transaction_request = TransactionRequestBuilder::new()
+        .custom_script(tx_script)
+        .build()
+        .unwrap();
+
+    // Step 1: Execute the transaction locally
+    println!("Executing transaction...");
+    let tx_result = client
+        .execute_transaction(alice_account.id(), transaction_request)
+        .await?;
+
+    // Step 2: Prove the transaction using the local prover
+    println!("Proving transaction with local prover...");
+    let proven_transaction = client.prove_transaction_with(&tx_result, tx_prover).await?;
+
+    // Step 3: Submit the proven transaction
+    println!("Submitting proven transaction...");
+    let submission_height = client
+        .submit_proven_transaction(proven_transaction, &tx_result)
+        .await?;
+
+    // Step 4: Apply the transaction to local store
+    client
+        .apply_transaction(&tx_result, submission_height)
+        .await?;
+
+    println!("Transaction submitted successfully using local prover!");
+
+    client.sync_state().await.unwrap();
+
+    let account = client
+        .get_account(alice_account.id())
+        .await
+        .unwrap()
+        .expect("alice account not found");
+
+    println!("Alice nonce has increased: {:?}", account.nonce());
+
+    Ok(())
+}
+```
+
+Now let's run the `src/main.rs` program:
+
+```bash
+cargo run --release
+```
+
+The output will look like this:
+
+```text
+Latest block: 226954
+Alice initial account balance: Ok(1000)
+Alice final account balance: Ok(900)
+```
+
+### Running the example
+
+To run a full working example navigate to the `rust-client` directory in the [miden-tutorials](https://github.com/0xMiden/miden-tutorials/) repository and run this command:
+
+```bash
+cd rust-client
+cargo run --release --bin delegated_prover
+```
+
+### Continue learning
+
+Next tutorial: [Consuming On-Chain Price Data from the Pragma Oracle](oracle_tutorial.md)

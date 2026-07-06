@@ -17,7 +17,7 @@ If you forget `#[export_type]` on a public API type, the compiler will emit an e
 Struct fields must be public and use types that are either SDK types (`Felt`, `Word`, `Asset`, etc.) or themselves marked with `#[export_type]`:
 
 ```rust
-use miden::{export_type, Felt, Word, Asset, component};
+use miden::{component, component_storage, export_type, Asset, Felt, Word};
 
 #[export_type]
 pub struct StructA {
@@ -31,12 +31,17 @@ pub struct StructB {
     pub baz: Felt,
 }
 
-#[component]
-struct MyAccount;
+#[component_storage]
+struct MyAccountStorage;
 
 #[component]
-impl MyAccount {
-    pub fn process(&self, a: StructA, asset: Asset) -> StructB {
+trait MyAccount {
+    fn process(&self, a: StructA, asset: Asset) -> StructB;
+}
+
+#[component]
+impl MyAccount for MyAccountStorage {
+    fn process(&self, a: StructA, asset: Asset) -> StructB {
         StructB {
             bar: a.foo[0],
             baz: a.foo[1],
@@ -97,7 +102,7 @@ pub mod my_types {
 
 | Rule | Details |
 |------|---------|
-| When needed | Any custom type in a `pub fn` signature on a `#[component]` impl |
+| When needed | Any custom type in a public method signature on a `#[component]` trait |
 | Struct fields | Must be `pub` |
 | Allowed field types | `Felt`, `Word`, `Asset`, `AccountId`, or other `#[export_type]` types |
 | Enums | Unit variants supported |

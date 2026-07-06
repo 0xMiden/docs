@@ -8,6 +8,8 @@ sidebar_position: 0
 
 This section is the practical guide to authoring Miden smart contracts directly in **Miden Assembly (MASM)** — the path Miden mainnet supports for production deployments today. The Rust SDK is in active development and will become the default authoring path once it ships v1; until then, MASM is what you ship with.
 
+The examples in this section assume protocol v0.15.3 and Miden Assembly v0.23.
+
 :::info Audience
 You're here because you want to deploy a contract to Miden mainnet. MASM is a small, stack-based assembly language — closer to assembly than Rust or Solidity, but it gives you direct, predictable control over the VM and is what the mainnet kernel verifies. The [Reference → Miden VM → Assembly](/reference/miden-vm/user_docs/assembly/) section is the full language reference; this section is the Builder-side cookbook for using it.
 :::
@@ -41,7 +43,7 @@ Practical, end-to-end tutorials are in progress in the [Miden tutorials reposito
 | Testing with MockChain | In progress |
 | Debugging MASM contracts | In progress |
 
-In the meantime, the existing [Rust-based Miden Bank tutorial](../../tutorials/miden-bank/index.md) is useful for understanding the overall transaction lifecycle and the patterns that translate to MASM. The [Reference assembly section](/reference/miden-vm/user_docs/assembly/) covers the language itself.
+In the meantime, the existing [Rust-based Miden Bank tutorial](../../tutorials/miden-bank/) is useful for understanding the overall transaction lifecycle and the patterns that translate to MASM. The [Reference assembly section](/reference/miden-vm/user_docs/assembly/) covers the language itself.
 
 ## See also
 

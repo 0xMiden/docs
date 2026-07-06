@@ -6,7 +6,9 @@ pagination_next: null
 
 # Build on Miden
 
-Accounts, notes, and transactions — authored in Rust, compiled to MASM, proved client-side.
+Miden is a zero-knowledge layer 2 where every account is an independent state machine and state is private by default. You author accounts, notes, and transactions in Rust, compile them to Miden Assembly (MASM), and prove them client-side — the network verifies each proof without ever seeing your private state.
+
+This is the developer's entry point. **New to Miden?** Start with [Get started](./get-started/index.md) to install the toolchain and send your first transaction, then build [Your first smart contract](./get-started/your-first-smart-contract/index.md), and dip into the [Reference](../reference/index.md) when you want to know how it all works underneath. Already oriented? Jump straight to any section below.
 
 ## Start here
 
@@ -18,6 +20,10 @@ Accounts, notes, and transactions — authored in Rust, compiled to MASM, proved
     Walk through writing, proving, and deploying a counter contract in Rust.
   </Card>
 </CardGrid>
+
+<Callout variant="tip" title="Testnet & faucet">
+Building against the public testnet? Grab free test assets from the [faucet](https://faucet.testnet.miden.io/), and find every public endpoint — RPC, block explorer, status — on the [Network](./tools/network.md) page.
+</Callout>
 
 ## Build
 
@@ -39,7 +45,7 @@ Accounts, notes, and transactions — authored in Rust, compiled to MASM, proved
 ## Ship
 
 <CardGrid cols={2}>
-  <Card title="Migration" docId="builder/migration/index" eyebrow="v0.13 → v0.14">
+  <Card title="Migration" docId="builder/migration/index" eyebrow="v0.14 → v0.15">
     Breaking changes, renames, and new features across accounts, notes, transactions, MASM, and the client.
   </Card>
   <Card title="Miden Guardian" docId="builder/miden-guardian/index" eyebrow="Account state">

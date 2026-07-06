@@ -41,7 +41,7 @@ The Playground shines for learning MASM and for quick prototyping. For anything 
   <Card title="First smart contract" docId="builder/get-started/your-first-smart-contract/index" eyebrow="Tutorial">
     Install the toolchain and build + deploy a counter contract in Rust.
   </Card>
-  <Card title="MASM in v0.14" docId="builder/migration/masm-changes" eyebrow="v0.14">
+  <Card title="MASM in v0.15" docId="builder/migration/masm-changes" eyebrow="v0.15">
     New `word(...)` / `event(...)` constants, `std::math::u128`, and other MASM-level deltas.
   </Card>
   <Card title="Smart contracts reference" docId="builder/smart-contracts/index" eyebrow="Reference">

@@ -11,7 +11,7 @@ Hands-on walkthroughs for building on Miden. Every tutorial pairs with runnable 
 ## Pick a path
 
 <CardGrid cols={3}>
-  <Card title="Miden Bank" docId="builder/tutorials/miden-bank/index" eyebrow="Walkthrough · Rust">
+  <Card title="Miden Bank" href="./miden-bank/" eyebrow="Walkthrough · Rust">
     A 9-part curriculum — build a complete banking application covering components, storage, note scripts, cross-component calls, and output notes.
   </Card>
   <Card title="Recipes" href="./recipes/rust/" eyebrow="Cookbook · Rust & Web">

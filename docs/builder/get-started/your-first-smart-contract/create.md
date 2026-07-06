@@ -21,7 +21,11 @@ This creates a workspace with the following structure:
 counter-project/
 ├── contracts/                   # Each contract as individual crate
 │   ├── counter-account/         # Example: Counter account contract
+│   │   ├── miden-project.toml   # Miden package manifest
+│   │   └── src/lib.rs
 │   └── increment-note/          # Example: Increment note contract
+│       ├── miden-project.toml   # Miden package manifest
+│       └── src/lib.rs
 ├── integration/                 # Integration crate (scripts + tests)
 │   ├── src/
 │   │   ├── bin/                 # Rust binaries for onchain interactions
@@ -37,7 +41,45 @@ The project follows Miden's design philosophy of clean separation:
 - **`contracts/`**: Your primary working directory for writing Miden smart contract code
 - **`integration/`**: All onchain interactions, deployment scripts, and tests
 
-Each contract is organized as its own individual crate, providing independent versioning, dependencies, and clear isolation between different contracts.
+Each contract is organized as its own individual crate, providing independent versioning, dependencies, and clear isolation between different contracts. Each contract crate also includes a `miden-project.toml` file next to `Cargo.toml`; the Miden compiler uses it to identify the project kind, WIT namespace, and generated interface dependencies.
+
+### Project Manifests
+
+The Miden-specific manifest is required for account components, notes, and transaction scripts. The counter account manifest identifies the exported account component interface:
+
+```toml title="contracts/counter-account/miden-project.toml"
+[package]
+name = "counter-account"
+version = "0.1.0"
+
+[lib]
+kind = "account-component"
+namespace = "miden:counter-account/counter-contract@0.1.0"
+
+[dependencies]
+miden-core = "*"
+miden-protocol = "*"
+```
+
+The increment note depends on the counter account's generated WIT so it can call the counter interface:
+
+```toml title="contracts/increment-note/miden-project.toml"
+[package]
+name = "increment-note"
+version = "0.1.0"
+
+[lib]
+kind = "note"
+namespace = "miden:increment-note/increment-note@0.1.0"
+
+[dependencies]
+miden-core = "*"
+miden-protocol = "*"
+counter-account = { path = "../counter-account" }
+
+[package.metadata.miden.dependencies]
+counter-account = { wit = "../counter-account/target/generated-wit/" }
+```
 
 ## Building Your Contracts
 
@@ -69,32 +111,39 @@ Let's examine the counter account contract that comes with the project template.
 //
 // extern crate alloc;
 
-use miden::{component, felt, Felt, StorageMap, StorageMapAccess, Word};
+use miden::{component, component_storage, felt, Felt, StorageMap, Word};
 
-/// Main contract structure for the counter example.
-#[component]
-struct CounterContract {
+/// Storage for the counter example.
+#[component_storage]
+struct CounterContractStorage {
     /// Storage map holding the counter value.
     #[storage(description = "counter contract storage map")]
-    count_map: StorageMap,
+    count_map: StorageMap<Word, Felt>,
+}
+
+/// Public interface for the counter component.
+#[component]
+trait CounterContract {
+    fn get_count(&self) -> Felt;
+    fn increment_count(&mut self) -> Felt;
 }
 
 #[component]
-impl CounterContract {
+impl CounterContract for CounterContractStorage {
     /// Returns the current counter value stored in the contract's storage map.
-    pub fn get_count(&self) -> Felt {
+    fn get_count(&self) -> Felt {
         // Define a fixed key for the counter value within the map
-        let key = Word::from_u64_unchecked(0, 0, 0, 1);
+        let key = Word::new([felt!(0), felt!(0), felt!(0), felt!(1)]);
         // Read the value associated with the key from the storage map
-        self.count_map.get(&key)
+        self.count_map.get(key)
     }
 
     /// Increments the counter value stored in the contract's storage map by one.
-    pub fn increment_count(&mut self) -> Felt {
+    fn increment_count(&mut self) -> Felt {
         // Define the same fixed key
-        let key = Word::from_u64_unchecked(0, 0, 0, 1);
+        let key = Word::new([felt!(0), felt!(0), felt!(0), felt!(1)]);
         // Read the current value
-        let current_value: Felt = self.count_map.get(&key);
+        let current_value: Felt = self.count_map.get(key);
         // Increment the value by one
         let new_value = current_value + felt!(1);
         // Write the new value back to the storage map
@@ -117,16 +166,16 @@ Miden contracts run in a `no_std` environment, meaning they don't link against R
 #### Miden Library Imports
 
 ```rust
-use miden::{component, felt, Felt, StorageMap, StorageMapAccess, Word};
+use miden::{component, component_storage, felt, Felt, StorageMap, Word};
 ```
 
 These imports provide:
 
 - **`component`**: Macro for defining contract components
+- **`component_storage`**: Macro for defining a component's storage struct
 - **`felt`**: Macro for creating `Felt` literals (e.g., `felt!(1)`)
 - **`Felt`/`Word`**: Miden's native field element and word types
 - **`StorageMap`**: Key-value storage within account storage slots
-- **`StorageMapAccess`**: Needed for reading storage values (`get_count` function)
 
 :::note[`felt` vs `Felt`]
 `Felt` is the field element type representing values in the Goldilocks prime field (p = 2^64 - 2^32 + 1). `felt!(1)` is a compile-time macro that creates `Felt` values from integer literals with compile-time range validation. Currently `felt!` only accepts values up to 2^32 (compiler limitation); for larger values use `Felt::from_u64_unchecked()`.
@@ -135,35 +184,41 @@ These imports provide:
 #### Contract Structure Definition
 
 ```rust
-#[component]
-struct CounterContract {
+#[component_storage]
+struct CounterContractStorage {
     /// Storage map holding the counter value.
     #[storage(description = "counter contract storage map")]
-    count_map: StorageMap,
+    count_map: StorageMap<Word, Felt>,
+}
+
+#[component]
+trait CounterContract {
+    fn get_count(&self) -> Felt;
+    fn increment_count(&mut self) -> Felt;
 }
 ```
 
-The `#[component]` attribute marks this as a Miden [Account component](/reference/protocol/account). The `count_map` field is a `StorageMap` stored in a named storage slot of the account. In v0.13, storage slots are identified by name rather than explicit index numbers — the slot name is derived automatically from the component's package name and field name (e.g., `miden::component::miden_counter_account::count_map`).
+The `#[component_storage]` attribute marks the storage struct for this Miden [Account component](/reference/protocol/account), while the `#[component]` trait defines the component's public interface. The `count_map` field is a `StorageMap` stored in a named storage slot of the account. In the v0.15-aligned SDK, storage slots are identified by name rather than explicit index numbers — the slot name is derived automatically from the component's package name and field name (e.g., `miden::component::miden_counter_account::count_map`).
 
 **Important**: Storage slots in Miden hold `Word` values, which are composed of four field elements (`Felt`). Each `Felt` is a 64-bit unsigned integer (u64). The `StorageMap` provides a key-value interface within a single storage slot, allowing you to store multiple key-value pairs within the four-element word structure.
 
 #### Contract Implementation
 
 ```rust
-impl CounterContract {
+impl CounterContract for CounterContractStorage {
     // Function implementations...
 }
 ```
 
-The `CounterContract` implementation defines the external interface that other contracts and notes can call. This is the contract's public API.
+The `CounterContract` trait defines the external interface that other contracts and notes can call. The `impl CounterContract for CounterContractStorage` block provides the behavior over the component's storage.
 
 #### Storage Key Strategy
 
 ```rust
-let key = Word::from_u64_unchecked(0, 0, 0, 1);
+let key = Word::new([felt!(0), felt!(0), felt!(0), felt!(1)]);
 ```
 
-Both functions in the counter contract use the same fixed key `[0, 0, 0, 1]` to store and retrieve the counter value within the storage map. The `Word::from_u64_unchecked` constructor creates a `Word` from four `u64` values. This demonstrates a simple but effective storage pattern.
+Both functions in the counter contract use the same fixed key `[0, 0, 0, 1]` to store and retrieve the counter value within the storage map. This demonstrates a simple but effective storage pattern.
 
 ## Understanding the Increment Note Script
 
@@ -180,9 +235,10 @@ Now let's examine the increment note script at `contracts/increment-note/src/lib
 // extern crate alloc;
 // use alloc::vec::Vec;
 
-use miden::*;
+use miden::{account, note, Felt, Word};
 
-use crate::bindings::miden::counter_account::counter_account;
+#[account(counter_account::CounterContract)]
+pub struct CounterAccount;
 
 #[note]
 struct IncrementNote;
@@ -190,11 +246,11 @@ struct IncrementNote;
 #[note]
 impl IncrementNote {
     #[note_script]
-    fn run(self, _arg: Word) {
-        let initial_value = counter_account::get_count();
-        counter_account::increment_count();
+    fn run(self, _arg: Word, account: &mut CounterAccount) {
+        let initial_value = account.get_count();
+        account.increment_count();
         let expected_value = initial_value + Felt::from_u32(1);
-        let final_value = counter_account::get_count();
+        let final_value = account.get_count();
         assert_eq(final_value, expected_value);
     }
 }
@@ -209,12 +265,10 @@ Similar to the account contract, the note script uses `#![no_std]` with the same
 #### Miden Imports
 
 ```rust
-use miden::*;
-
-use crate::bindings::miden::counter_account::counter_account;
+use miden::{account, note, Felt, Word};
 ```
 
-The wildcard import brings in all Miden note script functionality. The `counter_account` binding imports the interface functions from the counter contract, allowing the note script to call them.
+These imports bring in the note macro, explicit account binding macro, and the basic field/word types used by the note.
 
 #### Note Script Structure
 
@@ -227,11 +281,11 @@ struct IncrementNote;
 #[note]
 impl IncrementNote {
     #[note_script]
-    fn run(self, _arg: Word) { ... }
+    fn run(self, _arg: Word, account: &mut CounterAccount) { ... }
 }
 ```
 
-The struct definition (`IncrementNote`) provides a named type for the note script. Unlike account contracts, note scripts don't store persistent data — the struct serves as the entry point container.
+The struct definition (`IncrementNote`) provides a named type for the note script. Unlike account contracts, note scripts don't store persistent data — the struct serves as the entry point container. The `CounterAccount` type is declared with `#[account(counter_account::CounterContract)]`, which binds the note to the counter account interface generated from `miden-project.toml`.
 
 Learn more about [note scripts in the Miden documentation](/reference/protocol/note/).
 
@@ -239,18 +293,18 @@ Learn more about [note scripts in the Miden documentation](/reference/protocol/n
 
 ```rust
 #[note_script]
-fn run(self, _arg: Word) {
-    let initial_value = counter_account::get_count();
-    counter_account::increment_count();
+fn run(self, _arg: Word, account: &mut CounterAccount) {
+    let initial_value = account.get_count();
+    account.increment_count();
     let expected_value = initial_value + Felt::from_u32(1);
-    let final_value = counter_account::get_count();
+    let final_value = account.get_count();
     assert_eq(final_value, expected_value);
 }
 ```
 
 The `#[note_script]` attribute marks this method as the entry point for note execution. The `self` parameter is required for methods in the `impl` block. The function:
 
-1. **Gets the initial counter value** using the imported `counter_account::get_count()` function
+1. **Gets the initial counter value** using the bound counter account interface
 2. **Calls increment_count()** to increment the counter on the target account
 3. **Verifies the operation succeeded** by checking the final value matches expectations
 
