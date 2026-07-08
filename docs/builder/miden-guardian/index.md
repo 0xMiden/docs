@@ -70,7 +70,7 @@ Guardian has an explicit trust boundary:
   <Card title="Guides" href="./guides/overview" eyebrow="How-to">
     End-to-end Compose walkthroughs: signers, dashboard, observability, TLS.
   </Card>
-  <Card title="Private multisig" href="../private-multisig/" eyebrow="Solutions">
+  <Card title="Private multisig" href="./reference/multisig-sdk" eyebrow="Solutions">
     Multi-party threshold signature workflows powered by Guardian.
   </Card>
 </CardGrid>
