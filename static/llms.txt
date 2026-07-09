@@ -51,9 +51,9 @@
 ## Guardian and Application Patterns
 
 - [Miden Guardian](https://docs.miden.xyz/builder/miden-guardian/): Assisted self-custody architecture and operator documentation.
-- [Guardian Running Guide](https://docs.miden.xyz/builder/miden-guardian/operator-guide/running): How to get and run the Guardian service.
-- [Guardian Deployment Guide](https://docs.miden.xyz/builder/miden-guardian/operator-guide/deployment): Production deployment configuration.
-- [Private Multisig](https://docs.miden.xyz/builder/private-multisig/): Private multisig concepts and SDK usage.
+- [Guardian Quickstart](https://docs.miden.xyz/builder/miden-guardian/getting-started/quickstart): How to get and run the Guardian service.
+- [Guardian Production Guide](https://docs.miden.xyz/builder/miden-guardian/operations/production): Production deployment configuration.
+- [Multisig SDK](https://docs.miden.xyz/builder/miden-guardian/reference/multisig-sdk): Private multisig concepts and SDK usage.
 
 ## Reference
 

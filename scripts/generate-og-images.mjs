@@ -188,14 +188,6 @@ const images = [
     panel: "GUARD",
   },
   {
-    id: "private-multisig",
-    eyebrow: "Build",
-    title: "Private Multisig",
-    description: "Account patterns for private approvals and coordinated execution.",
-    accent: "#ff5500",
-    panel: "MULTI",
-  },
-  {
     id: "migration",
     eyebrow: "Build",
     title: "Migration",
