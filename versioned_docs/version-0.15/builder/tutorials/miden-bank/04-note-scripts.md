@@ -80,7 +80,7 @@ edition = "2021"
 crate-type = ["cdylib"]
 
 [dependencies]
-miden = { git = "https://github.com/0xMiden/compiler", rev = "97eb019ded3a2d1f29d77639190bad5d3f0f099b" }
+miden = "0.13"
 ```
 
 Create the `miden-project.toml`. This is where the note declares its kind and its dependency on the bank account it calls into:
@@ -231,13 +231,12 @@ cargo miden build --release
 ```text
    Compiling deposit-note v0.1.0
     Finished `release` profile [optimized] target(s)
-Creating Miden package /path/to/miden-bank/target/miden/release/deposit_note.masp
 ```
 
 </details>
 
 :::note Cosmetic MAST-serialization errors
-The part2 compiler prints non-fatal `ERROR` lines about `MAST` serialization on every build. They are cosmetic — the build still succeeds and produces the `.masp` package.
+The Miden compiler prints non-fatal `ERROR` lines about `MAST` serialization on every build. They are cosmetic — the build still succeeds and produces the `.masp` package.
 :::
 
 ## Execution Flow Diagram

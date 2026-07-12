@@ -83,7 +83,7 @@ edition = "2021"
 crate-type = ["cdylib"]
 
 [dependencies]
-miden = { git = "https://github.com/0xMiden/compiler", rev = "97eb019ded3a2d1f29d77639190bad5d3f0f099b" }
+miden = "0.13"
 ```
 
 Create the `miden-project.toml`:
@@ -234,13 +234,12 @@ cargo miden build --release
 ```text
    Compiling init-tx-script v0.1.0
     Finished `release` profile [optimized] target(s)
-Creating Miden package .../init-tx-script/target/miden/release/init_tx_script.masp
 ```
 
 </details>
 
 :::note Cosmetic build errors
-The part2 compiler prints non-fatal `MAST`-serialization `ERROR` lines on every build. They are cosmetic — the build still succeeds and produces the `.masp` package.
+The Miden compiler prints non-fatal `MAST`-serialization `ERROR` lines on every build. They are cosmetic — the build still succeeds and produces the `.masp` package.
 :::
 
 ## Account Deployment Pattern
@@ -531,7 +530,7 @@ edition = "2021"
 crate-type = ["cdylib"]
 
 [dependencies]
-miden = { git = "https://github.com/0xMiden/compiler", rev = "97eb019ded3a2d1f29d77639190bad5d3f0f099b" }
+miden = "0.13"
 ```
 
 ```toml title="contracts/init-tx-script/miden-project.toml"

@@ -19,6 +19,10 @@ You'll create a **banking system** consisting of:
 
 The tutorial includes runnable tests where appropriate — some parts are setup-only or conceptual, with the first runnable test in Part 4.
 
+:::note Verification runs on MockChain
+This tutorial targets protocol **v0.15** and the v0.15-aligned Rust compiler. The contracts depend on the published `miden = "0.13"` SDK, and the integration harness builds them with the published `cargo-miden = "0.9"` release. The flow is verified end-to-end by the MockChain integration tests (`tests/{init,deposit,withdraw}_test.rs`), which all pass. The live-network binaries (`cargo run --bin initialize` / `--bin deposit`) also run against testnet.
+:::
+
 ## Tutorial Structure
 
 This tutorial is designed for hands-on learning. Each part builds on the previous one, and every part includes:
@@ -30,35 +34,126 @@ This tutorial is designed for hands-on learning. Each part builds on the previou
 
 ### Parts Overview
 
-<CardGrid cols={2}>
-  <Card title="Project Setup" href="./project-setup" eyebrow="Part 0">
-    Create your project with <code>miden new</code> and understand the workspace structure.
-  </Card>
-  <Card title="Account Components" href="./account-components" eyebrow="Part 1">
-    Learn <code>#[component]</code>, Value storage, and StorageMap for managing state.
-  </Card>
-  <Card title="Constants & Constraints" href="./constants-constraints" eyebrow="Part 2">
-    Define business rules with constants and validate with assertions.
-  </Card>
-  <Card title="Asset Management" href="./asset-management" eyebrow="Part 3">
-    Handle fungible assets with vault operations and balance tracking.
-  </Card>
-  <Card title="Note Scripts" href="./note-scripts" eyebrow="Part 4">
-    Write scripts that execute when notes are consumed.
-  </Card>
-  <Card title="Cross-Component Calls" href="./cross-component-calls" eyebrow="Part 5">
-    Call account methods from note scripts via bindings.
-  </Card>
-  <Card title="Transaction Scripts" href="./transaction-scripts" eyebrow="Part 6">
-    Write scripts for account initialization and owner operations.
-  </Card>
-  <Card title="Creating Output Notes" href="./output-notes" eyebrow="Part 7">
-    Create P2ID notes programmatically for withdrawals.
-  </Card>
-  <Card title="Complete Flows" href="./complete-flows" eyebrow="Part 8">
-    Walk through end-to-end deposit and withdraw operations.
-  </Card>
-</CardGrid>
+| Part       | Topic                                                    | What You'll Build                   |
+| ---------- | -------------------------------------------------------- | ----------------------------------- |
+| **Part 0** | [Project Setup](./00-project-setup.md)                   | Create project with `miden new`     |
+| **Part 1** | [Account Components](./01-account-components.md)         | Bank struct with storage            |
+| **Part 2** | [Constants & Constraints](./02-constants-constraints.md) | Business rules and validation       |
+| **Part 3** | [Asset Management](./03-asset-management.md)             | Deposit logic with balance tracking |
+| **Part 4** | [Note Scripts](./04-note-scripts.md)                     | Deposit note for receiving assets   |
+| **Part 5** | [Cross-Component Calls](./05-cross-component-calls.md)   | How bindings enable calls           |
+| **Part 6** | [Transaction Scripts](./06-transaction-scripts.md)       | Initialization script               |
+| **Part 7** | [Output Notes](./07-output-notes.md)                     | Withdraw with P2ID output           |
+| **Part 8** | [Complete Flows](./08-complete-flows.md)                 | End-to-end verification             |
+
+## Tutorial Cards
+
+import DocCard from '@theme/DocCard';
+
+<div className="row">
+  <div className="col col--6">
+    <DocCard
+      item={{
+        type: 'link',
+        href: 'miden-bank/project-setup',
+        label: 'Part 0: Project Setup',
+        description: 'Create your project with miden new and understand the workspace structure.',
+      }}
+    />
+  </div>
+  <div className="col col--6">
+    <DocCard
+      item={{
+        type: 'link',
+        href: 'miden-bank/account-components',
+        label: 'Part 1: Account Components',
+        description: 'Learn #[component], StorageValue storage, and StorageMap for managing state.',
+      }}
+    />
+  </div>
+</div>
+
+<div className="row">
+  <div className="col col--6">
+    <DocCard
+      item={{
+        type: 'link',
+        href: 'miden-bank/constants-constraints',
+        label: 'Part 2: Constants & Constraints',
+        description: 'Define business rules with constants and validate with assertions.',
+      }}
+    />
+  </div>
+  <div className="col col--6">
+    <DocCard
+      item={{
+        type: 'link',
+        href: 'miden-bank/asset-management',
+        label: 'Part 3: Asset Management',
+        description: 'Handle fungible assets with vault operations and balance tracking.',
+      }}
+    />
+  </div>
+</div>
+
+<div className="row">
+  <div className="col col--6">
+    <DocCard
+      item={{
+        type: 'link',
+        href: 'miden-bank/note-scripts',
+        label: 'Part 4: Note Scripts',
+        description: 'Write scripts that execute when notes are consumed.',
+      }}
+    />
+  </div>
+  <div className="col col--6">
+    <DocCard
+      item={{
+        type: 'link',
+        href: 'miden-bank/cross-component-calls',
+        label: 'Part 5: Cross-Component Calls',
+        description: 'Call account methods from note scripts via bindings.',
+      }}
+    />
+  </div>
+</div>
+
+<div className="row">
+  <div className="col col--6">
+    <DocCard
+      item={{
+        type: 'link',
+        href: 'miden-bank/transaction-scripts',
+        label: 'Part 6: Transaction Scripts',
+        description: 'Write scripts for account initialization and owner operations.',
+      }}
+    />
+  </div>
+  <div className="col col--6">
+    <DocCard
+      item={{
+        type: 'link',
+        href: 'miden-bank/output-notes',
+        label: 'Part 7: Creating Output Notes',
+        description: 'Create P2ID notes programmatically for withdrawals.',
+      }}
+    />
+  </div>
+</div>
+
+<div className="row">
+  <div className="col col--6">
+    <DocCard
+      item={{
+        type: 'link',
+        href: 'miden-bank/complete-flows',
+        label: 'Part 8: Complete Flows',
+        description: 'Walk through end-to-end deposit and withdraw operations.',
+      }}
+    />
+  </div>
+</div>
 
 ## Prerequisites
 
@@ -76,17 +171,17 @@ This tutorial assumes no prior experience with the Miden Rust compiler. We'll ex
 
 This tutorial covers the following Miden Rust compiler features:
 
-| Concept                      | Description                                                | Part |
-| ---------------------------- | ---------------------------------------------------------- | ---- |
-| `#[component]`               | Define account components with storage                     | 1    |
-| Storage Types                | `Value` for single values, `StorageMap` for key-value data | 1    |
-| Constants                    | Define compile-time business rules                         | 2    |
-| Assertions                   | Validate conditions and handle errors                      | 2    |
-| Asset Handling               | Add and remove assets from account vaults                  | 3    |
-| `#[note]` + `#[note_script]` | Note struct/impl pattern for scripts consumed by accounts  | 4    |
-| Cross-Component Calls        | Call account methods from note scripts                     | 5    |
-| `#[tx_script]`               | Transaction scripts for account operations                 | 6    |
-| Output Notes                 | Create notes programmatically                              | 7    |
+| Concept                      | Description                                                       | Part |
+| ---------------------------- | ----------------------------------------------------------------- | ---- |
+| `#[component]`               | Define account components with storage                            | 1    |
+| Storage Types                | `StorageValue` for single values, `StorageMap` for key-value data | 1    |
+| Constants                    | Define compile-time business rules                                | 2    |
+| Assertions                   | Validate conditions and handle errors                             | 2    |
+| Asset Handling               | Add and remove assets from account vaults                         | 3    |
+| `#[note]` + `#[note_script]` | Note struct/impl pattern for scripts consumed by accounts         | 4    |
+| Cross-Component Calls        | Call account methods from note scripts                            | 5    |
+| `#[tx_script]`               | Transaction scripts for account operations                        | 6    |
+| Output Notes                 | Create notes programmatically                                     | 7    |
 
 ## Source Code
 
@@ -96,6 +191,14 @@ The complete source code for this tutorial is available in the [examples/miden-b
 git clone https://github.com/0xMiden/miden-tutorials.git
 cd miden-tutorials/examples/miden-bank
 ```
+
+## Supplementary Guides
+
+These standalone guides complement the tutorial:
+
+- **[Testing with MockChain](https://docs.miden.xyz/builder/tutorials/rust-compiler/testing)** - Learn to test your contracts
+- **[Debugging](https://docs.miden.xyz/builder/tutorials/rust-compiler/debugging)** - Troubleshoot common issues
+- **[Common Pitfalls](https://docs.miden.xyz/builder/tutorials/rust-compiler/pitfalls)** - Avoid known gotchas
 
 ## Getting Help
 
