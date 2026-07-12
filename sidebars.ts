@@ -66,6 +66,7 @@ const sidebars: SidebarsConfig = {
                 "builder/smart-contracts/accounts/account-operations",
                 "builder/smart-contracts/accounts/cryptography",
                 "builder/smart-contracts/accounts/authentication",
+                "builder/smart-contracts/accounts/network-accounts",
               ],
             },
             {
