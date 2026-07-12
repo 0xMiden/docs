@@ -23,7 +23,7 @@ Before v0.15, network accounts were a storage mode (`AccountStorageMode::Network
 
 `AuthNetworkAccount` writes a standardized [`StorageMap`](./storage) slot named `miden::standards::auth::network_account::allowed_note_scripts`. Off-chain services and the node's NTX builder treat the presence of that slot as the signal that an account is a network account. The slot holds a **note allowlist**: the set of note script roots the account is willing to consume. A note whose script root is not in the allowlist is rejected during authentication.
 
-The component also holds a second allowlist of permitted **transaction script roots** (`miden::standards::auth::network_account::allowed_tx_scripts`). It is empty by default, and the network auth procedure **rejects any transaction whose script root is not in this allowlist**. Consuming a note does not need a transaction script, so a note-only network account leaves it empty. But if the account is ever reached by a *custom transaction script* — for example a scripted deploy, or a scripted interaction — that script's root must be allowlisted too, or the transaction is rejected.
+Since **v0.15.2**, the component also holds a second allowlist of permitted **transaction script roots** (`miden::standards::auth::network_account::allowed_tx_scripts`). It is empty by default, and the network auth procedure **rejects any transaction that runs a transaction script whose root is not in this allowlist** — a scriptless transaction has no script and is always accepted. Consuming a note does not need a transaction script, so a note-only network account leaves it empty. But if the account is reached by a *custom transaction script* — for example a scripted deploy, or a scripted interaction — that script's root must be allowlisted too, or the transaction is rejected. (Before v0.15.2 the component banned transaction scripts outright, and its note-allowlist constructor was named `with_allowlist` rather than `with_allowed_notes`.)
 
 Both allowlists are **fixed at account creation**. The component deliberately exports no procedure to mutate them, so decide the allowed note scripts before you build the account.
 
@@ -48,6 +48,8 @@ use miden_client::account::{
 let note_script = client.code_builder().compile_note_script(note_code)?;
 let note_script_root = note_script.root();
 ```
+
+If the note script calls into the account's own procedures (as the counter example does), link the contract module first so the script compiles — for example `client.code_builder().with_linked_module("external_contract::counter_contract", counter_code)?.compile_note_script(note_code)?`.
 
 Attach `AuthNetworkAccount` as the account's auth component — `miden-client` re-exports it from `miden_client::account::component` — and build a public account:
 
@@ -94,6 +96,10 @@ client.sync_state().await?;
 ```
 
 Once the deploy transaction is committed, the network watches the account and will consume any allowlisted note addressed to it.
+
+:::note Scriptless vs. scripted deploy
+The scriptless deploy above is the minimal path. The [network transactions tutorial](../../tutorials/recipes/rust/network_transactions_tutorial.md) instead deploys with a **custom transaction script** (and therefore allowlists that script's root, as shown above) — that scripted flow is the one verified end-to-end on public testnet. Either works; use the scripted deploy if your contract needs initialization logic to run at deploy time.
+:::
 
 ## Inspecting a network account
 
