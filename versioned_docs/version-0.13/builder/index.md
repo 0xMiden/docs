@@ -35,8 +35,8 @@ import DocCard from '@theme/DocCard';
     <DocCard
       item={{
         type: 'link',
-        href: './quick-start',
-        label: 'Quick Start',
+        href: './get-started',
+        label: 'Get Started',
         description: 'Install Miden tools, create your first wallet, and build your first transaction.',
       }}
     />
@@ -45,7 +45,7 @@ import DocCard from '@theme/DocCard';
     <DocCard
       item={{
         type: 'link',
-        href: './quick-start/setup/installation',
+        href: './get-started/setup/installation',
         label: 'Installation',
         description: 'Set up your development environment with the midenup toolchain.',
       }}
@@ -60,7 +60,7 @@ import DocCard from '@theme/DocCard';
     <DocCard
       item={{
         type: 'link',
-        href: './develop',
+        href: './tutorials',
         label: 'Tutorials',
         description: 'Step-by-step guides for building applications on Miden.',
       }}

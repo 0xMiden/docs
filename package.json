@@ -5,21 +5,19 @@
   "scripts": {
     "docusaurus": "docusaurus",
     "start": "docusaurus start",
+    "prebuild": "npm run generate:og",
     "build": "docusaurus build",
     "swizzle": "docusaurus swizzle",
     "deploy": "docusaurus deploy",
     "clear": "docusaurus clear",
     "serve": "docusaurus serve",
+    "generate:og": "node scripts/generate-og-images.mjs",
     "write-translations": "docusaurus write-translations",
     "write-heading-ids": "docusaurus write-heading-ids",
-    "typecheck": "tsc",
-    "create-llm-file": "npx repomix",
-    "create-skill-file": "npx repomix --config repomix.skill.config.json",
-    "postinstall": "npm run create-llm-file && npm run create-skill-file"
+    "typecheck": "tsc"
   },
   "dependencies": {
     "@cmfcmf/docusaurus-search-local": "^2.0.0",
-    "@cookbookdev/docsbot": "^4.25.15",
     "@docusaurus/core": "3.8.1",
     "@docusaurus/plugin-client-redirects": "^3.8.1",
     "@docusaurus/preset-classic": "3.8.1",
@@ -30,7 +28,6 @@
     "react-dom": "^19.0.0",
     "rehype-katex": "^7.0.1",
     "remark-math": "^6.0.0",
-    "repomix": "^0.3.1",
     "turndown": "^7.2.2",
     "yaml": "^2.8.1"
   },
@@ -39,6 +36,7 @@
     "@docusaurus/tsconfig": "3.8.1",
     "@docusaurus/types": "3.8.1",
     "@types/turndown": "^5.0.6",
+    "sharp": "^0.34.5",
     "typescript": "~5.6.2"
   },
   "browserslist": {

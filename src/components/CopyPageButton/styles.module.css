@@ -5,31 +5,41 @@
 .button {
   display: inline-flex;
   align-items: center;
-  gap: 6px;
-  padding: 4px 10px;
+  gap: 0.375rem;
+  padding: 0.375rem 0.625rem;
   font-family: var(--font-sans);
-  font-size: 0.75rem;
-  font-weight: 600;
-  line-height: 150%;
-  color: var(--ifm-color-emphasis-600);
+  font-size: 13px;
+  font-weight: 500;
+  line-height: 1;
+  color: var(--color-muted);
   background: transparent;
-  border: 1px solid var(--ifm-border-color);
+  border: 1px solid var(--color-border);
   border-radius: var(--radius-md);
   cursor: pointer;
-  transition: color 0.15s ease, border-color 0.15s ease, background 0.15s ease;
+  transition:
+    color var(--t-base) var(--ease-out-expo),
+    border-color var(--t-base) var(--ease-out-expo),
+    background var(--t-base) var(--ease-out-expo);
   white-space: nowrap;
 }
 
 .button:hover {
-  color: var(--ifm-color-primary);
-  border-color: color-mix(in oklab, var(--ifm-color-primary) 50%, transparent);
-  background: color-mix(in oklab, var(--ifm-color-primary) 6%, transparent);
+  color: var(--color-text);
+  border-color: var(--color-border-strong);
+  background: var(--color-surface);
+}
+
+.button:focus-visible {
+  outline: none;
+  box-shadow: var(--shadow-focus);
 }
 
 .button:active {
-  background: color-mix(in oklab, var(--ifm-color-primary) 12%, transparent);
+  background: var(--color-surface-hover);
 }
 
 .button svg {
   flex-shrink: 0;
+  width: 14px;
+  height: 14px;
 }

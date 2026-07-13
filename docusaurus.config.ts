@@ -20,7 +20,7 @@ const config: Config = {
   baseUrl: "",
 
   organizationName: "0xMiden",
-  projectName: "miden-docs",
+  projectName: "docs",
 
   onBrokenLinks: "warn",
   onBrokenMarkdownLinks: "warn",
@@ -96,8 +96,9 @@ const config: Config = {
           if (existingPath === "/builder" || existingPath === "/builder/") {
             redirects.push("/intro");
           }
-          if (existingPath.startsWith("/builder/quick-start")) {
-            redirects.push(existingPath.replace("/builder/quick-start", "/quick-start"));
+          if (existingPath.startsWith("/builder/get-started")) {
+            redirects.push(existingPath.replace("/builder/get-started", "/quick-start"));
+            redirects.push(existingPath.replace("/builder/get-started", "/builder/quick-start"));
           }
           if (existingPath === "/builder/faq") {
             redirects.push("/faq");
@@ -105,25 +106,84 @@ const config: Config = {
           if (existingPath === "/builder/glossary") {
             redirects.push("/glossary");
           }
+          if (existingPath.startsWith("/builder/tutorials/miden-bank")) {
+            redirects.push(existingPath.replace("/builder/tutorials/miden-bank", "/builder/tutorials/rust-compiler/miden-bank"));
+            redirects.push(existingPath.replace("/builder/tutorials/miden-bank", "/builder/develop/tutorials/rust-compiler/miden-bank"));
+          }
+          if (existingPath.startsWith("/builder/tutorials")) {
+            redirects.push(existingPath.replace("/builder/tutorials", "/miden-tutorials"));
+          }
+          // Legacy redirect: old develop/tutorials paths
           if (existingPath.startsWith("/builder/develop/tutorials")) {
             redirects.push(existingPath.replace("/builder/develop/tutorials", "/miden-tutorials"));
           }
           if (existingPath.startsWith("/builder/tools")) {
             redirects.push(existingPath.replace("/builder/tools", "/miden-client"));
           }
+          // Redirect old client path to new clients path
+          if (existingPath.startsWith("/builder/tools/clients")) {
+            redirects.push(existingPath.replace("/builder/tools/clients", "/builder/tools/client"));
+          }
+          // Tutorials IA: rust-client → recipes/rust, web-client → recipes/web
+          if (existingPath.startsWith("/builder/tutorials/recipes/rust")) {
+            redirects.push(existingPath.replace("/builder/tutorials/recipes/rust", "/builder/tutorials/rust-client"));
+          }
+          if (existingPath.startsWith("/builder/tutorials/recipes/web")) {
+            redirects.push(existingPath.replace("/builder/tutorials/recipes/web", "/builder/tutorials/web-client"));
+          }
+          // rust-compiler/ was removed — its hub content folded into tutorials/index.
+          // Only fire on the no-trailing-slash variant; Docusaurus calls
+          // createRedirects for both `/foo` and `/foo/`, and pushing the
+          // same source twice causes a redirect-file collision.
+          if (existingPath === "/builder/tutorials") {
+            redirects.push("/builder/tutorials/rust-compiler");
+          }
+          // Guides folded into Tutorials → Development helpers. Redirect
+          // old /builder/guides/* paths to the new location.
+          if (existingPath.startsWith("/builder/tutorials/helpers")) {
+            redirects.push(existingPath.replace("/builder/tutorials/helpers", "/builder/guides"));
+            // The testing/debugging/pitfalls guides also previously lived under
+            // tutorials/rust-compiler/; the miden-bank tutorial still links there.
+            redirects.push(existingPath.replace("/builder/tutorials/helpers", "/builder/tutorials/rust-compiler"));
+          }
+          // tools/explorer renamed to tools/network (now covers status,
+          // RPC, faucet, remote prover — not just the block explorer).
+          if (existingPath === "/builder/tools/network") {
+            redirects.push("/builder/tools/explorer");
+          }
 
-          // Design section: redirect old root-level paths to new /design/ paths
-          if (existingPath.startsWith("/design/miden-base")) {
-            redirects.push(existingPath.replace("/design/miden-base", "/miden-base"));
+          // Reference section: redirect old root-level paths to stable /reference/ paths
+          if (existingPath.startsWith("/reference/protocol")) {
+            redirects.push(existingPath.replace("/reference/protocol", "/miden-base"));
+            // Also redirect old nested path
+            redirects.push(existingPath.replace("/reference/protocol", "/core-concepts/miden-base"));
           }
-          if (existingPath.startsWith("/design/miden-vm")) {
-            redirects.push(existingPath.replace("/design/miden-vm", "/miden-vm"));
+          if (existingPath.startsWith("/reference/miden-vm")) {
+            redirects.push(existingPath.replace("/reference/miden-vm", "/miden-vm"));
           }
-          if (existingPath.startsWith("/design/compiler")) {
-            redirects.push(existingPath.replace("/design/compiler", "/compiler"));
+          if (existingPath.startsWith("/reference/compiler")) {
+            redirects.push(existingPath.replace("/reference/compiler", "/compiler"));
           }
-          if (existingPath.startsWith("/design/miden-node")) {
-            redirects.push(existingPath.replace("/design/miden-node", "/miden-node"));
+          if (existingPath.startsWith("/reference/node")) {
+            redirects.push(existingPath.replace("/reference/node", "/miden-node"));
+            // Also redirect old nested path
+            redirects.push(existingPath.replace("/reference/node", "/core-concepts/miden-node"));
+          }
+
+          // The section formerly at /core-concepts/ was renamed to /reference/.
+          // Redirect the legacy section URLs (current, /next, and versioned) so existing
+          // links and bookmarks keep working.
+          const renamedFromCoreConcepts = existingPath.replace(
+            /(^|\/(?:next|\d+\.\d+))\/reference(?=\/|$)/,
+            "$1/core-concepts",
+          );
+          if (renamedFromCoreConcepts !== existingPath) {
+            redirects.push(renamedFromCoreConcepts);
+          }
+
+          // Redirect old /design/ paths to /reference/
+          if (existingPath.startsWith("/reference")) {
+            redirects.push(existingPath.replace("/reference", "/design"));
           }
 
           return redirects.length > 0 ? redirects : undefined;
@@ -189,11 +249,18 @@ const config: Config = {
   themeConfig:
     /** @type {import('@docusaurus/preset-classic').ThemeConfig} */
     {
-      image: "img/socialgraph_twitter.png",
+      image: "img/og/miden-docs.png",
       metadata: [
         { name: "twitter:card", content: "summary_large_image" },
         { name: "twitter:site", content: "@0xMiden" },
       ],
+      mermaid: {
+        theme: { light: "neutral", dark: "dark" },
+        options: {
+          fontFamily: '"Geist", ui-sans-serif, system-ui, sans-serif',
+          fontSize: 14,
+        },
+      },
       colorMode: {
         defaultMode: "light",
         disableSwitch: false,
@@ -202,15 +269,27 @@ const config: Config = {
       prism: {
         theme: prismThemes.oneLight,
         darkTheme: prismThemes.oneDark,
-        additionalLanguages: ["rust", "solidity", "toml", "yaml", "diff"],
+        additionalLanguages: [
+          "rust",
+          "solidity",
+          "toml",
+          "yaml",
+          "diff",
+          "bash",
+          "shell-session",
+          "docker",
+          "ignore",
+          "json",
+          "json5",
+        ],
       },
       navbar: {
         logo: {
-          src: "img/logo.svg",
-          alt: "Miden Logo",
-          height: 32,
+          src: "img/miden-logo-horizontal.svg",
+          alt: "Miden",
+          height: 22,
+          width: 73,
         },
-        title: "MIDEN",
         items: [
           // LEFT - Section tabs using docSidebar
           {
@@ -221,8 +300,8 @@ const config: Config = {
           },
           {
             type: "docSidebar",
-            sidebarId: "designSidebar",
-            label: "Design",
+            sidebarId: "referenceSidebar",
+            label: "Reference",
             position: "left",
           },
 
@@ -255,7 +334,66 @@ const config: Config = {
 
           // Search bar
           { type: "search", position: "right" },
+
+          // Primary CTA
+          {
+            type: "html",
+            position: "right",
+            value:
+              '<a class="navbar-cta" href="/builder/get-started"><span class="navbar-cta__label">Start building</span><span class="navbar-cta__arrow" aria-hidden="true">→</span></a>',
+          },
         ],
+      },
+      footer: {
+        style: "light",
+        logo: {
+          src: "img/logo.svg",
+          alt: "Miden",
+          height: 28,
+        },
+        links: [
+          {
+            title: "Build",
+            items: [
+              { label: "Get started", to: "/builder/get-started" },
+              { label: "Smart contracts", to: "/builder/smart-contracts" },
+              { label: "Tutorials", to: "/builder/tutorials" },
+              { label: "Tools", to: "/builder/tools" },
+              { label: "Migration", to: "/builder/migration" },
+            ],
+          },
+          {
+            title: "Reference",
+            items: [
+              { label: "Overview", to: "/reference" },
+              { label: "Protocol", to: "/reference/protocol" },
+              { label: "Miden VM", to: "/reference/miden-vm" },
+              { label: "Compiler", to: "/reference/compiler" },
+              { label: "Node", to: "/reference/node" },
+            ],
+          },
+          {
+            title: "Community",
+            items: [
+              { label: "GitHub", href: "https://github.com/0xMiden" },
+              { label: "X", href: "https://x.com/0xMiden" },
+              { label: "Telegram", href: "https://t.me/BuildOnMiden" },
+              { label: "Forum", href: "https://github.com/0xMiden/miden-node/discussions" },
+              { label: "Brand kit", href: "https://miden.xyz/brand" },
+            ],
+          },
+          {
+            title: "Resources",
+            items: [
+              { label: "Glossary", to: "/builder/glossary" },
+              { label: "FAQ", to: "/builder/faq" },
+              { label: "Playground", href: "https://playground.miden.xyz" },
+              { label: "Explorer", href: "https://testnet.midenscan.com" },
+              { label: "miden.xyz", href: "https://miden.xyz" },
+            ],
+          },
+        ],
+        copyright: `<span class="footer__tagline">Private by default · Scalable by design</span><span class="footer__sep">·</span>© ${new Date().getFullYear()} Miden`,
       },
     },
 };

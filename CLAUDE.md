@@ -4,9 +4,9 @@
 Docusaurus v3 documentation site for the Miden ecosystem. Deployed at docs.miden.xyz.
 
 ## Key Directories
-- `docs/` — current docs (design, builder/)
-- `docs/builder/` — developer-facing: tools, develop, quick-start, smart-contracts, migration
-- `docs/design/` — protocol design docs
+- `docs/` — current docs (reference, builder/)
+- `docs/builder/` — developer-facing: tools, develop, get-started, smart-contracts, migration
+- `docs/reference/` — protocol design docs
 - `versioned_docs/` — pinned version snapshots
 - `src/` — custom React components, pages, CSS
 - `static/` — images, assets
@@ -18,6 +18,7 @@ npm run build          # Full production build — ALWAYS run before PRing
 npm run start          # Dev server with hot reload
 npm run typecheck      # TypeScript check
 npm run clear          # Clear Docusaurus cache (if builds are stale)
+npm run generate:og    # Regenerate static Open Graph images
 ```
 
 ## Rules
@@ -34,6 +35,10 @@ npm run clear          # Clear Docusaurus cache (if builds are stale)
 - Keep markdown clean: no trailing whitespace, consistent heading levels
 - Internal links: use relative paths, not absolute URLs
 - Images go in `static/img/` with descriptive names
+- Open Graph cards: when adding or moving a top-level docs section, update
+  `src/utils/ogImages.ts` and `scripts/generate-og-images.mjs`. `npm run build`
+  runs `npm run generate:og` first, so include any generated `static/img/og/*.png`
+  changes in the PR.
 
 ## Gotchas
 - `versioned_docs/` and `versioned_sidebars/` are auto-generated — don't edit manually unless you need to update the versioned_docs release contents

@@ -55,7 +55,8 @@ main a:hover {
 .menu__link,
 .breadcrumbs__link,
 .pagination-nav__link,
-.table-of-contents a {
+.table-of-contents a,
+.card {
   text-decoration: none !important;
 }
 
@@ -65,7 +66,8 @@ main a:hover {
 .menu__link:hover,
 .breadcrumbs__link:hover,
 .pagination-nav__link:hover,
-.table-of-contents a:hover {
+.table-of-contents a:hover,
+.card:hover {
   text-decoration: none !important;
 }
 
@@ -183,16 +185,83 @@ ol ol ol {
   list-style-type: lower-roman;
 }
 
-/* Blockquote */
-blockquote {
-  border-left: 3px solid var(--ifm-color-primary);
-  background: var(--ifm-background-surface-color);
-  padding: var(--space-4);
-  border-radius: var(--radius-md);
-  color: var(--ifm-color-content);
+/* ==========================================
+   Unified keyboard focus — one ring across all interactive elements.
+   Uses :focus-visible so mouse clicks don't paint focus.
+   ========================================== */
+
+:focus {
+  outline: none;
 }
 
-/* Images */
+a:focus-visible,
+button:focus-visible,
+summary:focus-visible,
+[role="button"]:focus-visible,
+input:focus-visible,
+select:focus-visible,
+textarea:focus-visible,
+.menu__link:focus-visible,
+.pagination-nav__link:focus-visible,
+.table-of-contents__link:focus-visible,
+.breadcrumbs__link:focus-visible,
+.navbar__link:focus-visible,
+.navbar-cta:focus-visible,
+.card:focus-visible,
+.dropdown__link:focus-visible {
+  outline: none;
+  box-shadow: var(--shadow-focus);
+  border-radius: var(--radius-sm);
+}
+
+/* Blockquote — match the Callout/Card aesthetic: hairline border,
+   flush-left muted accent bar, subtle surface tint. */
+blockquote {
+  position: relative;
+  border: 1px solid var(--color-border);
+  border-left: none;
+  background: var(--color-surface);
+  padding: 0.875rem 1rem 0.875rem 1.25rem;
+  border-radius: var(--radius-md);
+  color: var(--color-text);
+  margin: 1.25rem 0;
+  overflow: hidden;
+}
+
+blockquote::before {
+  content: "";
+  position: absolute;
+  top: 0;
+  bottom: 0;
+  left: 0;
+  width: 3px;
+  background: var(--color-muted);
+}
+
+blockquote > :first-child { margin-top: 0; }
+blockquote > :last-child  { margin-bottom: 0; }
+
+/* Images inside doc content — hairline border, rounded corners,
+   subtle shadow. Scoped so logos in the navbar aren't affected. */
+.theme-doc-markdown img,
+article img {
+  border-radius: var(--radius-lg);
+  border: 1px solid var(--color-border);
+  box-shadow: var(--shadow-sm);
+  max-width: 100%;
+  height: auto;
+}
+
+/* Inline / icon-style images — no border, no shadow */
+.theme-doc-markdown img[width],
+.theme-doc-markdown a > img,
+.theme-doc-markdown p > img:only-child[alt=""],
+article img[width] {
+  border: none;
+  box-shadow: none;
+}
+
+/* General img default (icons, navbar, etc.) */
 img {
   border-radius: var(--radius-md);
 }

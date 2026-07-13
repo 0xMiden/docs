@@ -12,6 +12,18 @@ The advice provider is a mechanism for supplying non-deterministic auxiliary dat
 
 The advice provider is supplied by the **host** (the Miden client or node) — not by on-chain consensus. This means the VM cannot blindly trust that the host provided correct data. Two patterns address this:
 
+### Unverified stack push (caller must verify)
+
+`adv_push_mapvaln` pushes data onto the advice stack **without verification**. The caller is responsible for checking integrity if the data is security-sensitive:
+
+```rust
+let num_felts = adv_push_mapvaln(key);
+// Data is now on the stack — but not verified
+// If integrity matters, hash the result and compare to a known commitment
+```
+
+For signatures, `emit_falcon_sig_to_stack` pushes a Falcon512 signature that is subsequently verified by `rpo_falcon512_verify` — the verification step is what makes it safe.
+
 ### Commitment-verified loading (safe)
 
 `adv_load_preimage` is integrity-safe by construction. The VM verifies that the loaded data hashes to the provided `commitment` before returning it. If the host tampers with the data, the hash won't match and proof generation fails:
@@ -23,19 +35,6 @@ let data = adv_load_preimage(num_words, commitment);
 ```
 
 Use this pattern when the commitment is known ahead of time (e.g., stored in a note input or passed as a script argument).
-
-### Unverified stack push (caller must verify)
-
-`adv_push_mapvaln` pushes data onto the advice stack **without verification**. The caller is responsible for checking integrity if the data is security-sensitive:
-
-```rust
-let num_felts = adv_push_mapvaln(key);
-// Data is now on the stack — but not verified
-// If integrity matters, hash the result and compare to a known commitment:
-let data = adv_load_preimage(num_words, key); // Use this instead for verified loading
-```
-
-For signatures, `emit_falcon_sig_to_stack` pushes a Falcon512 signature that is subsequently verified by `rpo_falcon512_verify` — the verification step is what makes it safe.
 
 :::warning
 Never use `adv_push_mapvaln` for security-sensitive data without a subsequent integrity check. The host can supply any value it wants. Use `adv_load_preimage` (commitment-verified) or verify the loaded data yourself using `hash_words`.
@@ -54,10 +53,6 @@ use miden::intrinsics::advice::adv_push_mapvaln;
 let num_felts: Felt = adv_push_mapvaln(key);
 ```
 
-| Parameter | Type | Description |
-|-----------|------|-------------|
-| `key` | `Word` | Key to look up in the advice map |
-| **Returns** | `Felt` | Number of `Felt` elements pushed onto the advice stack |
 
 ### `adv_load_preimage`
 
@@ -70,11 +65,6 @@ use miden::stdlib::mem::adv_load_preimage;
 let felts: Vec<Felt> = adv_load_preimage(num_words, commitment);
 ```
 
-| Parameter | Type | Description |
-|-----------|------|-------------|
-| `num_words` | `Felt` | Number of `Word`s to load |
-| `commitment` | `Word` | Expected hash of the preimage data |
-| **Returns** | `Vec<Felt>` | The preimage data as a flat vector of `Felt` elements |
 
 ### Pattern: passing structured data to a transaction script
 
@@ -112,10 +102,6 @@ let values: &[Word] = &[word_a, word_b];
 adv_insert(key, values);
 ```
 
-| Parameter | Type | Description |
-|-----------|------|-------------|
-| `key` | `Word` | Key under which to store the data |
-| `values` | `&[Word]` | Slice of `Word`s to store |
 
 ### `adv_insert_mem`
 
@@ -127,11 +113,6 @@ use miden::intrinsics::advice::adv_insert_mem;
 adv_insert_mem(key, start_addr, end_addr);
 ```
 
-| Parameter | Type | Description |
-|-----------|------|-------------|
-| `key` | `Word` | Key under which to store the data |
-| `start_addr` | `u32` | Start memory address (inclusive) |
-| `end_addr` | `u32` | End memory address (exclusive) |
 
 ## Requesting a Falcon signature
 
@@ -144,20 +125,10 @@ use miden::intrinsics::advice::emit_falcon_sig_to_stack;
 emit_falcon_sig_to_stack(msg, pub_key);
 ```
 
-| Parameter | Type | Description |
-|-----------|------|-------------|
-| `msg` | `Word` | RPO256 hash of the message to sign |
-| `pub_key` | `Word` | RPO256 hash of the signer's public key |
 
-## Function reference
-
-| Function | Module | Signature | Description |
-|----------|--------|-----------|-------------|
-| `adv_push_mapvaln` | `miden::intrinsics::advice` | `(key: Word) -> Felt` | Push advice-map value onto the advice stack |
-| `adv_load_preimage` | `miden::stdlib::mem` | `(num_words: Felt, commitment: Word) -> Vec<Felt>` | Load a preimage matching a commitment |
-| `adv_insert` | `miden::intrinsics::advice` | `(key: Word, values: &[Word])` | Insert words into the advice map |
-| `adv_insert_mem` | `miden::intrinsics::advice` | `(key: Word, start_addr: u32, end_addr: u32)` | Insert a memory range into the advice map |
-| `emit_falcon_sig_to_stack` | `miden::intrinsics::advice` | `(msg: Word, pub_key: Word)` | Request a Falcon512 signature from the host |
+:::info API Reference
+Full API docs on docs.rs: [`miden::intrinsics::advice`](https://docs.rs/miden/latest/miden/intrinsics/advice/)
+:::
 
 ## Related
 

@@ -35,7 +35,7 @@ This guide is for:
 - **App developers** using `miden-objects`, `miden-lib`, or legacy MASM syntax
 - **Smart contract authors** using storage slots or note APIs
 
-If you're starting fresh on v0.13, you can skip this guide and go directly to the [Quick Start](../quick-start).
+If you're starting fresh on v0.13, you can skip this guide and go directly to the [Get Started](../get-started).
 :::
 
 ---

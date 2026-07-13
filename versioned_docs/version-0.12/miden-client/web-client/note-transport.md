@@ -83,11 +83,11 @@ try {
 
 For more detailed information about note transport functionality, refer to the following API documentation:
 
-- [WebClient](https://github.com/0xMiden/miden-client/docs/typedoc/web-client/classes/WebClient.md) - Main client class for note transport operations
-- [Note](https://github.com/0xMiden/miden-client/docs/typedoc/web-client/classes/Note.md) - Class for working with notes
-- [Address](https://github.com/0xMiden/miden-client/docs/typedoc/web-client/classes/Address.md) - Class for working with addresses
-- [NoteFilter](https://github.com/0xMiden/miden-client/docs/typedoc/web-client/classes/NoteFilter.md) - Class for filtering notes
-- [NoteFilterTypes](https://github.com/0xMiden/miden-client/docs/typedoc/web-client/enumerations/NoteFilterTypes.md) - Enumeration for note filter types
+- [WebClient](https://github.com/0xMiden/miden-client/blob/main/docs/typedoc/web-client/classes/WebClient.md) - Main client class for note transport operations
+- [Note](https://github.com/0xMiden/miden-client/blob/main/docs/typedoc/web-client/classes/Note.md) - Class for working with notes
+- [Address](https://github.com/0xMiden/miden-client/blob/main/docs/typedoc/web-client/classes/Address.md) - Class for working with addresses
+- [NoteFilter](https://github.com/0xMiden/miden-client/blob/main/docs/typedoc/web-client/classes/NoteFilter.md) - Class for filtering notes
+- [NoteFilterTypes](https://github.com/0xMiden/miden-client/blob/main/docs/typedoc/web-client/enumerations/NoteFilterTypes.md) - Enumeration for note filter types
 
-For a complete list of available classes and utilities, see the [SDK API Reference](https://github.com/0xMiden/miden-client/docs/typedoc/web-client/README.md).
+For a complete list of available classes and utilities, see the [SDK API Reference](https://github.com/0xMiden/miden-client/blob/main/docs/typedoc/web-client/README.md).
 

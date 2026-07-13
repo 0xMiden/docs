@@ -6,70 +6,426 @@
 .theme-layout-navbar {
   height: var(--ifm-navbar-height);
   border-bottom: 1px solid var(--ifm-border-color) !important;
-  background: color-mix(in oklab, var(--ifm-background-color) 75%, transparent);
+  background: color-mix(in oklab, var(--ifm-background-color) 72%, transparent);
   box-shadow: none;
 }
 
-/* Apply backdrop-filter only on desktop to avoid breaking mobile sidebar */
+/* Frosted navbar on desktop (safe) */
 @media (min-width: 997px) {
   .theme-layout-navbar {
-    backdrop-filter: saturate(1.1) blur(8px);
+    backdrop-filter: saturate(1.2) blur(14px);
+    -webkit-backdrop-filter: saturate(1.2) blur(14px);
   }
 }
 
-/* ThemeClassNames.layout.footer.container */
-.theme-layout-footer {
-  --ifm-footer-background-color: var(--color-elevated);
-  background: var(--ifm-footer-background-color);
-  color: var(--ifm-color-content);
+/* Horizontal brand mark — ember glyph + "MIDEN" wordmark in one SVG.
+   No separate .navbar__title; the wordmark is part of the asset.
+   `display: block` on the img kills the inline-baseline gap that
+   would otherwise misalign the brand vs. the nav tabs. */
+.navbar__brand {
+  display: inline-flex;
+  align-items: center;
+  margin-right: 1.5rem;
+  padding: 0;
+}
+
+.navbar__logo {
+  display: inline-flex;
+  align-items: center;
+  height: 22px;
+  margin: 0;
+}
+
+.navbar__logo img {
+  display: block;
+  height: 22px !important;
+  width: auto !important;
+  object-fit: contain;
+}
+
+/* Dark mode: invert + hue-rotate flips the dark wordmark to white
+   while leaving the saturated orange mark essentially untouched. */
+[data-theme="dark"] .navbar__logo img {
+  filter: invert(1) hue-rotate(180deg);
+}
+
+/* The asset bakes in the wordmark — hide the default .navbar__title
+   span in case a `title` config sneaks back in. */
+.navbar__title {
+  display: none !important;
 }
 
 /* ==========================================
-   3.1) NAVBAR ICON LINKS
+   3.1) NAVBAR SPACING RHYTHM + GROUPING
+   Consistent gap between items within each group (left tabs, right
+   cluster) and a subtle hairline divider separating the social
+   cluster from the section tabs on its left and from the version /
+   search / CTA group on its right. */
+.navbar__items {
+  gap: 0.25rem;
+}
+
+.navbar__items--right {
+  gap: 0.5rem;
+}
+
+/* ==========================================
+   3.2) NAVBAR ICON LINKS (social cluster)
    ========================================== */
 
 .navbar-icon-link {
   display: flex;
   align-items: center;
   justify-content: center;
-  padding: 6px;
-  color: var(--ifm-navbar-link-color);
-  opacity: 0.7;
-  transition: opacity 0.2s ease, color 0.2s ease;
+  width: 32px;
+  height: 32px;
+  padding: 0;
+  border-radius: var(--radius-md);
+  color: var(--color-muted);
+  opacity: 1;
+  transition:
+    color var(--t-base) var(--ease-out-expo),
+    background var(--t-base) var(--ease-out-expo),
+    transform var(--t-fast) var(--ease-out-expo);
 }
 
 .navbar-icon-link:hover {
-  opacity: 1;
-  color: var(--ifm-color-primary);
+  color: var(--color-text);
+  background: var(--color-surface);
+  transform: translateY(-0.5px);
+}
+
+.navbar-icon-link:active {
+  transform: translateY(0);
 }
 
 .navbar-icon-link svg {
-  width: 18px;
-  height: 18px;
+  width: 16px;
+  height: 16px;
 }
 
-/* Spacing between icon links */
+/* Tighten the social icons — they're a cluster, not individual items */
 .navbar__item.navbar__item--html {
-  margin: 0 2px;
+  margin: 0;
+}
+
+.navbar__item.navbar__item--html + .navbar__item.navbar__item--html {
+  margin-left: -2px; /* tighter within cluster */
+}
+
+/* Hairline divider before the social cluster (first html item among
+   right-side items). A single 1px vertical hairline between groups. */
+.navbar__items--right > .navbar__item.navbar__item--html:first-of-type {
+  position: relative;
+  margin-left: 0.5rem;
+}
+
+.navbar__items--right > .navbar__item.navbar__item--html:first-of-type::before {
+  content: "";
+  position: absolute;
+  left: -0.5rem;
+  top: 50%;
+  transform: translateY(-50%);
+  height: 20px;
+  width: 1px;
+  background: var(--color-border);
+}
+
+/* Hide social icons on mobile — they already live in the footer and
+   the hamburger drawer's brand row has limited horizontal space. */
+@media (max-width: 996px) {
+  .navbar-icon-link {
+    display: none;
+  }
 }
 
 /* ==========================================
-   3.2) NAVBAR TAB COLORS
+   3.2) NAVBAR TABS — neutral label, animated underline
+   Scoped to NON-dropdown nav links so the underline ::after
+   does not collide with Docusaurus's dropdown caret ::after.
    ========================================== */
 
-/* Navbar tabs - neutral by default */
 .navbar__link {
-  color: var(--ifm-navbar-link-color) !important;
+  position: relative;
+  color: var(--color-text) !important;
   font-weight: 500;
 }
 
-/* Hover - accent color */
-.navbar__link:hover {
-  color: var(--ifm-color-primary) !important;
+.navbar__item:not(.dropdown) > .navbar__link::after {
+  content: "";
+  position: absolute;
+  left: 0.75rem;
+  right: 0.75rem;
+  bottom: -6px;
+  height: 2px;
+  background: var(--color-brand);
+  border-radius: 2px;
+  transform: scaleX(0);
+  transform-origin: left center;
+  transition: transform var(--t-base) var(--ease-out-expo);
 }
 
-/* Active - accent color + stronger weight */
+.navbar__link:hover,
 .navbar__link--active {
-  color: var(--ifm-color-primary) !important;
+  color: var(--color-text) !important;
+}
+
+.navbar__item:not(.dropdown) > .navbar__link:hover::after {
+  transform: scaleX(0.6);
+}
+
+.navbar__link--active {
   font-weight: 600;
+}
+
+/* Quiet dropdown trigger caret. Docusaurus renders its own ::after
+   arrow on .dropdown > .navbar__link; we only tone it down. */
+.navbar__item.dropdown > .navbar__link {
+  display: inline-flex;
+  align-items: center;
+  gap: 0.25rem;
+  padding: 3px 0.625rem 3px 0.75rem;
+  font-family: var(--font-mono);
+  font-size: 12px;
+  font-weight: 500;
+  letter-spacing: 0.04em;
+  color: var(--color-muted) !important;
+  border: 1px solid var(--color-border);
+  border-radius: var(--radius-pill);
+  line-height: 1.4;
+  transition:
+    color var(--t-base) var(--ease-out-expo),
+    border-color var(--t-base) var(--ease-out-expo),
+    background var(--t-base) var(--ease-out-expo);
+}
+
+.navbar__item.dropdown > .navbar__link:hover {
+  color: var(--color-text) !important;
+  border-color: var(--color-border-strong);
+  background: var(--color-surface);
+}
+
+/* Override Docusaurus's default caret character with a minimalist one */
+.navbar__item.dropdown > .navbar__link::after {
+  content: "";
+  width: 8px;
+  height: 8px;
+  margin-left: 0.25rem;
+  background: transparent;
+  border: none;
+  border-right: 1.5px solid currentColor;
+  border-bottom: 1.5px solid currentColor;
+  transform: rotate(45deg) translateY(-2px);
+  transition: transform var(--t-fast) var(--ease-out-expo);
+  top: auto;
+}
+
+.navbar__item.dropdown.dropdown--show > .navbar__link::after,
+.navbar__item.dropdown > .navbar__link:hover::after {
+  transform: rotate(-135deg) translateY(1px);
+}
+
+/* Dropdown menu panel — align with the rest of the redesign.
+   No margin-top: the gap between trigger and menu breaks hover intent
+   (cursor exits the trigger's :hover zone before reaching the menu and
+   the panel collapses before it can be clicked). */
+.navbar__item.dropdown .dropdown__menu {
+  border: 1px solid var(--color-border);
+  border-radius: var(--radius-md);
+  background: var(--color-bg);
+  box-shadow: var(--shadow-md);
+  padding: 0.375rem;
+  margin-top: 0;
+}
+
+/* Invisible hover bridge so the mouse can move from the trigger into
+   the menu without crossing an unhovered gap (belt-and-suspenders for
+   any future offset). */
+.navbar__item.dropdown .dropdown__menu::before {
+  content: "";
+  position: absolute;
+  left: 0;
+  right: 0;
+  top: -8px;
+  height: 8px;
+  background: transparent;
+}
+
+.dropdown__link {
+  font-size: 13px;
+  padding: 0.375rem 0.625rem;
+  border-radius: var(--radius-sm);
+  color: var(--color-text);
+  transition:
+    background var(--t-fast) var(--ease-out-expo),
+    color var(--t-fast) var(--ease-out-expo);
+}
+
+.dropdown__link:hover,
+.dropdown__link--active {
+  background: var(--color-surface);
+  color: var(--color-text);
+}
+
+.dropdown__link--active {
+  font-weight: 600;
+}
+
+.navbar__link--active::after {
+  transform: scaleX(1);
+}
+
+/* Search pill refinements live in _components.css §16.1 */
+
+/* ==========================================
+   3.4) PRIMARY CTA — "Start building"
+   ========================================== */
+
+.navbar-cta {
+  display: inline-flex;
+  align-items: center;
+  gap: 0.375rem;
+  height: 32px;
+  padding: 0 0.875rem;
+  margin-left: 0.25rem;
+  border-radius: var(--radius-md);
+  background: var(--color-brand);
+  color: #ffffff !important;
+  font-family: var(--font-sans);
+  font-size: 13px;
+  font-weight: 600;
+  line-height: 1;
+  text-decoration: none !important;
+  transition:
+    background var(--t-base) var(--ease-out-expo),
+    box-shadow var(--t-base) var(--ease-out-expo);
+}
+
+.navbar-cta:hover,
+.navbar-cta:focus-visible {
+  background: var(--color-brand-600);
+  color: #ffffff !important;
+  box-shadow: 0 0 0 3px color-mix(in oklab, var(--color-brand) 22%, transparent);
+}
+
+.navbar-cta__arrow {
+  display: inline-block;
+  font-family: var(--font-mono);
+  transition: transform var(--t-base) var(--ease-out-expo);
+}
+
+.navbar-cta:hover .navbar-cta__arrow {
+  transform: translateX(2px);
+}
+
+/* Hide the CTA on small screens where the hamburger takes over */
+@media (max-width: 996px) {
+  .navbar-cta {
+    display: none;
+  }
+}
+
+/* ==========================================
+   3.5) THEME TOGGLE — outlined icon, no hover rotate
+   ========================================== */
+
+.colorModeToggle_DEke,
+[class*="colorModeToggle"] button {
+  color: var(--color-muted);
+}
+
+[class*="colorModeToggle"] button:hover {
+  color: var(--color-text);
+  background: transparent !important;
+}
+
+/* ==========================================
+   4) FOOTER — multi-column
+   ========================================== */
+
+.theme-layout-footer,
+.footer {
+  --ifm-footer-background-color: var(--color-surface);
+  background: var(--color-surface) !important;
+  color: var(--color-text);
+  border-top: 1px solid var(--color-border);
+  padding: 3.5rem 0 1.5rem;
+}
+
+.footer__logo {
+  max-width: 120px !important;
+  margin-bottom: 0.5rem;
+  opacity: 1;
+}
+
+.footer__links {
+  gap: 2.5rem;
+  margin-bottom: 2.5rem;
+}
+
+.footer__col {
+  min-width: 0;
+}
+
+.footer__title {
+  font-family: var(--font-eyebrow);
+  font-size: 11px;
+  font-weight: 500;
+  letter-spacing: 0.08em;
+  text-transform: uppercase;
+  color: var(--color-muted);
+  margin-bottom: 1rem;
+  opacity: 1;
+}
+
+.footer__items {
+  display: flex;
+  flex-direction: column;
+  gap: 0.5rem;
+}
+
+.footer__item {
+  margin: 0;
+}
+
+.footer__link-item {
+  font-size: 14px;
+  color: var(--color-text);
+  opacity: 1;
+  transition: color var(--t-fast) linear;
+}
+
+.footer__link-item:hover {
+  color: var(--color-brand);
+  text-decoration: none;
+}
+
+/* Bottom row — dotted seam + mono copyright */
+.footer__bottom {
+  border-top: 1px dashed var(--color-border);
+  padding-top: 1.5rem;
+  margin-top: 0.5rem;
+}
+
+.footer__copyright {
+  display: flex;
+  justify-content: center;
+  align-items: center;
+  flex-wrap: wrap;
+  gap: 0.5rem;
+  font-family: var(--font-mono);
+  font-size: 11px;
+  letter-spacing: 0.03em;
+  color: var(--color-muted);
+}
+
+.footer__tagline {
+  font-family: var(--font-mono);
+  text-transform: uppercase;
+  letter-spacing: 0.08em;
+  color: var(--color-muted);
+}
+
+.footer__sep {
+  color: var(--color-border-strong);
 }

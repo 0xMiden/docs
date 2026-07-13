@@ -1,0 +1,214 @@
+.page {
+  position: relative;
+  overflow: hidden;
+}
+
+.hero {
+  position: relative;
+  padding: clamp(3.5rem, 8vw, 6rem) 0 clamp(3rem, 6vw, 5rem);
+  overflow: hidden;
+  min-height: 72vh;
+  display: flex;
+  align-items: center;
+}
+
+/* Same 48px radially-masked grid as the main landing */
+.hero::before {
+  content: "";
+  position: absolute;
+  inset: -2rem;
+  background-image:
+    linear-gradient(to right, var(--color-grid) 1px, transparent 1px),
+    linear-gradient(to bottom, var(--color-grid) 1px, transparent 1px);
+  background-size: 48px 48px;
+  mask-image: radial-gradient(
+    ellipse at center,
+    #000 0%,
+    #000 35%,
+    transparent 75%
+  );
+  -webkit-mask-image: radial-gradient(
+    ellipse at center,
+    #000 0%,
+    #000 35%,
+    transparent 75%
+  );
+  pointer-events: none;
+  z-index: 0;
+}
+
+.heroInner {
+  position: relative;
+  z-index: 1;
+  max-width: 640px;
+  margin: 0 auto;
+  padding: 0 clamp(1.25rem, 4vw, 2.5rem);
+}
+
+.eyebrow {
+  display: inline-flex;
+  align-items: center;
+  gap: 0.5rem;
+  font-family: var(--font-mono);
+  font-size: 11px;
+  font-weight: 500;
+  letter-spacing: 0.12em;
+  text-transform: uppercase;
+  color: var(--color-muted);
+  margin-bottom: 1.25rem;
+}
+
+.eyebrowCode {
+  color: var(--color-brand);
+  border: 1px solid
+    color-mix(in oklab, var(--color-brand) 30%, transparent);
+  background: color-mix(in oklab, var(--color-brand) 10%, transparent);
+  border-radius: var(--radius-xs);
+  padding: 1px 6px;
+  letter-spacing: 0.08em;
+}
+
+.eyebrowDivider {
+  color: var(--color-border-strong);
+}
+
+.title {
+  font-family: var(--font-display);
+  font-size: clamp(2.25rem, 5vw, 3.25rem);
+  line-height: 1.05;
+  letter-spacing: -0.02em;
+  font-weight: 700;
+  color: var(--color-ink);
+  margin: 0 0 1rem;
+}
+
+.sub {
+  font-size: clamp(1rem, 1.5vw, 1.125rem);
+  line-height: 1.55;
+  color: var(--color-muted);
+  margin: 0 0 2rem;
+}
+
+/* ---- CTAs ---- */
+
+.ctaRow {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 0.75rem;
+  align-items: center;
+}
+
+.ctaPrimary {
+  display: inline-flex;
+  align-items: center;
+  gap: 0.45rem;
+  padding: 0.625rem 1rem;
+  background: var(--color-brand);
+  color: #ffffff !important;
+  border-radius: var(--radius-md);
+  font-family: var(--font-sans);
+  font-size: 14px;
+  font-weight: 600;
+  text-decoration: none !important;
+  box-shadow:
+    inset 0 1px 0 rgba(255, 255, 255, 0.22),
+    0 1px 2px rgba(0, 0, 0, 0.12);
+  transition:
+    background var(--t-base) var(--ease-out-expo),
+    transform var(--t-fast) var(--ease-out-expo);
+}
+
+.ctaPrimary:hover {
+  background: var(--color-brand-600);
+  color: #ffffff !important;
+  transform: translateY(-1px);
+}
+
+.ctaPrimary span[aria-hidden="true"] {
+  transition: transform var(--t-fast) var(--ease-out-expo);
+}
+
+.ctaPrimary:hover span[aria-hidden="true"] {
+  transform: translateX(2px);
+}
+
+.ctaSecondary {
+  display: inline-flex;
+  align-items: center;
+  padding: 0.625rem 0.875rem;
+  border: 1px solid var(--color-border);
+  color: var(--color-text) !important;
+  border-radius: var(--radius-md);
+  font-family: var(--font-sans);
+  font-size: 14px;
+  font-weight: 500;
+  text-decoration: none !important;
+  background: transparent;
+  transition:
+    border-color var(--t-base) var(--ease-out-expo),
+    background var(--t-base) var(--ease-out-expo);
+}
+
+.ctaSecondary:hover {
+  border-color: var(--color-border-strong);
+  background: var(--color-surface);
+}
+
+/* ---- Suggested links ---- */
+
+.suggested {
+  margin-top: 2.5rem;
+  padding-top: 1.5rem;
+  border-top: 1px dashed var(--color-border);
+}
+
+.suggestedLabel {
+  font-family: var(--font-eyebrow);
+  font-size: 11px;
+  font-weight: 500;
+  letter-spacing: 0.08em;
+  text-transform: uppercase;
+  color: var(--color-muted);
+  margin: 0 0 0.75rem;
+}
+
+.suggestedList {
+  list-style: none;
+  padding: 0;
+  margin: 0;
+  display: flex;
+  flex-direction: column;
+  gap: 0.5rem;
+}
+
+.suggestedList li {
+  display: flex;
+  align-items: baseline;
+  flex-wrap: wrap;
+  gap: 0.5rem;
+  padding: 0.5rem 0;
+  border-top: 1px solid var(--color-border);
+  font-size: 14px;
+  line-height: 1.5;
+}
+
+.suggestedList li:first-child {
+  border-top: none;
+  padding-top: 0;
+}
+
+.suggestedList li a {
+  font-weight: 500;
+  color: var(--color-text);
+  text-decoration: none !important;
+  transition: color var(--t-fast) linear;
+}
+
+.suggestedList li a:hover {
+  color: var(--color-brand);
+}
+
+.suggestedList li span {
+  color: var(--color-muted);
+  font-size: 13px;
+}

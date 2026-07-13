@@ -4,6 +4,7 @@
 
 /* Design System */
 @import "./_tokens.css";
+@import "./_motion.css";
 @import "./_base.css";
 @import "./_layout.css";
 @import "./_sidebar.css";

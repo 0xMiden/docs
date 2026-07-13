@@ -313,7 +313,21 @@ aside[class*="docSidebarContainer"] .menu__caret {
 }
 
 /* ==========================================
-   4.4) MOBILE SIDEBAR ADJUSTMENTS
+   4.4) SIDEBAR SECTION HEADERS
+   ========================================== */
+
+.sidebar-section {
+  font-size: 0.75rem;
+  font-weight: 700;
+  text-transform: uppercase;
+  letter-spacing: 0.05em;
+  color: var(--ifm-color-emphasis-600);
+  padding: 16px 0 4px;
+  display: block;
+}
+
+/* ==========================================
+   4.5) MOBILE SIDEBAR ADJUSTMENTS
    ========================================== */
 
 @media (max-width: 996px) {
@@ -324,7 +338,271 @@ aside[class*="docSidebarContainer"] .menu__caret {
   }
 }
 
-/* Navbar mobile sidebar inherits these styles */
+/* ==========================================
+   4.5) MOBILE SIDEBAR (navbar hamburger)
+   ========================================== */
+
 .navbar-sidebar .menu__list-item-collapsible {
   border-radius: var(--radius-md);
+}
+
+.navbar-sidebar {
+  background: var(--color-bg);
+  border-right: 1px solid var(--color-border);
+}
+
+.navbar-sidebar__brand {
+  padding: 0.75rem 1rem;
+  border-bottom: 1px solid var(--color-border);
+  background: var(--color-surface);
+}
+
+.navbar-sidebar__close {
+  color: var(--color-muted);
+  transition: color var(--t-base) var(--ease-out-expo);
+}
+
+.navbar-sidebar__close:hover {
+  color: var(--color-text);
+}
+
+.navbar-sidebar__items {
+  padding: 0.5rem 0.25rem;
+}
+
+.navbar-sidebar__item {
+  padding: 0.5rem;
+}
+
+.navbar-sidebar__back {
+  font-family: var(--font-eyebrow);
+  font-size: 11px;
+  font-weight: 500;
+  letter-spacing: 0.08em;
+  text-transform: uppercase;
+  color: var(--color-muted);
+  background: var(--color-surface);
+  border: 1px solid var(--color-border);
+  border-radius: var(--radius-md);
+  padding: 0.5rem 0.75rem;
+  margin: 0.5rem;
+  transition:
+    color var(--t-base) var(--ease-out-expo),
+    border-color var(--t-base) var(--ease-out-expo),
+    background var(--t-base) var(--ease-out-expo);
+}
+
+.navbar-sidebar__back:hover {
+  color: var(--color-text);
+  border-color: var(--color-border-strong);
+  background: var(--color-surface-hover);
+}
+
+/* Menu rows inside the mobile sheet */
+.navbar-sidebar .menu__link {
+  font-family: var(--font-sans);
+  font-size: 14px;
+  color: var(--color-text);
+  padding: 0.625rem 0.75rem;
+  border-radius: var(--radius-md);
+  transition: background var(--t-fast) var(--ease-out-expo);
+}
+
+.navbar-sidebar .menu__link:hover,
+.navbar-sidebar .menu__link--active {
+  background: var(--color-surface);
+  color: var(--color-text);
+}
+
+.navbar-sidebar .menu__link--active {
+  font-weight: 600;
+}
+
+/* Mobile section HTML labels (our `sidebar-section` eyebrow reused) */
+.navbar-sidebar .sidebar-section {
+  margin: 0.75rem 0.25rem 0.25rem;
+  padding: 0 0.5rem 0.375rem;
+}
+
+/* Backdrop overlay */
+.navbar-sidebar__backdrop,
+[class*="navbar-sidebar__backdrop"] {
+  background: color-mix(in oklab, var(--color-bg) 55%, rgba(0, 0, 0, 0.55));
+  backdrop-filter: saturate(1.2) blur(8px);
+  -webkit-backdrop-filter: saturate(1.2) blur(8px);
+}
+
+/* ==========================================
+   4.6) SIDEBAR STICKY + SCROLL MASK
+   ========================================== */
+
+/* Fade the top/bottom of the scrollable sidebar so long lists feather
+   instead of hard-cutting at the edge. */
+.theme-doc-sidebar-container > div,
+.theme-doc-sidebar-container [class*="docSidebarContainer"] > div {
+  mask-image: linear-gradient(
+    180deg,
+    transparent 0,
+    #000 16px,
+    #000 calc(100% - 24px),
+    transparent 100%
+  );
+  -webkit-mask-image: linear-gradient(
+    180deg,
+    transparent 0,
+    #000 16px,
+    #000 calc(100% - 24px),
+    transparent 100%
+  );
+}
+
+/* ==========================================
+   4.7) SIDEBAR SECTION HEADERS
+   ========================================== */
+
+/* Docusaurus renders `type: "html"` sidebar entries with no wrapper.
+   `<span class="sidebar-section">` is used in sidebars.ts for headings. */
+.sidebar-section {
+  display: block;
+  margin: 1.25rem 0 0.5rem;
+  padding-bottom: 0.375rem;
+  border-bottom: 1px dashed var(--color-border);
+  font-family: var(--font-eyebrow);
+  font-size: 11px;
+  font-weight: 500;
+  letter-spacing: 0.08em;
+  text-transform: uppercase;
+  color: var(--color-muted);
+}
+
+.sidebar-section:first-child {
+  margin-top: 0.25rem;
+}
+
+/* ==========================================
+   4.8) SIDEBAR LEVEL-1 CATEGORY ICONS
+   Category swizzle applies `sidebar-cat sidebar-cat--<slug>` to the
+   top-level category <li>. We render an icon via mask-image on a
+   ::before placed on the collapsible-row's <a>.
+   ========================================== */
+
+.sidebar-cat > .menu__list-item-collapsible > .menu__link,
+.sidebar-cat > .menu__link {
+  position: relative;
+  padding-left: 2rem !important;
+}
+
+.sidebar-cat > .menu__list-item-collapsible > .menu__link::before,
+.sidebar-cat > .menu__link::before {
+  /* Default fallback icon */
+  content: "";
+  position: absolute;
+  left: 0.5rem;
+  top: 50%;
+  transform: translateY(-50%);
+  width: 16px;
+  height: 16px;
+  background-color: var(--color-muted);
+  -webkit-mask: url("/img/sidebar-icons/folder.svg") center / 16px 16px no-repeat;
+  mask: url("/img/sidebar-icons/folder.svg") center / 16px 16px no-repeat;
+  transition: background-color var(--t-base) var(--ease-out-expo);
+}
+
+/* Icon map — each label slug picks its own glyph */
+.sidebar-cat--build > .menu__list-item-collapsible > .menu__link::before,
+.sidebar-cat--build > .menu__link::before {
+  -webkit-mask-image: url("/img/sidebar-icons/build.svg");
+  mask-image: url("/img/sidebar-icons/build.svg");
+}
+.sidebar-cat--smart-contracts > .menu__list-item-collapsible > .menu__link::before,
+.sidebar-cat--smart-contracts > .menu__link::before {
+  -webkit-mask-image: url("/img/sidebar-icons/smart-contracts.svg");
+  mask-image: url("/img/sidebar-icons/smart-contracts.svg");
+}
+.sidebar-cat--tutorials > .menu__list-item-collapsible > .menu__link::before,
+.sidebar-cat--tutorials > .menu__link::before {
+  -webkit-mask-image: url("/img/sidebar-icons/tutorials.svg");
+  mask-image: url("/img/sidebar-icons/tutorials.svg");
+}
+.sidebar-cat--guides > .menu__list-item-collapsible > .menu__link::before,
+.sidebar-cat--guides > .menu__link::before {
+  -webkit-mask-image: url("/img/sidebar-icons/guides.svg");
+  mask-image: url("/img/sidebar-icons/guides.svg");
+}
+.sidebar-cat--tools > .menu__list-item-collapsible > .menu__link::before,
+.sidebar-cat--tools > .menu__link::before {
+  -webkit-mask-image: url("/img/sidebar-icons/tools.svg");
+  mask-image: url("/img/sidebar-icons/tools.svg");
+}
+.sidebar-cat--solutions > .menu__list-item-collapsible > .menu__link::before,
+.sidebar-cat--solutions > .menu__link::before {
+  -webkit-mask-image: url("/img/sidebar-icons/solutions.svg");
+  mask-image: url("/img/sidebar-icons/solutions.svg");
+}
+.sidebar-cat--migration > .menu__list-item-collapsible > .menu__link::before,
+.sidebar-cat--migration > .menu__link::before {
+  -webkit-mask-image: url("/img/sidebar-icons/migration.svg");
+  mask-image: url("/img/sidebar-icons/migration.svg");
+}
+.sidebar-cat--reference > .menu__list-item-collapsible > .menu__link::before,
+.sidebar-cat--reference > .menu__link::before {
+  -webkit-mask-image: url("/img/sidebar-icons/reference.svg");
+  mask-image: url("/img/sidebar-icons/reference.svg");
+}
+.sidebar-cat--get-started > .menu__list-item-collapsible > .menu__link::before,
+.sidebar-cat--get-started > .menu__link::before {
+  -webkit-mask-image: url("/img/sidebar-icons/get-started.svg");
+  mask-image: url("/img/sidebar-icons/get-started.svg");
+}
+.sidebar-cat--protocol > .menu__list-item-collapsible > .menu__link::before,
+.sidebar-cat--protocol > .menu__link::before {
+  -webkit-mask-image: url("/img/sidebar-icons/protocol.svg");
+  mask-image: url("/img/sidebar-icons/protocol.svg");
+}
+.sidebar-cat--miden-vm > .menu__list-item-collapsible > .menu__link::before,
+.sidebar-cat--miden-vm > .menu__link::before {
+  -webkit-mask-image: url("/img/sidebar-icons/miden-vm.svg");
+  mask-image: url("/img/sidebar-icons/miden-vm.svg");
+}
+.sidebar-cat--compiler > .menu__list-item-collapsible > .menu__link::before,
+.sidebar-cat--compiler > .menu__link::before {
+  -webkit-mask-image: url("/img/sidebar-icons/compiler.svg");
+  mask-image: url("/img/sidebar-icons/compiler.svg");
+}
+.sidebar-cat--node > .menu__list-item-collapsible > .menu__link::before,
+.sidebar-cat--node > .menu__link::before {
+  -webkit-mask-image: url("/img/sidebar-icons/node.svg");
+  mask-image: url("/img/sidebar-icons/node.svg");
+}
+.sidebar-cat--guardian > .menu__list-item-collapsible > .menu__link::before,
+.sidebar-cat--guardian > .menu__link::before {
+  -webkit-mask-image: url("/img/sidebar-icons/guardian.svg");
+  mask-image: url("/img/sidebar-icons/guardian.svg");
+}
+
+/* Icon brightens on active / hover */
+.sidebar-cat.menu__list-item--active > .menu__list-item-collapsible > .menu__link::before,
+.sidebar-cat > .menu__list-item-collapsible > .menu__link.menu__link--active::before,
+.sidebar-cat > .menu__list-item-collapsible > .menu__link:hover::before,
+.sidebar-cat > .menu__link:hover::before {
+  background-color: var(--color-brand);
+}
+
+/* ==========================================
+   4.9) ACTIVE RAIL GLOW + SMOOTH TRANSITIONS
+   ========================================== */
+
+/* The rail pseudo-element already exists on .menu__link::before in §4.3
+   above for depth indicators. When a menu item is active, add a subtle
+   ember glow. */
+.theme-doc-sidebar-menu .menu__link--active {
+  transition: color var(--t-base) var(--ease-out-expo);
+}
+
+/* Active glow — soft halo on the rail */
+.theme-doc-sidebar-item-link-level-2 > .menu__link--active::before,
+.theme-doc-sidebar-item-link-level-3 > .menu__link--active::before,
+.theme-doc-sidebar-item-link-level-4 > .menu__link--active::before,
+.theme-doc-sidebar-item-link-level-5 > .menu__link--active::before {
+  box-shadow: 0 0 8px color-mix(in oklab, var(--color-brand) 45%, transparent);
 }

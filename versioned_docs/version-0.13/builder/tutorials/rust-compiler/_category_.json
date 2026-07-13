@@ -1,0 +1,8 @@
+{
+  "label": "Rust Compiler",
+  "position": 1,
+  "link": {
+    "type": "doc",
+    "id": "builder/tutorials/rust-compiler/index"
+  }
+}

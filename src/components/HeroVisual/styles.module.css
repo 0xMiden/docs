@@ -1,0 +1,439 @@
+/* ==========================================================================
+   Hero visual — Miden client-side proving lifecycle
+   8s loop. Four motion types only: pop-in, compress, arc, settle.
+   ========================================================================== */
+
+.root {
+  position: relative;
+  width: 100%;
+  max-width: 480px;
+  margin: 0 auto;
+}
+
+.glow {
+  position: absolute;
+  inset: -28px -20px -32px -20px;
+  z-index: 0;
+  background: radial-gradient(
+    ellipse at 50% 45%,
+    color-mix(in oklab, var(--color-brand) 18%, transparent) 0%,
+    transparent 62%
+  );
+  filter: blur(26px);
+  pointer-events: none;
+}
+
+.frame {
+  position: relative;
+  z-index: 1;
+  border: 1px solid var(--color-border);
+  border-radius: var(--radius-lg);
+  background: var(--color-card-bg);
+  box-shadow:
+    var(--shadow-sm),
+    0 24px 60px -20px color-mix(in oklab, var(--color-brand) 20%, transparent);
+  overflow: hidden;
+}
+
+.chromeTop {
+  display: flex;
+  align-items: center;
+  gap: 0.625rem;
+  padding: 0.5rem 0.75rem;
+  background: var(--color-surface);
+  border-bottom: 1px solid var(--color-border);
+}
+
+.lockIcon {
+  color: var(--color-muted);
+  flex-shrink: 0;
+}
+
+.chromeLabel {
+  font-family: var(--font-mono);
+  font-size: 10px;
+  font-weight: 500;
+  letter-spacing: 0.12em;
+  text-transform: uppercase;
+  color: var(--color-muted);
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
+}
+
+.chromeStatus {
+  display: inline-flex;
+  align-items: center;
+  gap: 0.375rem;
+  margin-left: auto;
+  font-family: var(--font-mono);
+  font-size: 10px;
+  letter-spacing: 0.08em;
+  text-transform: uppercase;
+  color: var(--color-brand);
+}
+
+.chromeDot {
+  width: 6px;
+  height: 6px;
+  border-radius: 999px;
+  background: var(--color-brand);
+  box-shadow: 0 0 8px color-mix(in oklab, var(--color-brand) 70%, transparent);
+  animation: pulse-dot 1.8s var(--ease-in-out) infinite;
+}
+
+.lattice {
+  display: block;
+  width: 100%;
+  height: auto;
+}
+
+/* Zone labels stay still across the whole loop */
+.zoneLabel {
+  font-family: var(--font-mono);
+  font-size: 9px;
+  letter-spacing: 0.2em;
+  text-transform: uppercase;
+  fill: var(--color-muted);
+}
+
+.zoneLabelR {
+  font-family: var(--font-mono);
+  font-size: 9px;
+  letter-spacing: 0.2em;
+  text-transform: uppercase;
+  fill: var(--color-muted);
+  text-anchor: end;
+}
+
+/* ============================================================ */
+/*   PHONE / CLIENT                                              */
+/* ============================================================ */
+
+.phoneBody {
+  fill: var(--color-surface);
+  stroke: var(--color-border-strong);
+  stroke-width: 1.2;
+}
+
+.phoneScreen {
+  fill: var(--color-card-bg);
+  stroke: var(--color-border);
+  stroke-width: 1;
+}
+
+.phoneNotch {
+  fill: var(--color-border-strong);
+  opacity: 0.65;
+}
+
+/* Transaction rows — pop in with a spring overshoot, stay, then
+   compress toward center during Prove */
+
+.txRow {
+  opacity: 0;
+  transform-origin: 72px 0;
+  transform-box: fill-box;
+  animation: hv-txrow 8s cubic-bezier(0.22, 1, 0.36, 1) infinite;
+}
+
+.row0 { animation-delay: 0ms; }
+.row1 { animation-delay: 150ms; }
+.row2 { animation-delay: 300ms; }
+.row3 { animation-delay: 450ms; }
+
+@keyframes hv-txrow {
+  /* Build (0–22%) : pop in with overshoot */
+  0%    { opacity: 0; transform: translateY(6px) scaleX(0.7); }
+  6%    { opacity: 1; transform: translateY(0)  scaleX(1.04); }
+  10%   { opacity: 1; transform: translateY(0)  scaleX(1); }
+  /* Prove (22–40%) : compress toward center y */
+  22%   { opacity: 1; transform: translateY(0)   scaleX(1); }
+  36%   { opacity: 0.85; transform: translateY(0) scaleX(0.55); }
+  40%   { opacity: 0; transform: translateY(0)   scaleX(0); }
+  /* Hold (40–95%) : everything away while proof travels */
+  95%   { opacity: 0; transform: translateY(6px) scaleX(0); }
+  100%  { opacity: 0; transform: translateY(6px) scaleX(0.2); }
+}
+
+/* Ember scan inside the phone — only visible during Prove */
+.phoneScan {
+  transform-origin: 0 0;
+  animation: hv-scan 8s linear infinite;
+  opacity: 0;
+}
+
+@keyframes hv-scan {
+  0%    { transform: translateY(0); opacity: 0; }
+  22%   { transform: translateY(0); opacity: 0; }
+  24%   { transform: translateY(200px); opacity: 0.9; }
+  38%   { transform: translateY(360px); opacity: 0.9; }
+  40%   { transform: translateY(380px); opacity: 0; }
+  100%  { transform: translateY(380px); opacity: 0; }
+}
+
+/* ============================================================ */
+/*   PROOF CAPSULE + AFTERIMAGES                                 */
+/* ============================================================ */
+
+/* Main capsule — pops in during Prove, then travels the arc.
+   Uses offset-path for the Submit stage. */
+
+.capsuleGroup {
+  offset-path: path("M 126 124 Q 186 60 250 124");
+  offset-distance: 0%;
+  offset-rotate: 0deg;
+  opacity: 0;
+  animation: hv-capsule 8s var(--ease-out-expo) infinite;
+}
+
+.capsuleBox {
+  fill: color-mix(in oklab, var(--color-brand) 22%, var(--color-card-bg));
+  stroke: var(--color-brand);
+  stroke-width: 1.4;
+}
+
+.capsuleGlyph {
+  fill: var(--color-brand);
+  font-family: var(--font-mono);
+  font-size: 12px;
+  font-weight: 700;
+  text-anchor: middle;
+  dominant-baseline: middle;
+}
+
+@keyframes hv-capsule {
+  /* Prove: pop in at phone with overshoot (32% → 40%) */
+  0%    { opacity: 0; offset-distance: 0%; transform: scale(0.4); }
+  30%   { opacity: 0; offset-distance: 0%; transform: scale(0.4); }
+  34%   { opacity: 1; offset-distance: 0%; transform: scale(1.12); }
+  38%   { opacity: 1; offset-distance: 0%; transform: scale(1); }
+  /* Submit: lift off + arc travel (40% → 58%) */
+  40%   { opacity: 1; offset-distance: 0%;   transform: scale(1); }
+  58%   { opacity: 1; offset-distance: 100%; transform: scale(1); }
+  /* Landing squash on the chain side (58% → 62%) */
+  60%   { opacity: 1; offset-distance: 100%; transform: scale(1.1, 0.85); }
+  62%   { opacity: 1; offset-distance: 100%; transform: scale(1); }
+  /* Absorb into chain (62% → 66%) */
+  66%   { opacity: 0; offset-distance: 100%; transform: scale(0.6); }
+  100%  { opacity: 0; offset-distance: 100%; transform: scale(0.6); }
+}
+
+/* Afterimage ghosts — lag the main capsule by ~120ms and ~240ms on the
+   same arc path, trailing it through the Submit stage. */
+
+.capsuleBoxGhost {
+  fill: transparent;
+  stroke: var(--color-brand);
+  stroke-width: 1;
+  stroke-dasharray: 2 2;
+}
+
+.capsuleGhostA {
+  animation-delay: -120ms;
+  opacity: 0.55;
+}
+
+.capsuleGhostB {
+  animation-delay: -240ms;
+  opacity: 0.3;
+}
+
+/* ============================================================ */
+/*   ARC GUIDE                                                   */
+/* ============================================================ */
+
+.arcGuide {
+  stroke: var(--color-border-strong);
+  stroke-width: 1;
+  stroke-dasharray: 3 3;
+  opacity: 0;
+  animation: hv-arc-guide 8s linear infinite;
+}
+
+@keyframes hv-arc-guide {
+  0%    { opacity: 0; }
+  38%   { opacity: 0; }
+  42%   { opacity: 0.8; }
+  56%   { opacity: 0.8; }
+  62%   { opacity: 0; }
+  100%  { opacity: 0; }
+}
+
+/* ============================================================ */
+/*   CHAIN / PUBLIC                                              */
+/* ============================================================ */
+
+.chainCard {
+  fill: color-mix(in oklab, var(--color-brand) 3%, var(--color-card-bg));
+  stroke: var(--color-border-strong);
+  stroke-width: 1.2;
+}
+
+.chainCommitSlot {
+  fill: transparent;
+  stroke: var(--color-border);
+  stroke-width: 1;
+  stroke-dasharray: 3 3;
+  animation: hv-commit-slot 8s var(--ease-out-expo) infinite;
+}
+
+@keyframes hv-commit-slot {
+  0%    { stroke: var(--color-border); stroke-dasharray: 3 3; }
+  62%   { stroke: var(--color-border); stroke-dasharray: 3 3; }
+  66%   { stroke: var(--color-brand); stroke-dasharray: 0 0; }
+  96%   { stroke: var(--color-brand); stroke-dasharray: 0 0; }
+  100%  { stroke: var(--color-border); stroke-dasharray: 3 3; }
+}
+
+.chainSlotLabel {
+  fill: var(--color-muted);
+  font-family: var(--font-mono);
+  font-size: 8px;
+  letter-spacing: 0.2em;
+  text-transform: uppercase;
+}
+
+.chainHashInline {
+  font-family: var(--font-mono);
+  font-size: 10px;
+  letter-spacing: 0.04em;
+  fill: var(--color-text);
+}
+
+.hashPiece {
+  opacity: 0;
+  animation: hv-hash-piece 8s linear infinite;
+}
+
+.hashPiece[data-delay="0"] { animation-delay: 0ms; }
+.hashPiece[data-delay="1"] { animation-delay: 60ms; }
+.hashPiece[data-delay="2"] { animation-delay: 120ms; }
+.hashPiece[data-delay="3"] { animation-delay: 180ms; }
+.hashPiece[data-delay="4"] { animation-delay: 240ms; }
+.hashPiece[data-delay="5"] { animation-delay: 300ms; }
+
+@keyframes hv-hash-piece {
+  0%    { opacity: 0; }
+  64%   { opacity: 0; }
+  72%   { opacity: 1; }
+  95%   { opacity: 1; }
+  100%  { opacity: 0; }
+}
+
+.chainHiddenLabel {
+  fill: var(--color-muted);
+  font-family: var(--font-mono);
+  font-size: 8px;
+  letter-spacing: 0.2em;
+  text-transform: uppercase;
+  opacity: 0.7;
+}
+
+/* Hidden private rows — faint dashed bars that never light up */
+.chainHiddenRow {
+  fill: none;
+  stroke: var(--color-border-strong);
+  stroke-width: 3;
+  stroke-dasharray: 3 4;
+  stroke-linecap: round;
+  opacity: 0.35;
+}
+
+/* Verify check that lands on the chain card during Seal */
+.chainVerifyGroup {
+  opacity: 0;
+  transform-origin: 352px 72px;
+  transform-box: fill-box;
+  animation: hv-verify 8s cubic-bezier(0.22, 1, 0.36, 1) infinite;
+}
+
+.chainVerifyCircle {
+  fill: color-mix(in oklab, var(--color-success) 14%, transparent);
+  stroke: var(--color-success);
+  stroke-width: 1.2;
+}
+
+.chainVerifyCheck {
+  fill: none;
+  stroke: var(--color-success);
+  stroke-width: 1.6;
+  stroke-linecap: round;
+  stroke-linejoin: round;
+}
+
+@keyframes hv-verify {
+  0%    { opacity: 0; transform: scale(0.5); }
+  82%   { opacity: 0; transform: scale(0.5); }
+  86%   { opacity: 1; transform: scale(1.18); }
+  90%   { opacity: 1; transform: scale(1); }
+  96%   { opacity: 1; transform: scale(1); }
+  100%  { opacity: 0; transform: scale(0.9); }
+}
+
+/* ============================================================ */
+/*   STAGE CAPTION                                               */
+/* ============================================================ */
+
+.stageCaption {
+  pointer-events: none;
+}
+
+.stageText {
+  font-family: var(--font-mono);
+  font-size: 10px;
+  letter-spacing: 0.12em;
+  text-transform: uppercase;
+  fill: var(--color-muted);
+  text-anchor: middle;
+  opacity: 0;
+}
+
+.stageBuild  { animation: hv-stage-build  8s linear infinite; }
+.stageProve  { animation: hv-stage-prove  8s linear infinite; }
+.stageSubmit { animation: hv-stage-submit 8s linear infinite; }
+.stageCommit { animation: hv-stage-commit 8s linear infinite; }
+.stageSealed { animation: hv-stage-sealed 8s linear infinite; }
+
+@keyframes hv-stage-build {
+  0%    { opacity: 0; }
+  2%    { opacity: 0.9; }
+  20%   { opacity: 0.9; }
+  24%   { opacity: 0; }
+  100%  { opacity: 0; }
+}
+
+@keyframes hv-stage-prove {
+  0%    { opacity: 0; }
+  24%   { opacity: 0; }
+  28%   { opacity: 0.9; }
+  38%   { opacity: 0.9; }
+  42%   { opacity: 0; }
+  100%  { opacity: 0; }
+}
+
+@keyframes hv-stage-submit {
+  0%    { opacity: 0; }
+  42%   { opacity: 0; }
+  46%   { opacity: 0.9; }
+  58%   { opacity: 0.9; }
+  62%   { opacity: 0; }
+  100%  { opacity: 0; }
+}
+
+@keyframes hv-stage-commit {
+  0%    { opacity: 0; }
+  62%   { opacity: 0; }
+  66%   { opacity: 0.9; }
+  80%   { opacity: 0.9; }
+  84%   { opacity: 0; }
+  100%  { opacity: 0; }
+}
+
+@keyframes hv-stage-sealed {
+  0%    { opacity: 0; }
+  84%   { opacity: 0; }
+  88%   { opacity: 0.95; }
+  96%   { opacity: 0.95; }
+  100%  { opacity: 0; }
+}

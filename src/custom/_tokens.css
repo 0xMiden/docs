@@ -1,27 +1,39 @@
 /* ============================
-   0) SEMANTIC TOKENS (your brand)
+   0) SEMANTIC TOKENS (Miden brand)
    ============================ */
 
 :root {
   /* ---- Brand palette (LIGHT) ---- */
-  --color-brand: #ff5500; /* TODO: replace with your primary */
-  --color-brand-600: #ff6a26; /* TODO */
-  --color-brand-700: #e24c00; /* TODO */
-  --color-brand-800: #b63c00; /* TODO */
+  --color-brand: #ff5500;
+  --color-brand-50: #fff4ee; /* wash for callouts / hero glow */
+  --color-brand-100: #ffe1d0;
+  --color-brand-600: #ff6a26;
+  --color-brand-700: #e24c00;
+  --color-brand-800: #b63c00;
+  --color-brand-900: #8a2d00;
   --color-secondary: #102445;
 
-  --color-accent: #1764a8; /* TODO secondary/accent */
-  --color-success: #00871d;
-  --color-warning: #ff5500;
-  --color-danger: #ff0000;
+  --color-accent: #1764a8;
+  --color-signal: #7a5cff; /* cryptographic violet — zk callouts, decorative accents */
+  --color-success: #12a150;
+  --color-warning: #f08900;
+  --color-danger: #e5484d;
 
-  /* ---- Neutral & Surfaces ---- */
+  /* ---- Neutral & Surfaces (LIGHT) ---- */
   --color-bg: #ffffff;
   --color-surface: #f9f9f9;
+  --color-surface-hover: #ffffff;
+  --color-card-bg: #ffffff;
+  --color-card-bg-hover: #fafafa;
   --color-elevated: color-mix(in oklab, #000 5%, transparent);
-  --color-border: color-mix(in oklab, #000 20%, transparent);
-  --color-text: #363636;
-  --color-muted: color-mix(in oklab, var(--color-text) 70%, transparent);
+  --color-border: rgba(11, 13, 16, 0.10);
+  --color-border-strong: rgba(11, 13, 16, 0.16);
+  --color-grid: rgba(11, 13, 16, 0.04); /* for landing + section-divider grid motifs */
+
+  /* Text: ink for hero/display, text for body, muted for meta */
+  --color-ink: #0b0d10;
+  --color-text: #1a1d21;
+  --color-muted: #5b636d;
   --color-link: var(--color-brand);
 
   /* ---- Typography ---- */
@@ -29,25 +41,45 @@
     "Apple Color Emoji", "Segoe UI Emoji", "Segoe UI Symbol", "Noto Color Emoji";
   --font-mono: "DM Mono", ui-monospace, SFMono-Regular, Menlo, Consolas,
     "Liberation Mono", monospace;
+  --font-display: var(--font-sans); /* Geist 600 for hero */
+  --font-eyebrow: var(--font-mono); /* DM Mono uppercase for UI metadata */
   --font-size-base: 16px;
-  --line-height-base: 150%;
+  --line-height-base: 1.65; /* editorial breathing room, up from 1.5 */
   --letter-spacing-base: 0;
 
-  /* ---- Radii & Spacing ---- */
-  --radius-xs: 0.357rem;
-  --radius-md: 0.357rem;
-  --radius-lg: 0.357rem;
-  --radius-xl: 0.357rem;
+  /* ---- Radii ---- */
+  --radius-xs: 4px;
+  --radius-sm: 6px;
+  --radius-md: 8px;
+  --radius-lg: 12px;
+  --radius-xl: 16px;
+  --radius-pill: 999px;
+  --radius-card: var(--radius-lg);
 
-  /* Design system spacing - rem values based on 14px base */
-  --space-4px: 0.286rem; /* Inline code padding */
-  --space-16px: 1.143rem; /* Standard paragraph, list, heading spacing */
-  --space-24px: 1.714rem; /* H1 to first content, H2 to large components, list indent */
-  --space-32px: 2.286rem; /* Section breaks, major structural spacing */
-  --space-40px: 2.857rem; /* Major structural reset (lower bound) */
-  --space-48px: 3.429rem; /* Major structural reset (upper bound) */
+  /* ---- Easings & motion primitives ---- */
+  --ease-out-expo: cubic-bezier(0.16, 1, 0.3, 1);
+  --ease-out-quart: cubic-bezier(0.25, 1, 0.5, 1);
+  --ease-in-out: cubic-bezier(0.4, 0, 0.2, 1);
+  --t-fast: 120ms;
+  --t-base: 180ms;
+  --t-slow: 260ms;
 
-  /* Legacy spacing variables for compatibility */
+  /* ---- Shadows ---- */
+  --shadow-sm: 0 1px 2px rgba(0, 0, 0, 0.06);
+  --shadow-md: 0 6px 16px rgba(0, 0, 0, 0.08);
+  --shadow-lg: 0 12px 28px rgba(0, 0, 0, 0.12);
+  --shadow-card:
+    0 0 0 1px rgba(0, 0, 0, 0.03),
+    0 2px 4px rgba(0, 0, 0, 0.04),
+    0 12px 24px rgba(0, 0, 0, 0.04);
+  --shadow-card-hover:
+    0 0 0 1px rgba(0, 0, 0, 0.03),
+    0 4px 8px rgba(0, 0, 0, 0.04),
+    0 24px 48px rgba(0, 0, 0, 0.08);
+  --shadow-focus: 0 0 0 3px color-mix(in oklab, var(--color-brand) 25%, transparent);
+  --elev-hairline: 0 0 0 1px var(--color-border);
+
+  /* ---- Spacing (4px scale) ---- */
   --space-1: 0.25rem; /* 4px  */
   --space-2: 0.5rem; /* 8px  */
   --space-3: 0.75rem; /* 12px */
@@ -56,16 +88,11 @@
   --space-6: 1.5rem; /* 24px */
   --space-8: 2rem; /* 32px */
   --space-10: 2.5rem; /* 40px */
+  --space-12: 3rem; /* 48px */
+  --space-16: 4rem; /* 64px */
 
-  /* ---- Shadows ---- */
-  --shadow-sm: 0 1px 2px rgba(0, 0, 0, 0.06);
-  --shadow-md: 0 6px 16px rgba(0, 0, 0, 0.08);
-  --shadow-lg: 0 12px 28px rgba(0, 0, 0, 0.12);
-
-  /* ---- Container widths ---- */
-
-  /* Common layout sizes */
-  --navbar-height: 4.571rem;
+  /* ---- Layout ---- */
+  --navbar-height: 3.5rem; /* 56px */
 
   /* Docs sidebar width */
   --doc-sidebar-width: 20rem !important;
@@ -87,10 +114,10 @@
   --ifm-color-secondary: var(--color-secondary);
   --ifm-color-primary-dark: var(--color-brand-700);
   --ifm-color-primary-darker: var(--color-brand-800);
-  --ifm-color-primary-darkest: var(--color-brand-800);
+  --ifm-color-primary-darkest: var(--color-brand-900);
   --ifm-color-primary-light: var(--color-brand-600);
   --ifm-color-primary-lighter: var(--color-brand-600);
-  --ifm-color-primary-lightest: var(--color-brand-600);
+  --ifm-color-primary-lightest: var(--color-brand-100);
 
   /* Text & surfaces */
   --ifm-color-content: var(--color-text);
@@ -107,36 +134,38 @@
   --ifm-font-weight-base: 400;
   --ifm-heading-font-weight: 700;
 
-  /* Heading typography specifications */
-  --ifm-h1-font-size: 2rem;
-  --ifm-h1-line-height: 114.3%;
-  --ifm-h2-font-size: 1.714rem;
-  --ifm-h2-line-height: 116.7%;
-  --ifm-h3-font-size: 1.429rem;
-  --ifm-h3-line-height: 120%;
-  --ifm-h4-font-size: 1.143rem;
-  --ifm-h4-line-height: 100%;
+  /* Heading scale — modular 1.25 anchored at 1rem */
+  --ifm-h1-font-size: 2.441rem; /* ~39px */
+  --ifm-h1-line-height: 1.1;
+  --ifm-h2-font-size: 1.953rem; /* ~31px */
+  --ifm-h2-line-height: 1.15;
+  --ifm-h3-font-size: 1.563rem; /* ~25px */
+  --ifm-h3-line-height: 1.2;
+  --ifm-h4-font-size: 1.25rem; /* 20px */
+  --ifm-h4-line-height: 1.3;
+  --ifm-h5-font-size: 1rem;
+  --ifm-h5-line-height: 1.4;
 
-  /* Code typography specifications */
+  /* Code typography */
   --ifm-code-font-size: 1rem;
-  --ifm-code-line-height: 150%; /* Reduced from 171.4% for tighter spacing */
-  --ifm-code-letter-spacing: -2%;
-  --ifm-code-padding-horizontal: 0.286rem;
-  --ifm-code-padding-vertical: 0.214rem; /* Reduced from 0.286rem */
+  --ifm-code-line-height: 1.5;
+  --ifm-code-letter-spacing: -0.02em;
+  --ifm-code-padding-horizontal: 0.25rem;
+  --ifm-code-padding-vertical: 0.125rem;
 
   /* Layout & spacing */
   --ifm-spacing-horizontal: var(--space-4);
   --ifm-global-radius: var(--radius-md);
 
   /* Component radii (Infima) */
-  --ifm-breadcrumb-border-radius: var(--radius-md);
+  --ifm-breadcrumb-border-radius: var(--radius-sm);
   --ifm-button-border-radius: var(--radius-md);
-  --ifm-card-border-radius: var(--radius-md);
+  --ifm-card-border-radius: var(--radius-lg);
   --ifm-alert-border-radius: var(--radius-md);
-  --ifm-badge-border-radius: var(--radius-md);
+  --ifm-badge-border-radius: var(--radius-sm);
   --ifm-tabs-border-radius: var(--radius-md);
   --ifm-table-border-radius: var(--radius-md);
-  --ifm-code-border-radius: var(--radius-md);
+  --ifm-code-border-radius: var(--radius-sm);
 
   /* Sizes */
   --ifm-container-width: var(--container-width);
@@ -146,7 +175,7 @@
 
   /* Borders & shadows */
   --ifm-border-color: var(--color-border);
-  --ifm-card-box-shadow: var(--shadow-md);
+  --ifm-card-box-shadow: var(--shadow-sm);
   --ifm-global-shadow-lw: var(--shadow-sm);
   --ifm-global-shadow-md: var(--shadow-md);
   --ifm-global-shadow-tl: var(--shadow-lg);
@@ -160,20 +189,48 @@
 
   /* Breadcrumbs */
   --ifm-breadcrumb-color-active: var(--color-text);
-  --ifm-breadcrumb-item-background-active: var(--color-elevated);
+  --ifm-breadcrumb-item-background-active: transparent;
 }
 
 /* ==========================================
-   1a) DARK THEME TOKENS
+   1a) DARK THEME TOKENS — "cryptographic night"
    ========================================== */
 
 :root[data-theme="dark"] {
-  --color-bg: #191919;
-  --color-surface: #232323;
-  --color-elevated: #3f3f3f99;
-  --color-border: color-mix(in oklab, #ffffff 22%, transparent);
-  --color-text: #e6e6e6;
-  --color-muted: color-mix(in oklab, #e6e6e6 65%, transparent);
+  /* Re-map Infima's hardcoded dark bg (#1b1b1d) to our token, so the
+     html background matches body and there's no two-tone scroll seam.
+     Infima defines these under html[data-theme='dark'] — our :root
+     selector here carries higher specificity, so this wins. */
+  --ifm-background-color: #0b0d10;
+  --ifm-background-surface-color: #13161b;
+
+  --color-bg: #0b0d10;
+  --color-surface: #13161b;
+  --color-surface-hover: #181c22;
+  --color-card-bg: #13161b;
+  --color-card-bg-hover: #1a1f26;
+  --color-elevated: rgba(255, 255, 255, 0.04);
+  --color-border: rgba(255, 255, 255, 0.08);
+  --color-border-strong: rgba(255, 255, 255, 0.14);
+  --color-grid: rgba(255, 255, 255, 0.045);
+
+  --color-ink: #f5f5f3;
+  --color-text: #e7e9ec;
+  --color-muted: #8a919b;
   --color-link: var(--color-brand);
+
+  --color-signal: #a28bff; /* lifted violet for dark */
+
+  /* Dark shadows lean on borders + subtle tints over heavy drops */
+  --shadow-card:
+    0 0 0 1px rgba(255, 255, 255, 0.04),
+    0 2px 4px rgba(0, 0, 0, 0.35),
+    0 8px 16px rgba(0, 0, 0, 0.35);
+  --shadow-card-hover:
+    0 0 0 1px rgba(255, 255, 255, 0.08),
+    0 4px 8px rgba(0, 0, 0, 0.45),
+    0 16px 32px rgba(0, 0, 0, 0.45);
+  --shadow-focus: 0 0 0 3px color-mix(in oklab, var(--color-brand) 35%, transparent);
+
   --ifm-code-color: #abb2bf;
 }

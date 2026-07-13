@@ -48,7 +48,7 @@ Transaction 1 (Sender)                Transaction 2 (Recipient)
 
 **Transaction 1**: The sender's account creates an output note, attaches assets to it, and the note is published (either on-chain or kept private).
 
-**Transaction 2**: The recipient discovers the note, consumes it in their own transaction, the note script runs and verifies the consumer is authorized, and assets transfer into the recipient's vault. A **nullifier** is recorded to prevent the same note from being consumed again (see [note design](/design/miden-base/note)).
+**Transaction 2**: The recipient discovers the note, consumes it in their own transaction, the note script runs and verifies the consumer is authorized, and assets transfer into the recipient's vault. A **nullifier** is recorded to prevent the same note from being consumed again (see [note design](/reference/protocol/note)).
 
 This separation is what enables privacy and parallelism — the two transactions are independent and unlinkable from the network's perspective.
 
@@ -63,7 +63,7 @@ Notes come in two visibility modes:
 
 Private notes provide stronger privacy guarantees — the network can't even see what assets a note carries — but they require the sender and recipient to have a communication channel outside the protocol.
 
-Miden provides built-in note patterns (P2ID, P2IDE, SWAP) for common transfer scenarios — see [Note Types](./note-types.md). You can also write fully custom note scripts for arbitrary consumption logic.
+Miden provides built-in note patterns (P2ID, P2IDE, SWAP) for common transfer scenarios — see [Standard Note Types](./note-types). You can also write fully custom note scripts for arbitrary consumption logic.
 
 ## How notes differ from EVM transfers
 

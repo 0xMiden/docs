@@ -20,39 +20,56 @@ The advice provider supplies auxiliary data during proof generation — see [Adv
 
 ## Auth component implementation
 
+From the [compiler examples](https://github.com/0xMiden/compiler/tree/next/examples/auth-component-rpo-falcon512):
+
 ```rust
 #![no_std]
 #![feature(alloc_error_handler)]
 
-use miden::*;
-use miden::intrinsics::advice::emit_falcon_sig_to_stack;
+extern crate alloc;
+
+use miden::{
+    Felt, Value, ValueAccess, Word, component, felt, hash_words,
+    intrinsics::advice::adv_insert, native_account, tx,
+};
 
 #[component]
 struct AuthComponent {
-    /// RPO256 hash of the Falcon512 public key
-    #[storage(description = "auth::rpo_falcon512::pub_key")]
-    pub_key: Value,
+    /// The account owner's public key (RPO-Falcon512 public key hash).
+    #[storage(
+        description = "owner public key",
+        type = "miden::standards::auth::falcon512_rpo::pub_key"
+    )]
+    owner_public_key: Value,
 }
 
 #[component]
 impl AuthComponent {
-    /// Verify the caller has the correct private key.
-    /// Called during transaction execution to authenticate state changes.
-    pub fn auth(&mut self) {
-        // 1. Read the stored public key hash
-        let pub_key: Word = self.pub_key.read();
+    pub fn auth_procedure(&mut self, _arg: Word) {
+        let ref_block_num = tx::get_block_number();
+        let final_nonce = self.incr_nonce();
 
-        // 2. Build the message to verify (transaction summary)
-        let commitment = self.compute_delta_commitment();
-        let nonce = Word::from(self.incr_nonce()); // Felt → [0, 0, 0, nonce_felt]
-        let msg: Word = hash_words(&[commitment, nonce]).into();
+        // Gather tx summary parts
+        let acct_delta_commit = self.compute_delta_commitment();
+        let input_notes_commit = tx::get_input_notes_commitment();
+        let output_notes_commit = tx::get_output_notes_commitment();
 
-        // 3. Request signature from advice provider
-        emit_falcon_sig_to_stack(msg, pub_key);
+        let salt = Word::from([felt!(0), felt!(0), ref_block_num, final_nonce]);
 
-        // 4. Verify the signature
-        // Panics if signature is invalid -> proof generation fails
-        rpo_falcon512_verify(pub_key, msg);
+        let mut tx_summary = [acct_delta_commit, input_notes_commit, output_notes_commit, salt];
+        let msg: Word = hash_words(&tx_summary).into();
+        // On the advice stack the words are expected to be in reverse order
+        tx_summary.reverse();
+        // Insert tx summary into advice map under key `msg`
+        adv_insert(msg, &tx_summary);
+
+        let pub_key: Word = self.owner_public_key.read();
+
+        // Emit signature request event to advice stack
+        miden::emit_falcon_sig_to_stack(msg, pub_key);
+
+        // Verify the signature loaded on the advice stack
+        miden::rpo_falcon512_verify(pub_key, msg);
     }
 }
 ```
@@ -64,14 +81,11 @@ The nonce prevents replay attacks — each transaction must use a unique nonce:
 ```rust
 // Increment and return the new nonce
 let new_nonce: Felt = self.incr_nonce();
-
-// Or via the module function
-let new_nonce: Felt = native_account::incr_nonce();
 ```
 
 The nonce is automatically included in the transaction's proof. If someone tries to replay a transaction, the nonce won't match and verification will fail.
 
-Auth components are typically called via [cross-component calls](../cross-component-calls) from note scripts or [transaction scripts](../transactions/transaction-scripts). For access control and security patterns, see [Patterns & Security](../patterns).
+Auth components are typically called via [cross-component calls](../cross-component-calls) from note scripts or [transaction scripts](../transactions/transaction-scripts). For access control and security patterns, see [Patterns](../patterns).
 
 :::info API Reference
 Full API docs on docs.rs: [`miden`](https://docs.rs/miden/latest/miden/) (`rpo_falcon512_verify`)
@@ -81,4 +95,4 @@ Full API docs on docs.rs: [`miden`](https://docs.rs/miden/latest/miden/) (`rpo_f
 
 - [Cryptography](./cryptography) — RPO-Falcon512 verification and hashing primitives
 - [Advice Provider](../transactions/advice-provider) — supplying auxiliary data during proof generation
-- [Patterns & Security](../patterns) — access control, rate limiting, and anti-patterns
+- [Patterns](../patterns) — access control, rate limiting, and anti-patterns

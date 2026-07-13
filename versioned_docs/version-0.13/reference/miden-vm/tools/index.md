@@ -1,0 +1,21 @@
+---
+title: "Development tooling"
+sidebar_position: 1
+---
+
+# Development Tools and Resources
+
+The following tools are available for interacting with Miden VM:
+
+- Via the [miden-vm](https://crates.io/crates/miden-vm) crate (or within the Miden VM repo):
+  - [CLI](../usage.md#cli-interface)
+  - [REPL](./repl.md)
+- For interactive debugging:
+  - [Debugger](./debugger.md) — the standalone debugger now lives in its own repository, with `midenc debug` available for compiler-driven flows.
+- Via your browser:
+  - The interactive [Miden VM Playground](https://0xMiden.github.io/examples/) for writing, executing, proving, and verifying programs from your browser.
+
+The following resources are available to help you get started programming with Miden VM more quickly:
+
+- The [Miden VM examples repo](https://github.com/0xMiden/examples) contains examples of programs written in Miden Assembly.
+- The [Miden project template](https://github.com/0xMiden/project-template) provides a scaffold for starting new Miden projects in Rust.

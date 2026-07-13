@@ -59,21 +59,7 @@ The expiration delta determines how many blocks after creation the transaction r
 
 Transaction scripts use the `#[tx_script]` macro to define a top-level entry point for the transaction. See [Transaction Scripts](./transaction-scripts) for the full `#[tx_script]` API and examples.
 
-## Complete `tx` module reference
-
-| Function | Signature | Description |
-|----------|-----------|-------------|
-| `get_block_number` | `fn() -> Felt` | Current block number |
-| `get_block_commitment` | `fn() -> Word` | Block header commitment |
-| `get_block_timestamp` | `fn() -> Felt` | Block timestamp (seconds) |
-| `get_input_notes_commitment` | `fn() -> Word` | Hash of all input notes |
-| `get_output_notes_commitment` | `fn() -> Word` | Hash of all output notes |
-| `get_num_input_notes` | `fn() -> Felt` | Number of input notes |
-| `get_num_output_notes` | `fn() -> Felt` | Number of output notes |
-| `get_expiration_block_delta` | `fn() -> Felt` | Current expiration delta |
-| `update_expiration_block_delta` | `fn(delta: Felt)` | Set expiration delta |
-
-For signature verification using the transaction context, see [Authentication](../accounts/authentication). For time-based patterns using `tx::get_block_number()`, see [Patterns & Security — Rate limiting](../patterns#rate-limiting). For the complete function table, see the [Cheatsheet](../api-reference).
+For signature verification using the transaction context, see [Authentication](../accounts/authentication). For time-based patterns using `tx::get_block_number()`, see [Patterns — Rate limiting](../patterns#rate-limiting).
 
 :::info API Reference
 Full API docs on docs.rs: [`miden::tx`](https://docs.rs/miden/latest/miden/tx/)

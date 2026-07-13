@@ -1,14 +1,14 @@
 ---
 title: "Miden Smart Contracts"
 sidebar_position: 0
-description: "Reference documentation for building Miden smart contracts in Rust using the Miden compiler SDK."
+description: "Reference documentation for building Miden smart contracts in Rust using the Miden SDK."
 ---
 
 # Miden Smart Contracts
 
-This section is the complete reference for building smart contracts on Miden using Rust and the compiler SDK (v0.9.0). If you're new to Miden, start with the [Toolchain & Project Structure](./getting-started) guide below, or follow the hands-on [Miden Bank Tutorial](../develop/tutorials/rust-compiler/miden-bank/).
+This section is the complete reference for building smart contracts on Miden using Rust and the Miden SDK (v0.10). If you're new to Miden, follow the hands-on [Miden Bank Tutorial](../tutorials/rust-compiler/miden-bank/).
 
-All Miden Rust contracts compile under these constraints: `#![no_std]`, Rust 2024 edition, targeting `wasm32-unknown-unknown` → Miden Assembly → ZK proof.
+All Miden Rust contracts compile under these constraints: `#![no_std]`, Rust 2024 edition.
 
 import DocCard from '@theme/DocCard';
 
@@ -16,24 +16,6 @@ import DocCard from '@theme/DocCard';
 
 <div className="row">
   <div className="col col--6">
-    <DocCard
-      item={{
-        type: 'link',
-        href: './overview',
-        label: 'What is a Miden Smart Contract',
-        description: 'Execution model, accounts, notes, and the transaction lifecycle.',
-      }}
-    />
-  </div>
-  <div className="col col--6">
-    <DocCard
-      item={{
-        type: 'link',
-        href: './getting-started',
-        label: 'Toolchain & Project Structure',
-        description: 'The Miden toolchain, project layout, and how Rust source becomes a deployable .masp file.',
-      }}
-    />
   </div>
 </div>
 
@@ -79,7 +61,7 @@ import DocCard from '@theme/DocCard';
         type: 'link',
         href: './cross-component-calls',
         label: 'Cross-Component Calls',
-        description: 'WIT bindings and generate!() for inter-component calls.',
+        description: 'Calling methods across account components and from note scripts.',
       }}
     />
   </div>
@@ -103,7 +85,7 @@ import DocCard from '@theme/DocCard';
       item={{
         type: 'link',
         href: './patterns',
-        label: 'Patterns & Security',
+        label: 'Patterns',
         description: 'Access control, rate limiting, spending limits, and anti-patterns.',
       }}
     />
@@ -112,9 +94,9 @@ import DocCard from '@theme/DocCard';
     <DocCard
       item={{
         type: 'link',
-        href: './api-reference',
-        label: 'Cheatsheet',
-        description: 'Every function, type, trait, and macro at a glance.',
+        href: 'https://docs.rs/miden/latest/miden/',
+        label: 'API Reference (docs.rs)',
+        description: 'Complete API documentation for the miden crate.',
       }}
     />
   </div>

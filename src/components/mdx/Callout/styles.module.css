@@ -1,0 +1,94 @@
+.root {
+  --callout-accent: var(--color-muted);
+  --callout-surface: var(--color-surface);
+
+  display: grid;
+  grid-template-columns: auto 1fr;
+  gap: 0.75rem;
+  padding: 1rem 1.25rem 1rem 1rem;
+  margin: 1.25rem 0;
+  border-radius: var(--radius-md);
+  border: 1px solid var(--color-border);
+  background: var(--callout-surface);
+  position: relative;
+  overflow: hidden;
+}
+
+/* Flush-left 3px accent bar */
+.root::before {
+  content: "";
+  position: absolute;
+  top: 0;
+  bottom: 0;
+  left: 0;
+  width: 3px;
+  background: var(--callout-accent);
+}
+
+.icon {
+  display: flex;
+  align-items: flex-start;
+  padding-top: 1px;
+  color: var(--callout-accent);
+}
+
+.body {
+  min-width: 0;
+}
+
+.title {
+  font-family: var(--font-sans);
+  font-size: 14px;
+  font-weight: 600;
+  color: var(--color-text);
+  margin-bottom: 0.25rem;
+  letter-spacing: -0.005em;
+}
+
+.content {
+  font-size: 15px;
+  line-height: 1.6;
+  color: var(--color-text);
+}
+
+.content :global(p) {
+  margin: 0.25rem 0;
+}
+
+.content :global(p:first-child) {
+  margin-top: 0;
+}
+
+.content :global(p:last-child) {
+  margin-bottom: 0;
+}
+
+/* Variants */
+.variant-note {
+  --callout-accent: var(--color-muted);
+}
+
+.variant-tip {
+  --callout-accent: var(--color-success);
+  --callout-surface: color-mix(in oklab, var(--color-success) 6%, var(--color-surface));
+}
+
+.variant-info {
+  --callout-accent: var(--color-accent);
+  --callout-surface: color-mix(in oklab, var(--color-accent) 6%, var(--color-surface));
+}
+
+.variant-warn {
+  --callout-accent: var(--color-warning);
+  --callout-surface: color-mix(in oklab, var(--color-warning) 8%, var(--color-surface));
+}
+
+.variant-danger {
+  --callout-accent: var(--color-danger);
+  --callout-surface: color-mix(in oklab, var(--color-danger) 7%, var(--color-surface));
+}
+
+.variant-zk {
+  --callout-accent: var(--color-signal);
+  --callout-surface: color-mix(in oklab, var(--color-signal) 8%, var(--color-surface));
+}

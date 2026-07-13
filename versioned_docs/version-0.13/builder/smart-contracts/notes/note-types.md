@@ -1,12 +1,12 @@
 ---
-title: "Note Types"
-sidebar_position: 2
-description: "Built-in note types: P2ID, P2IDE (with expiration), and SWAP (atomic exchange)."
+title: "Standard Note Types"
+sidebar_position: 3
+description: "Built-in note types from miden-standards: P2ID, P2IDE (with expiration), and SWAP (atomic exchange)."
 ---
 
-# Note Types
+# Standard Note Types
 
-Miden provides built-in note patterns for common asset transfer scenarios. These are protocol primitives you can use directly or extend for custom behavior.
+The `miden-standards` crate provides built-in note patterns for common asset transfer scenarios. These are pre-compiled note scripts you can use directly via the builder API in client code.
 
 ## P2ID (Pay to ID)
 
@@ -159,4 +159,4 @@ Returns a tuple of `(Note, NoteDetails)` — the SWAP note to submit and the exp
 
 ## More note types
 
-For writing custom note scripts, see [Note Scripts](./note-scripts). For the transaction context and `#[tx_script]`, see [Transaction Context](../transactions/transaction-context). For common patterns, see [Patterns & Security](../patterns).
+For writing custom note scripts, see [Note Scripts](./note-scripts). For the transaction context and `#[tx_script]`, see [Transaction Context](../transactions/transaction-context).

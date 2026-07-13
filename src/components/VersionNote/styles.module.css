@@ -1,0 +1,18 @@
+.container {
+  margin: 1rem 0 1.5rem;
+  padding: 0.875rem 1.25rem;
+  border-top: 3px solid var(--ifm-color-primary);
+  border-radius: var(--ifm-global-radius);
+  background: var(--ifm-color-emphasis-100);
+}
+
+[data-theme="dark"] .container {
+  background: var(--ifm-color-emphasis-100);
+}
+
+.text {
+  margin: 0;
+  font-size: 0.9375rem;
+  line-height: 1.6;
+  color: var(--ifm-color-content);
+}

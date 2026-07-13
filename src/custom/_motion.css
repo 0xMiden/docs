@@ -1,0 +1,99 @@
+/* ==========================================
+   MOTION LANGUAGE
+   - All durations and easings come from _tokens.css.
+   - Keep transitions under 200ms. Slow tier (260ms) reserved for
+     structural reveals like sidebar expand/collapse.
+   - Respect prefers-reduced-motion globally at the bottom of the file.
+   ========================================== */
+
+/* ---- Keyframes ---- */
+
+@keyframes fade-up {
+  from {
+    opacity: 0;
+    transform: translateY(6px);
+  }
+  to {
+    opacity: 1;
+    transform: translateY(0);
+  }
+}
+
+@keyframes fade-in {
+  from { opacity: 0; }
+  to { opacity: 1; }
+}
+
+@keyframes shimmer {
+  0% { background-position: -200% 0; }
+  100% { background-position: 200% 0; }
+}
+
+/* Diagonal sweep used by the landing hero's proof-lattice visual. */
+@keyframes scan-line {
+  0% { transform: translateX(-120%) translateY(-40%); }
+  100% { transform: translateX(120%) translateY(40%); }
+}
+
+/* Pulsing status dot (eyebrow accent on the landing page). */
+@keyframes pulse-dot {
+  0%, 100% { opacity: 1; transform: scale(1); }
+  50% { opacity: 0.55; transform: scale(0.85); }
+}
+
+/* Slow rotation for decorative loading/processing glyphs. */
+@keyframes spin-slow {
+  from { transform: rotate(0deg); }
+  to { transform: rotate(360deg); }
+}
+
+/* ---- Page content fade-up on route change ----
+   Docusaurus re-mounts the main container on route change, so the
+   animation replays automatically. */
+main[class*="docMainContainer"] > .container {
+  animation: fade-up var(--t-base) var(--ease-out-expo) both;
+}
+
+/* Also fade-in on custom pages. */
+main[class*="docMainContainer"] article,
+main[class*="mainWrapper"] {
+  animation: fade-in var(--t-base) var(--ease-out-expo) both;
+}
+
+/* ---- Skeleton loading shimmer ---- */
+.skeleton {
+  background-image: linear-gradient(
+    90deg,
+    var(--color-surface) 0%,
+    var(--color-surface-hover) 50%,
+    var(--color-surface) 100%
+  );
+  background-size: 200% 100%;
+  animation: shimmer 1.4s linear infinite;
+  border-radius: var(--radius-md);
+}
+
+/* ---- Scroll-linked reveal (modern CSS, feature-detected) ---- */
+/* Zero-JS scroll reveal via animation-timeline. Degrades to static
+   content on browsers that don't support view timelines. */
+@supports (animation-timeline: view()) {
+  .reveal,
+  [data-reveal] {
+    animation: fade-up linear both;
+    animation-timeline: view();
+    animation-range: entry 10% cover 30%;
+  }
+}
+
+/* ---- Global reduced-motion guard ----
+   Applies last so it wins over every rule above. */
+@media (prefers-reduced-motion: reduce) {
+  *,
+  *::before,
+  *::after {
+    animation-duration: 0.001ms !important;
+    animation-iteration-count: 1 !important;
+    transition-duration: 0.001ms !important;
+    scroll-behavior: auto !important;
+  }
+}

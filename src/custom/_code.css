@@ -3,184 +3,364 @@
    ========================= */
 
 .theme-code-block {
-  border: 1px solid var(--ifm-border-color);
-  border-radius: 0.357rem;
+  border: 1px solid var(--color-border);
+  border-radius: var(--radius-lg);
+  background: var(--color-card-bg);
+  overflow: hidden;
+  box-shadow: var(--shadow-sm);
+  margin: 1.25rem 0;
   position: relative;
 }
 
-/* Target CSS module class using attribute selector to handle hashed names */
+/* Title row (filename / label) */
 .theme-code-block [class*="codeBlockTitle"] {
   display: flex;
   align-items: center;
-  gap: 0.714rem;
-  padding: 0.714rem 0.857rem;
-  font-family: var(--font-sans) !important;
-  font-size: 0.875rem !important;
+  gap: 0.625rem;
+  padding: 0.5rem 0.875rem;
+  font-family: var(--font-mono) !important;
+  font-size: 11px !important;
   font-weight: 500 !important;
-  letter-spacing: 0.02rem !important;
-  color: var(--color-base) !important;
-  border-bottom: 1px solid var(--ifm-border-color) !important;
+  letter-spacing: 0.08em !important;
+  text-transform: uppercase !important;
+  color: var(--color-muted) !important;
+  background: var(--color-surface) !important;
+  border-bottom: 1px solid var(--color-border) !important;
+}
+
+/* Language chip when no title is set but a language is specified */
+.theme-code-block[data-language]:not(:has([class*="codeBlockTitle"]))::before {
+  content: attr(data-language);
+  position: absolute;
+  top: 0.5rem;
+  right: 0.75rem;
+  font-family: var(--font-mono);
+  font-size: 10px;
+  letter-spacing: 0.08em;
+  text-transform: uppercase;
+  color: var(--color-muted);
+  background: var(--color-surface);
+  border: 1px solid var(--color-border);
+  border-radius: var(--radius-xs);
+  padding: 1px 6px;
+  z-index: 1;
+  pointer-events: none;
+  opacity: 0.85;
 }
 
 /* Body */
 .theme-code-block pre {
   margin: 0;
-  background: color-mix(
-    in oklab,
-    var(--color-surface) 96%,
-    var(--color-bg, #fff)
-  );
-  padding: 0.857rem 1.286rem; /* Reduced vertical padding from 1.143rem to 0.857rem */
+  background: var(--color-bg);
+  padding: 0.875rem 1rem;
+  overflow-x: auto;
 }
 
-/* Code text - design specifications */
+/* Code text */
 .theme-code-block code {
   background: transparent;
   border: 0;
   border-radius: 0;
   padding: 0;
   font-family: var(--font-mono);
-  font-size: var(--ifm-code-font-size); /* 14px */
-  line-height: var(--ifm-code-line-height); /* 24px */
-  letter-spacing: var(--ifm-code-letter-spacing); /* -2% */
+  font-size: 13.5px;
+  line-height: 1.6;
+  letter-spacing: var(--ifm-code-letter-spacing);
   color: var(--color-text);
 }
 
-/* Inline code - design specifications */
+/* Inline code */
 code {
   font-family: var(--font-mono);
-  font-size: 0.857rem; /* 12px converted to rem */
-  line-height: 120%; /* Further reduced for tighter spacing */
-  letter-spacing: var(--ifm-code-letter-spacing); /* -2% */
+  font-size: 0.875em; /* relative to surrounding text */
+  line-height: 1.5;
+  letter-spacing: var(--ifm-code-letter-spacing);
   font-weight: 400;
-  background: var(--ifm-background-surface-color);
-  padding: var(--ifm-code-padding-vertical) var(--ifm-code-padding-horizontal);
-  border-radius: var(--ifm-code-border-radius);
-  border: 1px solid var(--ifm-border-color);
+  background: var(--color-surface);
+  padding: 1px 5px;
+  border-radius: var(--radius-xs);
+  border: 1px solid var(--color-border);
+  color: var(--color-text);
+}
+
+/* Copy / action buttons on code blocks */
+.theme-code-block [class*="buttonGroup"] {
+  gap: 4px;
+}
+
+.theme-code-block [class*="buttonGroup"] button {
+  background: var(--color-surface);
+  border: 1px solid var(--color-border);
+  border-radius: var(--radius-xs);
+  color: var(--color-muted);
+  transition:
+    color var(--t-base) var(--ease-out-expo),
+    border-color var(--t-base) var(--ease-out-expo),
+    background var(--t-base) var(--ease-out-expo);
+}
+
+.theme-code-block [class*="buttonGroup"] button:hover {
+  color: var(--color-text);
+  border-color: var(--color-border-strong);
+  background: var(--color-surface-hover);
 }
 
 /* Highlighted lines / magic comments */
 .token-line.highlighted,
 .code-block-highlighted-line {
-  background: color-mix(in oklab, var(--ifm-color-primary) 12%, transparent);
+  background: color-mix(in oklab, var(--color-brand) 12%, transparent);
+  box-shadow: inset 2px 0 0 var(--color-brand);
 }
 
-/* Optional: softer $ prompt tint in bash */
-.theme-code-block[data-language="bash"] pre code .token.operator {
+/* Bash prompt tint */
+.theme-code-block[data-language="bash"] pre code .token.operator,
+.theme-code-block[data-language="shell-session"] pre code .token.operator {
   opacity: 0.9;
 }
 
-/* Dark tweaks */
-[data-theme="dark"] .theme-code-block .codeBlockTitle {
-  background: color-mix(in oklab, var(--color-surface) 85%, transparent);
+/* ==========================================
+   12.0) PRISM TOKEN OVERRIDES — refine oneLight / oneDark
+   so bash, shell, and diff get usable coloring on the new palette.
+   Selectors target the Prism token classes emitted by prism-react-renderer.
+   ========================================== */
+
+/* Shared — applies to both light and dark unless overridden below */
+.theme-code-block .token.comment,
+.theme-code-block .token.prolog,
+.theme-code-block .token.cdata {
+  color: var(--color-muted);
+  font-style: italic;
 }
 
+.theme-code-block .token.punctuation {
+  color: var(--color-muted);
+}
+
+.theme-code-block .token.property,
+.theme-code-block .token.tag,
+.theme-code-block .token.constant,
+.theme-code-block .token.symbol,
+.theme-code-block .token.deleted {
+  color: var(--color-danger);
+}
+
+.theme-code-block .token.boolean,
+.theme-code-block .token.number {
+  color: var(--color-signal);
+}
+
+.theme-code-block .token.selector,
+.theme-code-block .token.attr-name,
+.theme-code-block .token.string,
+.theme-code-block .token.char,
+.theme-code-block .token.builtin,
+.theme-code-block .token.inserted {
+  color: var(--color-success);
+}
+
+.theme-code-block .token.operator,
+.theme-code-block .token.entity,
+.theme-code-block .token.url,
+.theme-code-block .token.variable,
+.theme-code-block .language-css .token.string,
+.theme-code-block .style .token.string {
+  color: var(--color-brand);
+}
+
+.theme-code-block .token.atrule,
+.theme-code-block .token.attr-value,
+.theme-code-block .token.keyword {
+  color: var(--color-brand);
+  font-weight: 500;
+}
+
+.theme-code-block .token.function,
+.theme-code-block .token.class-name,
+.theme-code-block .token.maybe-class-name {
+  color: var(--color-signal);
+}
+
+.theme-code-block .token.regex,
+.theme-code-block .token.important {
+  color: var(--color-warning);
+}
+
+.theme-code-block .token.bold {
+  font-weight: 700;
+}
+
+.theme-code-block .token.italic {
+  font-style: italic;
+}
+
+/* Bash / shell-session specifics */
+.theme-code-block[data-language="bash"] .token.function,
+.theme-code-block[data-language="shell-session"] .token.function {
+  color: var(--color-signal);
+  font-weight: 500;
+}
+
+.theme-code-block[data-language="bash"] .token.parameter,
+.theme-code-block[data-language="shell-session"] .token.parameter {
+  color: var(--color-muted);
+  font-style: italic;
+}
+
+/* Diff lines */
+.theme-code-block .token.inserted-sign,
+.theme-code-block .token.prefix.inserted,
+.theme-code-block .token.line.inserted {
+  color: var(--color-success);
+  background: color-mix(in oklab, var(--color-success) 10%, transparent);
+}
+
+.theme-code-block .token.deleted-sign,
+.theme-code-block .token.prefix.deleted,
+.theme-code-block .token.line.deleted {
+  color: var(--color-danger);
+  background: color-mix(in oklab, var(--color-danger) 10%, transparent);
+}
+
+/* Dark-mode tweaks where the shared palette is too dim */
+[data-theme="dark"] .theme-code-block .token.keyword,
+[data-theme="dark"] .theme-code-block .token.atrule,
+[data-theme="dark"] .theme-code-block .token.attr-value {
+  color: #ff9a66; /* lifted ember */
+}
+
+[data-theme="dark"] .theme-code-block .token.string,
+[data-theme="dark"] .theme-code-block .token.inserted,
+[data-theme="dark"] .theme-code-block .token.builtin {
+  color: #7ddf9a;
+}
+
+[data-theme="dark"] .theme-code-block .token.function,
+[data-theme="dark"] .theme-code-block .token.class-name {
+  color: #a28bff;
+}
+
+[data-theme="dark"] .theme-code-block .token.number,
+[data-theme="dark"] .theme-code-block .token.boolean {
+  color: #a28bff;
+}
+
+[data-theme="dark"] .theme-code-block .token.comment {
+  color: #6b7280;
+}
+
+[data-theme="dark"] .theme-code-block .token.property,
+[data-theme="dark"] .theme-code-block .token.tag,
+[data-theme="dark"] .theme-code-block .token.symbol {
+  color: #ff7788;
+}
+
+/* Dark surface for the block */
 [data-theme="dark"] .theme-code-block {
+  background: var(--color-surface);
   border-color: var(--color-border);
 }
 
 [data-theme="dark"] .theme-code-block pre {
-  background: #3f3f3f99;
-}
-
-[data-theme="dark"] .theme-code-block code {
-  background: transparent;
-  color: var(--ifm-code-color, #abb2bf);
+  background: var(--color-bg);
 }
 
 [data-theme="dark"] code {
-  background: #3f3f3f99;
-  color: var(--ifm-code-color, #abb2bf);
-  border-color: #3f3f3f99;
+  background: var(--color-surface);
+  color: var(--color-text);
+  border-color: var(--color-border);
 }
 
 /* ==========================================
-   12.1) DETAILS/SUMMARY (Expandable Sections) - styled like code blocks
+   12.1) DETAILS/SUMMARY (Expandable Sections)
    ========================================== */
 
-/* Scope to docs content only */
 .theme-doc-markdown details {
-  border: 1px solid var(--ifm-border-color);
-  border-radius: 0.357rem;
-  background: var(--ifm-background-surface-color);
-  margin: 0.75rem 0 1rem;
-  overflow: hidden; /* crisp rounded corners */
+  border: 1px solid var(--color-border);
+  border-radius: var(--radius-lg);
+  background: var(--color-card-bg);
+  margin: 1rem 0 1.25rem;
+  overflow: hidden;
   padding: 0;
 }
 
-/* The clickable header row */
 .theme-doc-markdown details > summary {
   display: flex;
   align-items: center;
-  gap: 0.714rem;
-  padding: 0.714rem 0.857rem;
+  gap: 0.5rem;
+  padding: 0.625rem 0.875rem;
+  font-family: var(--font-mono);
+  font-size: 11px;
   font-weight: 500;
+  letter-spacing: 0.08em;
   text-transform: uppercase;
-  font-family: var(--font-sans);
+  color: var(--color-muted);
+  background: var(--color-surface);
   line-height: 1.5;
   cursor: pointer;
   list-style: none;
   user-select: none;
-  color: var(--color-text);
   border-bottom: 1px solid transparent;
+  transition: color var(--t-base) var(--ease-out-expo);
 }
 
-/* Normal text variant - use .normal-text class to override uppercase */
+.theme-doc-markdown details > summary:hover {
+  color: var(--color-text);
+}
+
+/* Normal (non-uppercase) summary variant */
 .theme-doc-markdown details.normal-text > summary,
 .theme-doc-markdown details > summary.normal-text {
   text-transform: none !important;
-  font-family: var(
-    --font-sans
-  ) !important; /* Use monospace like code block titles */
-  font-size: 0.875rem !important;
+  font-family: var(--font-sans) !important;
+  font-size: 14px !important;
   font-weight: 500 !important;
-  letter-spacing: 0.02rem !important;
+  letter-spacing: 0 !important;
+  color: var(--color-text) !important;
 }
 
-/* Hide native disclosure marker */
 .theme-doc-markdown details > summary::marker,
 .theme-doc-markdown details > summary::-webkit-details-marker {
   display: none;
   content: "";
 }
 
-/* Custom caret icon */
+/* Custom caret — 0.1rem whisper-thin chevron. */
 .theme-doc-markdown details > summary::before {
   content: "";
-  width: 0.214rem;
-  height: 0.214rem;
+  width: 0.1rem;
+  height: 0.1rem;
   flex-shrink: 0;
-  -webkit-mask: url("/img/custom_caret.svg") no-repeat center / contain;
-  mask: url("/img/custom_caret.svg") no-repeat center / contain;
   background: currentColor;
-  transition: transform 0.15s ease;
-  transform: rotate(0deg);
-  transform-origin: center center; /* Rotate around its own center */
-  opacity: 0.8;
-  position: relative;
-  top: 0;
+  -webkit-mask-image: url("data:image/svg+xml;utf8,<svg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 8 8' fill='none'><path d='m3 1.5 3 2.5-3 2.5' stroke='black' stroke-width='1' stroke-linecap='round' stroke-linejoin='round'/></svg>");
+  mask-image: url("data:image/svg+xml;utf8,<svg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 8 8' fill='none'><path d='m3 1.5 3 2.5-3 2.5' stroke='black' stroke-width='1' stroke-linecap='round' stroke-linejoin='round'/></svg>");
+  -webkit-mask-repeat: no-repeat;
+  mask-repeat: no-repeat;
+  -webkit-mask-position: center;
+  mask-position: center;
+  -webkit-mask-size: contain;
+  mask-size: contain;
+  transform-origin: center;
+  transition: transform var(--t-base) var(--ease-out-expo);
+  opacity: 0.7;
 }
 
 .theme-doc-markdown details[open] > summary {
-  border-bottom-color: var(--ifm-border-color);
+  border-bottom-color: var(--color-border);
+  color: var(--color-text);
 }
 
-/* Rotate caret when details is open */
 .theme-doc-markdown details[open] > summary::before {
   transform: rotate(90deg);
-  transform-origin: center center; /* Keep center rotation when open */
+  opacity: 1;
 }
 
-/* Body content area */
 .theme-doc-markdown details > :not(summary) {
   padding: 1rem;
 }
 
-/* Code block inside details (optional polish) */
 .theme-doc-markdown details pre {
   margin: 0;
-  background: color-mix(in oklab, var(--color-surface) 96%, var(--color-bg));
-  border-radius: 0.429rem;
+  border-radius: var(--radius-md);
 }
 
 .theme-doc-markdown details > summary {

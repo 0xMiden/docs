@@ -269,22 +269,22 @@ Custom transactions require a good understanding of the Miden VM and its instruc
 
 For more detailed information about transaction functionality, refer to the following API documentation:
 
-- [WebClient](https://github.com/0xMiden/miden-client/docs/typedoc/web-client/classes/WebClient.md) - Main client class for transaction operations
-- [TransactionRequest](https://github.com/0xMiden/miden-client/docs/typedoc/web-client/classes/TransactionRequest.md) - Class representing transaction requests
-- [TransactionRequestBuilder](https://github.com/0xMiden/miden-client/docs/typedoc/web-client/classes/TransactionRequestBuilder.md) - Builder class for creating transaction requests
-- [TransactionResult](https://github.com/0xMiden/miden-client/docs/typedoc/web-client/classes/TransactionResult.md) - Class representing transaction execution results
-- [TransactionProver](https://github.com/0xMiden/miden-client/docs/typedoc/web-client/classes/TransactionProver.md) - Class for transaction proving
-- [TransactionScript](https://github.com/0xMiden/miden-client/docs/typedoc/web-client/classes/TransactionScript.md) - Class for defining transaction scripts
-- [NoteType](https://github.com/0xMiden/miden-client/docs/typedoc/web-client/enumerations/NoteType.md) - Enumeration for note types (Private/Public)
-- [NoteAssets](https://github.com/0xMiden/miden-client/docs/typedoc/web-client/classes/NoteAssets.md) - Class for defining note assets
-- [NoteMetadata](https://github.com/0xMiden/miden-client/docs/typedoc/web-client/classes/NoteMetadata.md) - Class for defining note metadata
-- [FungibleAsset](https://github.com/0xMiden/miden-client/docs/typedoc/web-client/classes/FungibleAsset.md) - Class for defining fungible assets
-- [Felt](https://github.com/0xMiden/miden-client/docs/typedoc/web-client/classes/Felt.md) - Class for working with field elements
-- [FeltArray](https://github.com/0xMiden/miden-client/docs/typedoc/web-client/classes/FeltArray.md) - Class for working with arrays of field elements
-- [NoteTag](https://github.com/0xMiden/miden-client/docs/typedoc/web-client/classes/NoteTag.md) - Class for defining note tags
-- [NoteExecutionMode](https://github.com/0xMiden/miden-client/docs/typedoc/web-client/classes/NoteExecutionMode.md) - Class for defining note execution modes
-- [NoteExecutionHint](https://github.com/0xMiden/miden-client/docs/typedoc/web-client/classes/NoteExecutionHint.md) - Class for defining note execution hints
-- [OutputNotesArray](https://github.com/0xMiden/miden-client/docs/typedoc/web-client/classes/OutputNotesArray.md) - Class for working with arrays of output notes
-- [NotesArray](https://github.com/0xMiden/miden-client/docs/typedoc/web-client/classes/NotesArray.md) - Class for working with arrays of notes
+- [WebClient](https://github.com/0xMiden/miden-client/blob/main/docs/typedoc/web-client/classes/WebClient.md) - Main client class for transaction operations
+- [TransactionRequest](https://github.com/0xMiden/miden-client/blob/main/docs/typedoc/web-client/classes/TransactionRequest.md) - Class representing transaction requests
+- [TransactionRequestBuilder](https://github.com/0xMiden/miden-client/blob/main/docs/typedoc/web-client/classes/TransactionRequestBuilder.md) - Builder class for creating transaction requests
+- [TransactionResult](https://github.com/0xMiden/miden-client/blob/main/docs/typedoc/web-client/classes/TransactionResult.md) - Class representing transaction execution results
+- [TransactionProver](https://github.com/0xMiden/miden-client/blob/main/docs/typedoc/web-client/classes/TransactionProver.md) - Class for transaction proving
+- [TransactionScript](https://github.com/0xMiden/miden-client/blob/main/docs/typedoc/web-client/classes/TransactionScript.md) - Class for defining transaction scripts
+- [NoteType](https://github.com/0xMiden/miden-client/blob/main/docs/typedoc/web-client/enumerations/NoteType.md) - Enumeration for note types (Private/Public)
+- [NoteAssets](https://github.com/0xMiden/miden-client/blob/main/docs/typedoc/web-client/classes/NoteAssets.md) - Class for defining note assets
+- [NoteMetadata](https://github.com/0xMiden/miden-client/blob/main/docs/typedoc/web-client/classes/NoteMetadata.md) - Class for defining note metadata
+- [FungibleAsset](https://github.com/0xMiden/miden-client/blob/main/docs/typedoc/web-client/classes/FungibleAsset.md) - Class for defining fungible assets
+- [Felt](https://github.com/0xMiden/miden-client/blob/main/docs/typedoc/web-client/classes/Felt.md) - Class for working with field elements
+- [FeltArray](https://github.com/0xMiden/miden-client/blob/main/docs/typedoc/web-client/classes/FeltArray.md) - Class for working with arrays of field elements
+- [NoteTag](https://github.com/0xMiden/miden-client/blob/main/docs/typedoc/web-client/classes/NoteTag.md) - Class for defining note tags
+- [NoteExecutionMode](https://github.com/0xMiden/miden-client/blob/main/docs/typedoc/web-client/classes/NoteExecutionMode.md) - Class for defining note execution modes
+- [NoteExecutionHint](https://github.com/0xMiden/miden-client/blob/main/docs/typedoc/web-client/classes/NoteExecutionHint.md) - Class for defining note execution hints
+- [OutputNotesArray](https://github.com/0xMiden/miden-client/blob/main/docs/typedoc/web-client/classes/OutputNotesArray.md) - Class for working with arrays of output notes
+- [NotesArray](https://github.com/0xMiden/miden-client/blob/main/docs/typedoc/web-client/classes/NotesArray.md) - Class for working with arrays of notes
 
-For a complete list of available classes and utilities, see the [SDK API Reference](https://github.com/0xMiden/miden-client/docs/typedoc/web-client/README.md). 
+For a complete list of available classes and utilities, see the [SDK API Reference](https://github.com/0xMiden/miden-client/blob/main/docs/typedoc/web-client/README.md). 

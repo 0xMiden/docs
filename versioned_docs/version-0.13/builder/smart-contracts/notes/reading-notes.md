@@ -21,7 +21,16 @@ use miden::active_note;
 
 ### Inputs
 
-Note inputs are custom `Felt` values set by the note creator. Use these to pass parameters to the note script (e.g., a target account ID, an expiration block height):
+Note inputs are custom `Felt` values set by the note creator (e.g., a target account ID, an expiration block height). The recommended way to access inputs is through the `#[note]` struct — fields are automatically deserialized from inputs:
+
+```rust
+#[note]
+struct MyNote {
+    target_account_id: AccountId,  // Deserialized from note inputs automatically
+}
+```
+
+See [Note Scripts](./note-scripts) for the full `#[note]` pattern. The low-level `active_note::get_inputs()` function is also available for advanced use cases:
 
 ```rust
 let inputs: Vec<Felt> = active_note::get_inputs();

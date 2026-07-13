@@ -1,5 +1,44 @@
 /* ==========================================
-   5) BREADCRUMBS
+   4.9) HEADING ANCHOR LINKS
+   A subtle mono "#" glyph that fades in when you hover the heading.
+   ========================================== */
+
+.theme-doc-markdown .hash-link {
+  margin-left: 0.375rem;
+  font-family: var(--font-mono);
+  font-weight: 400;
+  color: var(--color-muted);
+  text-decoration: none !important;
+  opacity: 0;
+  transform: translateX(-2px);
+  transition:
+    opacity var(--t-base) var(--ease-out-expo),
+    transform var(--t-base) var(--ease-out-expo),
+    color var(--t-fast) linear;
+}
+
+.theme-doc-markdown .hash-link::before {
+  content: "#";
+}
+
+.theme-doc-markdown h1:hover .hash-link,
+.theme-doc-markdown h2:hover .hash-link,
+.theme-doc-markdown h3:hover .hash-link,
+.theme-doc-markdown h4:hover .hash-link,
+.theme-doc-markdown h5:hover .hash-link,
+.theme-doc-markdown h6:hover .hash-link,
+.theme-doc-markdown .hash-link:focus-visible {
+  opacity: 0.7;
+  transform: translateX(0);
+}
+
+.theme-doc-markdown .hash-link:hover {
+  color: var(--color-brand);
+  opacity: 1 !important;
+}
+
+/* ==========================================
+   5) BREADCRUMBS — de-pilled, mono separators
    ========================================== */
 
 /* Remove original margin — the wrapper row controls spacing */
@@ -7,16 +46,42 @@
   margin-bottom: 0;
 }
 
-/* ThemeClassNames.docs.docBreadcrumbs */
+.theme-doc-breadcrumbs .breadcrumbs {
+  font-size: 13px;
+  gap: 0.25rem;
+}
+
+.theme-doc-breadcrumbs .breadcrumbs__item {
+  display: inline-flex;
+  align-items: center;
+}
+
 .theme-doc-breadcrumbs .breadcrumbs__link {
-  line-height: 150%;
-  border-radius: var(--radius-md);
-  padding: var(--ifm-menu-link-padding-horizontal)
-    var(--ifm-menu-link-padding-vertical);
+  line-height: 1.5;
+  padding: 2px 4px;
+  background: transparent !important;
+  border-radius: var(--radius-xs);
+  color: color-mix(in oklab, var(--color-muted) 92%, var(--color-text));
+  transition: color var(--t-fast) linear;
+}
+
+.theme-doc-breadcrumbs .breadcrumbs__link:hover {
+  color: var(--color-text);
+  text-decoration: none;
+}
+
+.theme-doc-breadcrumbs .breadcrumbs__item:not(:last-child)::after {
+  content: "/";
+  margin: 0 0.375rem;
+  font-family: var(--font-mono);
+  font-size: 12px;
+  color: color-mix(in oklab, var(--color-border-strong) 65%, var(--color-muted));
 }
 
 .theme-doc-breadcrumbs .breadcrumbs__item--active .breadcrumbs__link {
-  color: var(--ifm-color-primary);
+  color: var(--color-ink);
+  font-weight: 600;
+  background: transparent !important;
 }
 
 /* ==========================================
@@ -54,63 +119,70 @@
 }
 
 /* ==========================================
-   8) ALERTS (Admonitions)
+   8) ALERTS (Admonitions) — Callout aesthetic
+   Flush-left 3px accent bar, hairline border, subtle tinted surface
+   via color-mix. Matches src/components/mdx/Callout visually so
+   :::note / :::tip / :::warning and <Callout> look identical.
    ========================================== */
 
 .theme-admonition {
   display: flex;
-  align-items: flex-start; /* icon aligns with text top */
-  gap: 0.75rem; /* spacing between icon and text */
-  padding: 1rem 1.25rem;
-  font-size: var(--ifm-font-size-base);
+  align-items: flex-start;
+  gap: 0.75rem;
+  padding: 1rem 1.25rem 1rem 1rem;
+  font-size: 15px;
+  line-height: 1.6;
 }
 
-/* ThemeClassNames.common.admonition */
 .theme-admonition.alert {
-  --ifm-alert-background-color: var(--color-elevated);
-  --ifm-alert-border-color: var(--ifm-color-primary);
-  --ifm-alert-background-color-highlight: #fff;
+  --callout-accent: var(--color-muted);
+  --callout-surface: var(--color-surface);
 
+  position: relative;
   font-family: var(--font-sans);
-  border: 1px solid var(--color-elevated);
-  border-top: 5px solid var(--ifm-alert-border-color); /* top border accent */
-  border-left: none; /* disable default */
-  border-radius: var(--ifm-alert-border-radius);
+  border: 1px solid var(--color-border) !important;
+  border-radius: var(--radius-md);
+  background: var(--callout-surface) !important;
+  color: var(--color-text);
   box-shadow: none;
-  background: var(--ifm-alert-background-color);
-  color: var(--ifm-color-content);
-  /* padding: 1rem 1.25rem; */
+  overflow: hidden;
+}
+
+.theme-admonition.alert::before {
+  content: "";
+  position: absolute;
+  top: 0;
+  bottom: 0;
+  left: 0;
+  width: 3px;
+  background: var(--callout-accent);
 }
 
 [data-theme="dark"] .theme-admonition.alert {
-  --ifm-alert-background-color: #3f3f3f99;
-  --ifm-alert-background-color-highlight: #3f3f3f99;
-  background: #3f3f3f99;
+  background: var(--callout-surface) !important;
   color: var(--color-text);
-  border: 1px solid #3f3f3f99;
-  border-top: 5px solid var(--ifm-alert-border-color);
-  border-left: none;
+  border: 1px solid var(--color-border) !important;
 }
 
-/* NOTE */
+/* NOTE (default secondary) */
 .theme-admonition.alert--secondary {
-  --ifm-alert-border-color: var(--ifm-color-primary);
-  border-top-color: var(--ifm-color-primary);
+  --callout-accent: var(--color-muted);
 }
+
 /* TIP */
 .theme-admonition.alert--success {
-  --ifm-alert-background-color: var(--color-elevated);
-  border-top-color: var(--ifm-color-success) !important;
+  --callout-accent: var(--color-success);
+  --callout-surface: color-mix(in oklab, var(--color-success) 6%, var(--color-surface));
 }
+
 /* INFO / IMPORTANT */
 .theme-admonition.alert--info {
-  --ifm-alert-border-color: #1764a8;
-  border-top-color: #1764a8;
+  --callout-accent: var(--color-accent);
+  --callout-surface: color-mix(in oklab, var(--color-accent) 6%, var(--color-surface));
 }
 
 [data-theme="dark"] .theme-admonition.alert--info {
-  --ifm-alert-border-color: #7b9cff;
-  border-top-color: #7b9cff;
+  --callout-accent: #7b9cff;
 }
 
 [data-theme="dark"] .theme-admonition.alert--info .admonition-icon svg {
@@ -118,31 +190,30 @@
   fill: #7b9cff !important;
   stroke: #7b9cff !important;
 }
+
 /* WARNING */
 .theme-admonition.alert--warning {
-  --ifm-alert-border-color: var(--color-warning);
-  border-top-color: var(--color-warning);
+  --callout-accent: var(--color-warning);
+  --callout-surface: color-mix(in oklab, var(--color-warning) 8%, var(--color-surface));
 }
 
 /* DANGER */
 .theme-admonition.alert--danger {
-  --ifm-alert-border-color: var(--color-danger);
-  border-top-color: var(--color-danger);
+  --callout-accent: var(--color-danger);
+  --callout-surface: color-mix(in oklab, var(--color-danger) 7%, var(--color-surface));
 }
 
 .theme-admonition ul li::marker {
-  color: var(--ifm-color-primary);
+  color: var(--callout-accent);
 }
 
-/* Exclude list margins from alert blocks */
 .theme-admonition ul,
 .theme-admonition ol {
-  margin-top: 0 !important; /* Smaller margins for lists in alert blocks */
+  margin-top: 0 !important;
   margin-bottom: 0 !important;
-  padding-left: 1.5rem !important; /* Standard padding for lists in alerts */
+  padding-left: 1.5rem !important;
 }
 
-/* Nested lists in alert blocks should have no extra margin */
 .theme-admonition ul ul,
 .theme-admonition ol ol,
 .theme-admonition ul ol,
@@ -151,16 +222,65 @@
   margin-bottom: 0 !important;
 }
 
-/* VERSION BANNER */
-.theme-doc-version-banner {
-  --ifm-alert-background-color: var(--color-elevated);
-  --ifm-alert-border-color: var(--color-warning);
+/* Nested <details> inside an admonition or callout — smaller radius,
+   subtle border so it reads as a child element, not another card. */
+.theme-admonition details {
+  border: 1px solid var(--color-border);
+  border-radius: var(--radius-sm);
+  margin: 0.5rem 0 0 !important;
+  background: var(--color-bg);
+}
 
+.theme-admonition details > summary {
+  padding: 0.5rem 0.75rem;
+  font-size: 10px;
+  background: transparent;
+}
+
+.theme-admonition details > :not(summary) {
+  padding: 0.75rem;
+}
+
+/* Admonition title row */
+.theme-admonition .admonitionHeading_Gvgb,
+.theme-admonition [class*="admonitionHeading"] {
   font-family: var(--font-sans);
-  border: 1px solid var(--color-elevated);
-  border-top: 6px solid var(--ifm-alert-border-color);
-  border-left: none; /* disable default */
-  color: var(--ifm-color-content);
+  font-size: 14px;
+  font-weight: 600;
+  color: var(--color-text);
+  letter-spacing: -0.005em;
+  margin-bottom: 0.25rem;
+  text-transform: none;
+}
+
+/* VERSION BANNER — info-variant Callout look */
+.theme-doc-version-banner {
+  --callout-accent: var(--color-accent);
+  --callout-surface: color-mix(in oklab, var(--color-accent) 6%, var(--color-surface));
+
+  position: relative;
+  font-family: var(--font-sans);
+  border: 1px solid var(--color-border) !important;
+  border-radius: var(--radius-md);
+  background: var(--callout-surface) !important;
+  color: var(--color-text) !important;
+  padding: 1rem 1.25rem 1rem 1rem;
+  margin: 1rem 0 1.5rem;
+  overflow: hidden;
+}
+
+.theme-doc-version-banner::before {
+  content: "";
+  position: absolute;
+  top: 0;
+  bottom: 0;
+  left: 0;
+  width: 3px;
+  background: var(--callout-accent);
+}
+
+[data-theme="dark"] .theme-doc-version-banner {
+  --callout-accent: #7b9cff;
 }
 
 /* ==========================================
@@ -185,11 +305,37 @@
    10) CARDS
    ========================================== */
 
+/* Match src/components/mdx/Card — hairline border, subtle shadow,
+   ember border + lift on hover. Applied to Docusaurus DocCard and any
+   other `.card`-class element so the aesthetic is consistent with the
+   MDX-authored <Card> grids. */
 .card {
-  border-radius: var(--ifm-card-border-radius);
-  box-shadow: var(--ifm-card-box-shadow);
-  border: 1px solid var(--ifm-border-color);
-  background: var(--ifm-background-surface-color);
+  border-radius: var(--radius-lg);
+  border: 1px solid var(--color-border);
+  background: var(--color-card-bg);
+  box-shadow: none;
+  transition:
+    border-color var(--t-base) var(--ease-out-expo),
+    box-shadow var(--t-base) var(--ease-out-expo),
+    transform var(--t-base) var(--ease-out-expo),
+    background var(--t-base) var(--ease-out-expo);
+}
+
+.card:hover {
+  border-color: var(--color-border-strong);
+  background: var(--color-card-bg-hover);
+  transform: translateY(-2px);
+  box-shadow: var(--shadow-card-hover);
+}
+
+.card:focus-visible {
+  outline: none;
+  box-shadow: var(--shadow-focus);
+}
+
+.card:active {
+  transform: translateY(0);
+  transition-duration: var(--t-fast);
 }
 
 /* ==========================================
@@ -207,94 +353,641 @@
   padding-top: 0 !important;
 }
 
+.theme-doc-markdown .row + .row {
+  margin-top: 1rem;
+}
+
+/* ==========================================
+   10.2) MERMAID DIAGRAMS
+   ========================================== */
+
+/* ---- Container ---- */
+.theme-doc-markdown .docusaurus-mermaid-container {
+  --_mermaid-glow: var(--ifm-color-primary);
+  margin-top: 3rem;
+  margin-bottom: 3rem;
+  padding: 2.5rem 2rem;
+  border-radius: 20px;
+  border: 1px solid color-mix(in oklab, var(--_mermaid-glow) 20%, transparent);
+  background:
+    radial-gradient(
+      ellipse 80% 60% at 20% 10%,
+      color-mix(in oklab, var(--_mermaid-glow) 10%, transparent),
+      transparent 70%
+    ),
+    radial-gradient(
+      ellipse 60% 50% at 85% 90%,
+      color-mix(in oklab, var(--_mermaid-glow) 6%, transparent),
+      transparent 70%
+    ),
+    var(--color-bg);
+  box-shadow:
+    inset 0 1px 0 color-mix(in oklab, #fff 8%, transparent),
+    0 0 0 1px color-mix(in oklab, var(--_mermaid-glow) 8%, transparent),
+    0 2px 4px rgba(0, 0, 0, 0.03),
+    0 8px 20px rgba(0, 0, 0, 0.04),
+    0 0 60px -10px color-mix(in oklab, var(--_mermaid-glow) 10%, transparent);
+  backdrop-filter: blur(16px) saturate(1.3);
+  -webkit-backdrop-filter: blur(16px) saturate(1.3);
+  overflow-x: auto;
+  position: relative;
+}
+
+/* Top-edge glow bar */
+.theme-doc-markdown .docusaurus-mermaid-container::before {
+  content: "";
+  position: absolute;
+  top: -1px;
+  left: 15%;
+  right: 15%;
+  height: 2px;
+  background: linear-gradient(
+    90deg,
+    transparent,
+    color-mix(in oklab, var(--_mermaid-glow) 50%, transparent) 30%,
+    var(--_mermaid-glow) 50%,
+    color-mix(in oklab, var(--_mermaid-glow) 50%, transparent) 70%,
+    transparent
+  );
+  border-radius: 2px;
+  filter: blur(0.5px);
+}
+
+/* Soft bloom behind the top bar */
+.theme-doc-markdown .docusaurus-mermaid-container::after {
+  content: "";
+  position: absolute;
+  top: -4px;
+  left: 20%;
+  right: 20%;
+  height: 12px;
+  background: radial-gradient(
+    ellipse at 50% 0%,
+    color-mix(in oklab, var(--_mermaid-glow) 18%, transparent),
+    transparent 80%
+  );
+  pointer-events: none;
+}
+
+/* ---- Dark mode container ---- */
+[data-theme="dark"] .theme-doc-markdown .docusaurus-mermaid-container {
+  border-color: color-mix(in oklab, var(--_mermaid-glow) 25%, transparent);
+  background:
+    radial-gradient(
+      ellipse 80% 60% at 20% 10%,
+      color-mix(in oklab, var(--_mermaid-glow) 12%, transparent),
+      transparent 70%
+    ),
+    radial-gradient(
+      ellipse 60% 50% at 85% 90%,
+      color-mix(in oklab, var(--_mermaid-glow) 8%, transparent),
+      transparent 70%
+    ),
+    var(--color-bg);
+  box-shadow:
+    inset 0 1px 0 color-mix(in oklab, #fff 4%, transparent),
+    0 0 0 1px color-mix(in oklab, var(--_mermaid-glow) 12%, transparent),
+    0 2px 4px rgba(0, 0, 0, 0.2),
+    0 8px 20px rgba(0, 0, 0, 0.15),
+    0 0 80px -10px color-mix(in oklab, var(--_mermaid-glow) 15%, transparent);
+}
+
+[data-theme="dark"] .theme-doc-markdown .docusaurus-mermaid-container::before {
+  background: linear-gradient(
+    90deg,
+    transparent,
+    color-mix(in oklab, var(--_mermaid-glow) 60%, transparent) 30%,
+    var(--_mermaid-glow) 50%,
+    color-mix(in oklab, var(--_mermaid-glow) 60%, transparent) 70%,
+    transparent
+  );
+}
+
+[data-theme="dark"] .theme-doc-markdown .docusaurus-mermaid-container::after {
+  background: radial-gradient(
+    ellipse at 50% 0%,
+    color-mix(in oklab, var(--_mermaid-glow) 25%, transparent),
+    transparent 80%
+  );
+}
+
+/* Center SVG */
+.theme-doc-markdown .docusaurus-mermaid-container svg {
+  display: block;
+  margin: 0 auto;
+  overflow: visible;
+}
+
+/* ---- Flowchart nodes ---- */
+.docusaurus-mermaid-container .node rect,
+.docusaurus-mermaid-container .node polygon,
+.docusaurus-mermaid-container .node circle {
+  fill: color-mix(in oklab, var(--_mermaid-glow) 12%, var(--color-surface)) !important;
+  stroke: color-mix(in oklab, var(--_mermaid-glow) 35%, transparent) !important;
+  stroke-width: 1.5px !important;
+  filter:
+    drop-shadow(0 1px 2px color-mix(in oklab, var(--_mermaid-glow) 10%, transparent))
+    drop-shadow(0 4px 8px color-mix(in oklab, var(--_mermaid-glow) 6%, transparent));
+}
+
+.docusaurus-mermaid-container .nodeLabel {
+  color: var(--color-text) !important;
+  font-family: var(--font-sans) !important;
+  font-weight: 300 !important;
+  letter-spacing: -0.01em !important;
+}
+
+/* ---- Subgraph clusters ---- */
+.docusaurus-mermaid-container .cluster {
+  overflow: visible !important;
+}
+
+.docusaurus-mermaid-container .cluster rect {
+  fill: color-mix(in oklab, var(--_mermaid-glow) 5%, var(--color-bg)) !important;
+  stroke: color-mix(in oklab, var(--_mermaid-glow) 18%, transparent) !important;
+  stroke-width: 1px !important;
+  stroke-dasharray: none !important;
+  filter: drop-shadow(0 2px 8px color-mix(in oklab, var(--_mermaid-glow) 6%, transparent));
+}
+
+.docusaurus-mermaid-container .cluster-label .nodeLabel {
+  font-family: var(--font-sans) !important;
+  font-weight: 400 !important;
+  font-style: normal !important;
+  color: color-mix(in oklab, var(--_mermaid-glow) 75%, var(--color-text)) !important;
+  letter-spacing: 0.06em !important;
+  text-transform: none !important;
+}
+
+/* Ensure no italic on cluster title elements */
+.docusaurus-mermaid-container .cluster-label,
+.docusaurus-mermaid-container .cluster-label span,
+.docusaurus-mermaid-container .cluster-label p {
+  font-style: normal !important;
+}
+
+/* ---- Edges ---- */
+.docusaurus-mermaid-container .flowchart-link,
+.docusaurus-mermaid-container .edge-pattern-solid {
+  stroke: color-mix(in oklab, var(--_mermaid-glow) 40%, var(--color-muted)) !important;
+  stroke-width: 1.5px !important;
+}
+
+.docusaurus-mermaid-container .edge-pattern-dotted {
+  stroke: color-mix(in oklab, var(--_mermaid-glow) 30%, var(--color-muted)) !important;
+}
+
+/* Edge labels */
+.docusaurus-mermaid-container .edgeLabel {
+  background-color: transparent !important;
+  color: color-mix(in oklab, var(--_mermaid-glow) 60%, var(--color-muted)) !important;
+  font-family: var(--font-sans) !important;
+  font-weight: 300 !important;
+  font-style: normal !important;
+  letter-spacing: -0.01em !important;
+}
+
+.docusaurus-mermaid-container .edgeLabel .edgeLabel {
+  background-color: transparent !important;
+}
+
+/* Arrowheads */
+.docusaurus-mermaid-container .marker {
+  fill: color-mix(in oklab, var(--_mermaid-glow) 60%, var(--color-muted)) !important;
+  stroke: none !important;
+}
+
+/* ---- Sequence diagrams ---- */
+.docusaurus-mermaid-container .actor {
+  fill: color-mix(in oklab, var(--_mermaid-glow) 12%, var(--color-surface)) !important;
+  stroke: color-mix(in oklab, var(--_mermaid-glow) 35%, transparent) !important;
+  stroke-width: 1.5px !important;
+  filter:
+    drop-shadow(0 1px 2px color-mix(in oklab, var(--_mermaid-glow) 10%, transparent))
+    drop-shadow(0 4px 8px color-mix(in oklab, var(--_mermaid-glow) 6%, transparent));
+}
+
+.docusaurus-mermaid-container text.actor {
+  font-family: var(--font-sans) !important;
+  fill: var(--color-text) !important;
+  font-weight: 300 !important;
+  letter-spacing: -0.02em !important;
+}
+
+.docusaurus-mermaid-container .messageLine0,
+.docusaurus-mermaid-container .messageLine1 {
+  stroke: color-mix(in oklab, var(--_mermaid-glow) 35%, var(--color-muted)) !important;
+  stroke-width: 1.5px !important;
+}
+
+.docusaurus-mermaid-container .messageText {
+  font-family: var(--font-sans) !important;
+  fill: var(--color-text) !important;
+  font-weight: 300 !important;
+  letter-spacing: -0.01em !important;
+}
+
+.docusaurus-mermaid-container .loopLine {
+  stroke: color-mix(in oklab, var(--_mermaid-glow) 20%, transparent) !important;
+}
+
+.docusaurus-mermaid-container .activation0,
+.docusaurus-mermaid-container .activation1,
+.docusaurus-mermaid-container .activation2 {
+  fill: color-mix(in oklab, var(--_mermaid-glow) 15%, var(--color-surface)) !important;
+  stroke: color-mix(in oklab, var(--_mermaid-glow) 30%, transparent) !important;
+}
+
+/* ---- Dark mode element overrides ---- */
+[data-theme="dark"] .docusaurus-mermaid-container .node rect,
+[data-theme="dark"] .docusaurus-mermaid-container .node polygon,
+[data-theme="dark"] .docusaurus-mermaid-container .node circle {
+  fill: color-mix(in oklab, var(--_mermaid-glow) 15%, var(--color-surface)) !important;
+  stroke: color-mix(in oklab, var(--_mermaid-glow) 40%, transparent) !important;
+  filter:
+    drop-shadow(0 1px 3px color-mix(in oklab, var(--_mermaid-glow) 15%, transparent))
+    drop-shadow(0 4px 12px color-mix(in oklab, var(--_mermaid-glow) 10%, transparent));
+}
+
+[data-theme="dark"] .docusaurus-mermaid-container .cluster rect {
+  fill: color-mix(in oklab, var(--_mermaid-glow) 8%, var(--color-bg)) !important;
+  stroke: color-mix(in oklab, var(--_mermaid-glow) 22%, transparent) !important;
+  filter: drop-shadow(0 2px 10px color-mix(in oklab, var(--_mermaid-glow) 10%, transparent));
+}
+
+[data-theme="dark"] .docusaurus-mermaid-container .actor {
+  fill: color-mix(in oklab, var(--_mermaid-glow) 15%, var(--color-surface)) !important;
+  stroke: color-mix(in oklab, var(--_mermaid-glow) 40%, transparent) !important;
+  filter:
+    drop-shadow(0 1px 3px color-mix(in oklab, var(--_mermaid-glow) 15%, transparent))
+    drop-shadow(0 4px 12px color-mix(in oklab, var(--_mermaid-glow) 10%, transparent));
+}
+
+[data-theme="dark"] .docusaurus-mermaid-container .edgeLabel {
+  color: color-mix(in oklab, var(--_mermaid-glow) 65%, var(--color-muted)) !important;
+}
+
 /* ==========================================
    11) TABLES
    ========================================== */
 
-/* Apply border radius to the entire table */
-table {
-  border-radius: 0.357rem; /* 5px converted to rem */
+/* Card-aesthetic tables: hairline border, monospace uppercase headers,
+   subtle row hover. Scoped to doc markdown so other tables (admin UI,
+   mermaid) are untouched.
+
+   width + min-width at 100% forces the table to always fill its
+   container instead of shrinking to content — kills the "whitespace on
+   the right" effect on tables whose columns are all content-sized
+   (e.g. concept/part-number tables where col-3 is a single digit).
+   table-layout: auto still lets wide columns expand into the extra
+   width proportionally. */
+.theme-doc-markdown table,
+article table {
+  display: table;
+  width: 100%;
+  min-width: 100%;
+  table-layout: auto;
+  border: 1px solid var(--color-border);
+  border-radius: var(--radius-lg);
+  background: var(--color-card-bg);
+  border-collapse: separate;
+  border-spacing: 0;
+  margin: 1.5rem 0;
+  box-shadow: var(--shadow-sm);
+  overflow: hidden; /* clip content at the rounded corners */
 }
 
-tbody tr {
-  border-top: none;
-  background: var(--ifm-background-surface-color);
+/* Narrow trailing columns (common pattern — "Part" numbers, short
+   badges) must not be allowed to absorb the leftover distribution.
+   Letting the middle (usually description) column take it keeps the
+   visual weight balanced. */
+.theme-doc-markdown table th:not(:first-child):not(:last-child),
+.theme-doc-markdown table td:not(:first-child):not(:last-child),
+article table th:not(:first-child):not(:last-child),
+article table td:not(:first-child):not(:last-child) {
+  width: auto;
+}
+
+.theme-doc-markdown table th:last-child,
+.theme-doc-markdown table td:last-child,
+article table th:last-child,
+article table td:last-child {
+  white-space: nowrap;
+}
+
+.theme-doc-markdown thead,
+article thead {
+  background: var(--color-surface);
+}
+
+.theme-doc-markdown th,
+article th {
+  font-family: var(--font-eyebrow);
+  font-size: 11px;
+  font-weight: 500;
+  letter-spacing: 0.08em;
+  text-transform: uppercase;
+  color: var(--color-muted);
+  padding: 0.625rem 1rem;
+  text-align: left;
+  border: none !important;
+  background: transparent;
+}
+
+.theme-doc-markdown td,
+article td {
+  padding: 0.75rem 1rem;
+  font-size: 14px;
+  line-height: 1.55;
+  color: var(--color-text);
+  border-top: 1px solid var(--color-border);
+  border-left: none !important;
+  border-right: none !important;
+  border-bottom: none !important;
+  background: transparent;
+}
+
+.theme-doc-markdown tbody tr,
+article tbody tr {
+  background: transparent;
+  transition: background var(--t-fast) linear;
+  border: none !important;
+}
+
+.theme-doc-markdown tbody tr:hover,
+article tbody tr:hover {
+  background: var(--color-surface);
+}
+
+/* Inline code inside tables stays legible */
+.theme-doc-markdown td code,
+article td code {
+  font-size: 13px;
+  padding: 1px 4px;
+}
+
+@media (max-width: 768px) {
+  .theme-doc-markdown table,
+  article table {
+    display: block;
+    max-width: 100%;
+    overflow-x: auto;
+    overflow-y: hidden;
+    -webkit-overflow-scrolling: touch;
+  }
 }
 
 /* ==========================================
    15) VERSION INDICATOR STYLING
    ========================================== */
 
-/* Style the version indicator that appears above page content */
+/* Style the version indicator (v0.13 pill) above page content.
+   Uses the same soft-badge look as <Badge tone="brand" variant="soft">. */
 .theme-doc-version-badge {
-  font-size: 0.75rem !important;
-  font-weight: 600 !important;
-  color: var(--ifm-color-primary) !important;
+  display: inline-flex !important;
+  align-items: center !important;
+  font-family: var(--font-mono) !important;
+  font-size: 10px !important;
+  font-weight: 500 !important;
+  letter-spacing: 0.08em !important;
+  text-transform: uppercase !important;
+  color: var(--color-brand) !important;
   background: color-mix(
     in oklab,
-    var(--ifm-color-primary) 12%,
+    var(--color-brand) 10%,
     transparent
   ) !important;
   border: 1px solid
-    color-mix(in oklab, var(--ifm-color-primary) 30%, transparent) !important;
-  border-radius: var(--radius-md) !important;
-  /* line-height: 0 !important; */
-  padding-top: 0.37rem !important;
-  display: inline-block !important;
-  text-transform: uppercase !important;
-  letter-spacing: 0.05em !important;
-  margin-top: 0.571rem !important;
-  margin-bottom: 0.571rem !important;
+    color-mix(in oklab, var(--color-brand) 22%, transparent) !important;
+  border-radius: var(--radius-pill) !important;
+  padding: 2px 8px !important;
+  margin: 0.5rem 0 0.75rem !important;
 }
 
 [data-theme="dark"] .theme-doc-version-badge {
-  background: #3f3f3f99 !important;
-  border-color: var(--ifm-color-primary) !important;
-  color: var(--ifm-color-primary) !important;
+  color: var(--color-brand) !important;
+  background: color-mix(
+    in oklab,
+    var(--color-brand) 14%,
+    transparent
+  ) !important;
+  border-color: color-mix(
+    in oklab,
+    var(--color-brand) 32%,
+    transparent
+  ) !important;
 }
 
 /* ==========================================
-   16) LOCAL SEARCH STYLING
+   16) LOCAL SEARCH — modal + results
+   Card aesthetic: hairline border, radius-lg, muted subdued header,
+   mono eyebrow per section, ember active highlight on the selected
+   result. Matches <Callout>/<Card> visual language.
    ========================================== */
 
-/* Local search modal styling - integrate with design system */
-.aa-Panel {
-  border-radius: var(--radius-md);
-  box-shadow: var(--shadow-lg);
+/* Full-screen backdrop behind the modal */
+.aa-DetachedOverlay {
+  background: color-mix(in oklab, var(--color-bg) 55%, rgba(0, 0, 0, 0.55));
+  backdrop-filter: saturate(1.2) blur(8px);
+  -webkit-backdrop-filter: saturate(1.2) blur(8px);
+  animation: fade-in var(--t-base) var(--ease-out-expo) both;
+}
+
+/* Modal container — hairline bordered card */
+.aa-DetachedContainer {
   border: 1px solid var(--color-border);
+  border-radius: var(--radius-lg);
+  background: var(--color-bg);
+  box-shadow: var(--shadow-lg);
+  overflow: hidden;
+  animation: fade-up var(--t-base) var(--ease-out-expo) both;
+}
+
+/* Top form row — search input + cancel button */
+.aa-DetachedFormContainer {
+  padding: 0.75rem 0.875rem;
+  border-bottom: 1px solid var(--color-border);
+  background: var(--color-surface);
+  gap: 0.625rem;
+}
+
+/* Results panel (inside the detached modal) */
+.aa-Panel,
+.aa-DetachedContainer .aa-Panel {
+  border: none;
+  border-radius: 0;
+  box-shadow: none;
   background: var(--color-bg);
 }
 
+/* Search input chrome */
 .aa-Form {
   border-radius: var(--radius-md);
-  background: var(--color-surface);
+  background: var(--color-bg);
   border: 1px solid var(--color-border);
+  min-height: 38px;
+  transition: border-color var(--t-base) var(--ease-out-expo);
+}
+
+.aa-Form:focus-within {
+  border-color: var(--color-brand);
+  box-shadow: var(--shadow-focus);
+}
+
+.aa-InputWrapper,
+.aa-InputWrapperPrefix,
+.aa-InputWrapperSuffix {
+  padding: 0 0.5rem;
+}
+
+.aa-SubmitButton,
+.aa-SubmitIcon {
+  color: var(--color-muted);
 }
 
 .aa-Input {
   font-family: var(--font-sans);
-  font-size: var(--font-size-base);
+  font-size: 14px;
+  color: var(--color-text);
+  background: transparent;
+  padding: 0.375rem 0.5rem;
+}
+
+.aa-Input::placeholder {
+  color: var(--color-muted);
+}
+
+/* Clear-input ("x") + cancel buttons */
+.aa-ClearButton,
+.aa-DetachedCancelButton {
+  font-family: var(--font-sans);
+  font-size: 13px;
+  color: var(--color-muted);
+  background: transparent;
+  border: 1px solid var(--color-border);
+  border-radius: var(--radius-md);
+  padding: 0.375rem 0.75rem;
+  transition:
+    color var(--t-base) var(--ease-out-expo),
+    border-color var(--t-base) var(--ease-out-expo),
+    background var(--t-base) var(--ease-out-expo);
+}
+
+.aa-ClearButton:hover,
+.aa-DetachedCancelButton:hover {
+  color: var(--color-text);
+  border-color: var(--color-border-strong);
+  background: var(--color-surface);
+}
+
+/* Source / section headers ("Get Started", "Builder", etc.) */
+.aa-SourceHeader,
+.aa-SourceHeaderTitle {
+  font-family: var(--font-eyebrow);
+  font-size: 11px;
+  font-weight: 500;
+  letter-spacing: 0.08em;
+  text-transform: uppercase;
+  color: var(--color-muted);
+  padding: 0.5rem 0.875rem 0.25rem;
+  border-top: 1px solid var(--color-border);
+}
+
+.aa-SourceHeader:first-child,
+.aa-List > li:first-child .aa-SourceHeader {
+  border-top: none;
+}
+
+.aa-SourceHeaderLine {
+  display: none;
+}
+
+/* Result list rows */
+.aa-List {
+  padding: 0.25rem 0.5rem 0.5rem;
+  list-style: none;
+  margin: 0;
+}
+
+.aa-Item {
+  display: flex;
+  align-items: center;
+  gap: 0.625rem;
+  padding: 0.5rem 0.625rem;
+  border-radius: var(--radius-md);
+  color: var(--color-text);
+  border: 1px solid transparent;
+  transition:
+    background var(--t-fast) var(--ease-out-expo),
+    border-color var(--t-fast) var(--ease-out-expo);
+}
+
+.aa-Item[aria-selected="true"],
+.aa-Item:hover {
+  background: var(--color-surface);
+  border-color: var(--color-border);
+}
+
+.aa-Item[aria-selected="true"] {
+  border-color: var(--color-brand);
+  background: color-mix(in oklab, var(--color-brand) 6%, var(--color-surface));
+}
+
+.aa-ItemContentTitle,
+.aa-ItemContent mark {
+  font-family: var(--font-sans);
+  font-weight: 600;
   color: var(--color-text);
   background: transparent;
 }
 
-.aa-Item {
-  border-radius: var(--radius-md);
-  color: var(--color-text);
-}
-
-.aa-Item[aria-selected="true"] {
-  background: var(--color-surface);
-}
-
-.aa-ItemContentTitle {
-  font-family: var(--font-sans);
-  font-weight: 600;
-  color: var(--color-text);
+.aa-ItemContent mark {
+  color: var(--color-brand);
+  font-weight: 700;
 }
 
 .aa-ItemContentDescription {
   font-family: var(--font-sans);
+  font-size: 12.5px;
+  color: var(--color-muted);
+  margin-top: 2px;
+}
+
+.aa-ItemContent {
+  min-width: 0;
+  flex: 1;
+}
+
+.aa-ItemIcon {
+  color: var(--color-muted);
+  width: 18px;
+  height: 18px;
+  opacity: 0.9;
+}
+
+.aa-ItemLink {
+  color: inherit;
+  text-decoration: none !important;
+}
+
+/* Footer ("↵" to select, "esc" to close) */
+.aa-DetachedFooter,
+.aa-DetachedSearchButtonFooter {
+  font-family: var(--font-mono);
+  font-size: 11px;
+  letter-spacing: 0.04em;
+  color: var(--color-muted);
+  padding: 0.5rem 0.875rem;
+  border-top: 1px solid var(--color-border);
+  background: var(--color-surface);
+}
+
+/* Empty / no-results state */
+.aa-NoResults,
+.aa-Panel--empty {
+  padding: 1.5rem 0.875rem;
+  text-align: center;
+  font-size: 13px;
   color: var(--color-muted);
 }
 
@@ -304,13 +997,14 @@ tbody tr {
 
 /* Detached mode search button (pill shape) */
 .aa-DetachedSearchButton {
-  min-width: 200px;
-  border-radius: 2rem;
-  padding: 0 12px;
-  height: 36px;
-  background: var(--ifm-background-surface-color);
-  border: 1px solid var(--ifm-border-color);
-  transition: border-color 0.2s ease, background 0.2s ease;
+  min-width: 220px;
+  border-radius: var(--radius-pill);
+  padding: 0 8px 0 12px;
+  height: 32px;
+  background: var(--color-surface);
+  border: 1px solid var(--color-border);
+  transition: border-color var(--t-base) var(--ease-out-expo),
+              background var(--t-base) var(--ease-out-expo);
   display: flex;
   align-items: center;
   gap: 8px;
@@ -318,21 +1012,21 @@ tbody tr {
 }
 
 .aa-DetachedSearchButton:hover {
-  border-color: var(--ifm-color-emphasis-400);
-  background: var(--ifm-hover-overlay);
+  border-color: var(--color-border-strong);
+  background: var(--color-surface-hover);
 }
 
 /* Search icon */
 .aa-DetachedSearchButtonIcon {
-  width: 16px;
-  height: 16px;
-  color: var(--ifm-color-emphasis-600);
+  width: 14px;
+  height: 14px;
+  color: var(--color-muted);
 }
 
 /* Placeholder text */
 .aa-DetachedSearchButtonPlaceholder {
-  font-size: 0.875rem;
-  color: var(--ifm-color-emphasis-500);
+  font-size: 13px;
+  color: var(--color-muted);
 }
 
 /* Keyboard shortcut keys container */
@@ -342,20 +1036,31 @@ tbody tr {
   margin-left: auto;
 }
 
-/* Individual key styling */
+/* Individual keycap — mono, hairline border */
 .aa-DetachedSearchButtonKey {
   display: inline-flex;
   align-items: center;
   justify-content: center;
-  min-width: 20px;
-  padding: 2px 6px;
-  font-size: 0.7rem;
-  font-family: var(--font-sans);
-  color: var(--ifm-color-emphasis-500);
-  background: var(--ifm-background-color);
-  border: 1px solid var(--ifm-border-color);
-  border-radius: 4px;
-  box-shadow: 0 1px 0 var(--ifm-border-color);
+  min-width: 22px;
+  height: 22px;
+  padding: 0 6px;
+  font-size: 12px;
+  font-weight: 500;
+  font-family: var(--font-mono);
+  letter-spacing: 0.04em;
+  color: var(--color-text);
+  background: var(--color-bg);
+  border: 1px solid var(--color-border-strong);
+  border-radius: var(--radius-xs);
+  box-shadow: inset 0 -1px 0 var(--color-border-strong);
+  transition:
+    color var(--t-fast) var(--ease-out-expo),
+    border-color var(--t-fast) var(--ease-out-expo);
+}
+
+.aa-DetachedSearchButton:hover .aa-DetachedSearchButtonKey {
+  color: var(--color-brand);
+  border-color: color-mix(in oklab, var(--color-brand) 35%, var(--color-border));
 }
 
 /* Hide shortcut keys on mobile */
