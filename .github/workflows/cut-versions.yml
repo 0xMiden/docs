@@ -323,6 +323,10 @@ jobs:
           VERSION="${{ steps.manifest.outputs.version_label }}"
           echo "Creating Docusaurus version: $VERSION"
           npm run docusaurus -- docs:version "$VERSION"
+          # Freeze resolvable root-absolute links to their new version by making
+          # them relative inside the snapshot. This keeps authored links such as
+          # /reference/protocol/... from drifting to a newer stable release.
+          node scripts/rebase-ingested-links.mjs "versioned_docs/version-$VERSION"
 
       # CRITICAL: Clean up docs/ to maintain canonical-source architecture
       # docs/ must only contain authored content (builder/, reference/ landing pages)
