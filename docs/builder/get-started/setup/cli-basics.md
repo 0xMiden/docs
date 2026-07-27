@@ -125,7 +125,7 @@ Request tokens from the public testnet faucet:
 miden mint --target-account <ACCOUNT_ID> --amount 1000
 ```
 
-This sends a mint request to the [public testnet faucet](https://faucet-api.testnet.miden.io) and automatically consumes the resulting note, depositing the tokens into your account.
+This sends a mint request to the [public testnet faucet](https://faucet.testnet.miden.io/) and automatically consumes the resulting note, depositing the tokens into your account.
 
 Display your balance:
 
