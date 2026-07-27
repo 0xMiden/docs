@@ -10,6 +10,11 @@ import { join } from "path";
 const releaseManifestPath = join(__dirname, ".release", "release-manifest.yml");
 const releaseManifest = parseYaml(readFileSync(releaseManifestPath, "utf8"));
 const nextVersion = releaseManifest.next_version;
+const stableVersion = (
+  JSON.parse(
+    readFileSync(join(__dirname, "versions.json"), "utf8"),
+  ) as string[]
+)[0];
 
 const categoryIndexAutogenDirs = new Set([
   "builder/get-started",
@@ -110,6 +115,17 @@ const config: Config = {
         // This ensures redirects are only created for paths that exist
         createRedirects(existingPath: string) {
           const redirects: string[] = [];
+
+          // Docusaurus serves the newest stable release without a version prefix.
+          // Give the migration guide's v0.15 asset reference an explicit versioned
+          // alias before it becomes a naturally versioned route at the next cut.
+          if (
+            stableVersion &&
+            (existingPath === "/reference/protocol/asset" ||
+              existingPath === "/reference/protocol/asset/")
+          ) {
+            redirects.push(`/${stableVersion}${existingPath}`);
+          }
 
           // Builder section: redirect old root-level paths to new /builder/ paths
           if (existingPath === "/builder" || existingPath === "/builder/") {
