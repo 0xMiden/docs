@@ -80,8 +80,9 @@ jobs:
           const read = (p) => fs.existsSync(p) ? fs.readFileSync(p, 'utf8') : '';
           const m = YAML.parse(read(path) || '{}') || {};
 
-          // Prefer manual inputs if provided; else manifest; else fallback to "main"
-          const getRef = (input, manifestVal) => input && input.trim() ? input.trim() : (manifestVal || 'main');
+          // Prefer manual inputs, then the manifest, then each repository's development branch.
+          const getRef = (input, manifestVal, fallback = 'main') =>
+            input && input.trim() ? input.trim() : (manifestVal || fallback);
 
           const inputs = {
             version_label: process.env.INPUT_VERSION_LABEL || ''
@@ -92,7 +93,7 @@ jobs:
           // Build outputs
           const out = {
             version_label: inputs.version_label || (m.version || '').trim(),
-            miden_node_ref:      getRef(process.env.INPUT_MIDEN_NODE_REF,      refs['node']),
+            miden_node_ref:      getRef(process.env.INPUT_MIDEN_NODE_REF,      refs['node'], 'next'),
             miden_vm_ref:        getRef(process.env.INPUT_MIDEN_VM_REF,        refs['miden-vm']),
             miden_base_ref:      getRef(process.env.INPUT_MIDEN_BASE_REF,      refs['protocol']),
             miden_client_ref:    getRef(process.env.INPUT_MIDEN_CLIENT_REF,    refs['miden-client']),
