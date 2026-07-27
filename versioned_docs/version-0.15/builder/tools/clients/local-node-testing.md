@@ -72,7 +72,7 @@ make compose-genesis
 make compose-up
 ```
 
-For the full node operator workflow, see the [local network development guide](../../../reference/node/local-network-development.md).
+For the full node operator workflow, see the [local network development guide](../../../reference/node/local-network-development).
 
 ## Export the genesis account
 

@@ -211,6 +211,15 @@ jobs:
             echo "Synced compiler → docs/reference/compiler"
           fi
 
+          # Rebase root-absolute internal links before snapshotting the release.
+          # Ingested reference sections are authored as standalone sites, so links
+          # such as "/full-node/installation" need to become relative links before
+          # docs:version freezes them under a versioned route.
+          for section in protocol miden-vm node compiler; do
+            [ -d "docs/reference/$section" ] || continue
+            node scripts/rebase-ingested-links.mjs "docs/reference/$section"
+          done
+
           # Builder docs → docs/builder/*
           # Sync tutorials into tutorials — selective ingest.
           # rust-compiler/, index.md, miden-bank/index.md, recipes/_category_.json,
@@ -255,6 +264,9 @@ jobs:
             if [ -d "vendor/tutorials/docs/src/img" ]; then
               cp -r vendor/tutorials/docs/src/img docs/builder/tutorials/recipes/
             fi
+            # Rebase links whose source paths changed when mounted under the
+            # docs IA (recipe depth and Miden Bank card targets).
+            node scripts/fix-ingested-tutorial-links.mjs docs/builder/tutorials
             # Restore locally-authored files over vendor versions.
             git checkout HEAD -- docs/builder/tutorials/miden-bank/index.md 2>/dev/null || true
             git checkout HEAD -- docs/builder/tutorials/recipes/_category_.json 2>/dev/null || true
@@ -311,6 +323,10 @@ jobs:
           VERSION="${{ steps.manifest.outputs.version_label }}"
           echo "Creating Docusaurus version: $VERSION"
           npm run docusaurus -- docs:version "$VERSION"
+          # Freeze resolvable root-absolute links to their new version by making
+          # them relative inside the snapshot. This keeps authored links such as
+          # /reference/protocol/... from drifting to a newer stable release.
+          node scripts/rebase-ingested-links.mjs "versioned_docs/version-$VERSION"
 
       # CRITICAL: Clean up docs/ to maintain canonical-source architecture
       # docs/ must only contain authored content (builder/, reference/ landing pages)

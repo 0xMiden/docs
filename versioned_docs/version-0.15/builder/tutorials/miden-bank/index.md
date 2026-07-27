@@ -55,7 +55,7 @@ import DocCard from '@theme/DocCard';
     <DocCard
       item={{
         type: 'link',
-        href: 'miden-bank/project-setup',
+        href: './project-setup',
         label: 'Part 0: Project Setup',
         description: 'Create your project with miden new and understand the workspace structure.',
       }}
@@ -65,7 +65,7 @@ import DocCard from '@theme/DocCard';
     <DocCard
       item={{
         type: 'link',
-        href: 'miden-bank/account-components',
+        href: './account-components',
         label: 'Part 1: Account Components',
         description: 'Learn #[component], StorageValue storage, and StorageMap for managing state.',
       }}
@@ -78,7 +78,7 @@ import DocCard from '@theme/DocCard';
     <DocCard
       item={{
         type: 'link',
-        href: 'miden-bank/constants-constraints',
+        href: './constants-constraints',
         label: 'Part 2: Constants & Constraints',
         description: 'Define business rules with constants and validate with assertions.',
       }}
@@ -88,7 +88,7 @@ import DocCard from '@theme/DocCard';
     <DocCard
       item={{
         type: 'link',
-        href: 'miden-bank/asset-management',
+        href: './asset-management',
         label: 'Part 3: Asset Management',
         description: 'Handle fungible assets with vault operations and balance tracking.',
       }}
@@ -101,7 +101,7 @@ import DocCard from '@theme/DocCard';
     <DocCard
       item={{
         type: 'link',
-        href: 'miden-bank/note-scripts',
+        href: './note-scripts',
         label: 'Part 4: Note Scripts',
         description: 'Write scripts that execute when notes are consumed.',
       }}
@@ -111,7 +111,7 @@ import DocCard from '@theme/DocCard';
     <DocCard
       item={{
         type: 'link',
-        href: 'miden-bank/cross-component-calls',
+        href: './cross-component-calls',
         label: 'Part 5: Cross-Component Calls',
         description: 'Call account methods from note scripts via bindings.',
       }}
@@ -124,7 +124,7 @@ import DocCard from '@theme/DocCard';
     <DocCard
       item={{
         type: 'link',
-        href: 'miden-bank/transaction-scripts',
+        href: './transaction-scripts',
         label: 'Part 6: Transaction Scripts',
         description: 'Write scripts for account initialization and owner operations.',
       }}
@@ -134,7 +134,7 @@ import DocCard from '@theme/DocCard';
     <DocCard
       item={{
         type: 'link',
-        href: 'miden-bank/output-notes',
+        href: './output-notes',
         label: 'Part 7: Creating Output Notes',
         description: 'Create P2ID notes programmatically for withdrawals.',
       }}
@@ -147,7 +147,7 @@ import DocCard from '@theme/DocCard';
     <DocCard
       item={{
         type: 'link',
-        href: 'miden-bank/complete-flows',
+        href: './complete-flows',
         label: 'Part 8: Complete Flows',
         description: 'Walk through end-to-end deposit and withdraw operations.',
       }}
