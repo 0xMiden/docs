@@ -255,6 +255,9 @@ jobs:
             if [ -d "vendor/tutorials/docs/src/img" ]; then
               cp -r vendor/tutorials/docs/src/img docs/builder/tutorials/recipes/
             fi
+            # Rebase links whose source paths changed when mounted under the
+            # docs IA (recipe depth and Miden Bank card targets).
+            node scripts/fix-ingested-tutorial-links.mjs docs/builder/tutorials
             # Restore locally-authored files over vendor versions.
             git checkout HEAD -- docs/builder/tutorials/miden-bank/index.md 2>/dev/null || true
             git checkout HEAD -- docs/builder/tutorials/recipes/_category_.json 2>/dev/null || true
