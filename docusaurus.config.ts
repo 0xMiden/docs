@@ -111,21 +111,19 @@ const config: Config = {
     [
       "@docusaurus/plugin-client-redirects",
       {
+        // Docusaurus serves the newest stable release without a version prefix.
+        // Keep the migration guide's explicit version link on HTTPS by targeting
+        // the canonical directory URL, including its trailing slash.
+        redirects: [
+          {
+            from: `/${stableVersion}/reference/protocol/asset`,
+            to: "https://docs.miden.xyz/reference/protocol/asset/",
+          },
+        ],
         // Use createRedirects for v0.12 → v0.13 path migrations
         // This ensures redirects are only created for paths that exist
         createRedirects(existingPath: string) {
           const redirects: string[] = [];
-
-          // Docusaurus serves the newest stable release without a version prefix.
-          // Give the migration guide's v0.15 asset reference an explicit versioned
-          // alias before it becomes a naturally versioned route at the next cut.
-          if (
-            stableVersion &&
-            (existingPath === "/reference/protocol/asset" ||
-              existingPath === "/reference/protocol/asset/")
-          ) {
-            redirects.push(`/${stableVersion}${existingPath}`);
-          }
 
           // Builder section: redirect old root-level paths to new /builder/ paths
           if (existingPath === "/builder" || existingPath === "/builder/") {
