@@ -211,6 +211,15 @@ jobs:
             echo "Synced compiler → docs/reference/compiler"
           fi
 
+          # Rebase root-absolute internal links before snapshotting the release.
+          # Ingested reference sections are authored as standalone sites, so links
+          # such as "/full-node/installation" need to become relative links before
+          # docs:version freezes them under a versioned route.
+          for section in protocol miden-vm node compiler; do
+            [ -d "docs/reference/$section" ] || continue
+            node scripts/rebase-ingested-links.mjs "docs/reference/$section"
+          done
+
           # Builder docs → docs/builder/*
           # Sync tutorials into tutorials — selective ingest.
           # rust-compiler/, index.md, miden-bank/index.md, recipes/_category_.json,
