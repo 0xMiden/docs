@@ -1,15 +1,21 @@
 ---
-title: Integrate Agglayer
-description: Add Sepolia-to-Miden and Miden-to-Sepolia Agglayer flows to a TypeScript application.
+title: Agglayer on Miden
+description: Integrate Agglayer asset transfers between Sepolia and Miden.
 sidebar_position: 2
 ---
 
-# Integrate Agglayer
+# Agglayer on Miden
 
-The Agglayer integration gives a Miden application direct access to canonical
-bridge semantics. The application builds the source-chain action, persists the
-bridge identifiers, and follows the deposit until its destination transaction
-settles.
+Agglayer is the bridge provider. A Miden application builds the source-chain
+action, persists the bridge identifiers, and follows the transfer until the
+destination transaction settles.
+
+<Callout variant="info" title="Why the Miden guide includes implementation">
+Agglayer's documentation defines the Unified Bridge contract, proof model, and
+generic bridge services. This guide owns the Miden-specific integration:
+destination encoding, `B2AGG` notes, the current Miden-side service, and wallet
+note consumption.
+</Callout>
 
 The current reference integration supports:
 
@@ -38,8 +44,11 @@ implementation is currently verified with `@miden-sdk/miden-sdk@0.15.7`,
 
 ## Current testnet parameters
 
-Keep deployment parameters in one application configuration object. Recheck
-them before a funded testnet run; rollup IDs and account deployments can change.
+<Callout variant="warn" title="Verify testnet parameters">
+Keep deployment parameters in one application configuration object and recheck
+them before a funded testnet run. Rollup IDs, bridge accounts, faucets, and
+service endpoints can change.
+</Callout>
 
 ```typescript
 export const AGGLAYER_BALI = {
@@ -285,8 +294,24 @@ prevents duplicate claims. An offchain integration service still observes the
 Agglayer state and creates the Miden update and claim notes. Your application
 should expose that service dependency and testnet status.
 
-## Reference implementation
+## Continue with Agglayer
 
-- [Agglayer helpers in the bridge portal](https://github.com/0xMiden/bridge-portal/tree/main/src/app/lib)
+<CardGrid cols={3}>
+  <Card title="Unified Bridge asset flow ↗" href="https://docs.polygon.technology/interoperability/agglayer/core-concepts/unified-bridge/asset-bridging" eyebrow="Official · Contract">
+    Understand `bridgeAsset`, `claimAsset`, token handling, and proof
+    verification.
+  </Card>
+  <Card title="AggKit Bridge Service ↗" href="https://docs.polygon.technology/interoperability/agglayer/integrations/aggkit-bridge-service" eyebrow="Official · Single chain">
+    Query bridge transactions, claim status, network data, and claim proofs.
+  </Card>
+  <Card title="Bridge Hub ↗" href="https://docs.polygon.technology/interoperability/agglayer/integrations/bridge-hub" eyebrow="Official · Multi-chain">
+    Index transactions across networks and model `BRIDGED`,
+    `READY_TO_CLAIM`, and `CLAIMED`.
+  </Card>
+</CardGrid>
+
+### Miden implementation references
+
+- [Agglayer integration in the bridge portal](https://github.com/0xMiden/bridge-portal/tree/main/src/app/lib)
 - [Miden Agglayer protocol specification](https://github.com/0xMiden/protocol/blob/next/crates/miden-agglayer/SPEC.md)
 - [Gateway bridge monitor](https://gateway-fm.github.io/miden-agglayer/bridge-monitor/bali/)

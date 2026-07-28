@@ -1,89 +1,80 @@
 ---
 title: Bridging
-description: Choose and integrate an Agglayer or Epoch bridge flow in a Miden application.
+description: Choose a third-party bridge integration for a Miden application.
 sidebar_position: 1
 ---
 
 # Bridging
 
-Miden applications can move assets between Miden testnet and Ethereum Sepolia
-through two different integration models:
+Miden applications can use third-party interoperability providers to move
+assets between Miden testnet and Ethereum Sepolia.
 
-- **Agglayer** exposes the canonical bridge primitives. Your application builds
-  the source-chain transaction or note and tracks the bridge lifecycle.
-- **Epoch** exposes a quote-and-solve SDK. Your application creates an intent
-  and the Epoch allocator and solver coordinate the destination leg.
+These are provider integrations available to Miden developers, not
+Miden-owned bridge products or APIs.
 
-:::warning Testnet only
-The deployments, assets, addresses, timings, and service endpoints in this
-section are for testnet development. Do not treat them as production guarantees.
-:::
+<Callout variant="warn" title="Testnet only">
+The assets, deployments, timings, and endpoints described here are for testnet
+development. Confirm current support in the provider's documentation before
+building or funding an integration.
+</Callout>
 
 ## Choose an integration
 
-|                    | Agglayer                                                                 | Epoch                                                                    |
-| ------------------ | ------------------------------------------------------------------------ | ------------------------------------------------------------------------ |
-| Typical testnet time | 10–20 minutes                                                           | 1–3 minutes                                                              |
-| Asset in the current reference | Sepolia ETH ↔ Miden ETH                                      | Epoch test USDC on Sepolia ↔ Miden USDC                                  |
-| Developer surface  | Miden Web SDK, wallet adapter, EVM bridge contract, bridge indexer       | Epoch intent SDK, Miden wallet callback, EVM wallet client                |
-| Settlement model   | Canonical bridge                                                          | Allocator and solver                                                      |
-| Application owns   | Source transaction, bridge identifiers, lifecycle and recovery UI       | Intent envelope, wallet callbacks, sponsor/nonce persistence and status UI |
-| Best fit           | Direct Agglayer interoperability and canonical bridge semantics          | Faster USDC movement and quote-and-solve abstraction                      |
+<CardGrid cols={2}>
+  <Card title="Agglayer bridge" href="./agglayer" eyebrow="10–20 min · Sepolia ETH">
+    Integrate directly with Agglayer's bridge lifecycle and the Miden-specific
+    account and note flow.
+  </Card>
+  <Card title="Epoch intents" href="./epoch" eyebrow="1–3 min · Test USDC">
+    Request a quote, authorize the source asset, and let Epoch coordinate
+    destination fulfillment.
+  </Card>
+</CardGrid>
 
-The timing ranges are observations from the current testnet integrations, not
-service-level agreements. Source-chain confirmation, bridge observation,
-exit-root or proof propagation, solver availability, destination settlement,
-and Miden note synchronization can all change the final duration.
+| | Agglayer | Epoch |
+| --- | --- | --- |
+| Typical testnet time | 10–20 minutes | 1–3 minutes |
+| Current reference asset | Sepolia ETH ↔ Miden ETH | Epoch test USDC on Sepolia ↔ Miden USDC |
+| Integration model | Agglayer bridge transaction and lifecycle | Quote-and-solve intent SDK |
+| Provider boundary | Agglayer and its Miden-side integration service | Epoch allocator and solver |
+| Best fit | Direct Agglayer interoperability | Faster intent-based USDC movement |
 
-### Choose Agglayer when
+The timing ranges are observations, not service-level agreements. Source
+finality, provider observation, proof or solver availability, destination
+settlement, and Miden note synchronization can all affect the final duration.
 
-- Your application needs canonical Agglayer interoperability.
-- ETH is the asset your current integration needs to move.
-- You want to control and expose each source, bridge, and destination state.
-- A 10–20 minute bridge lifecycle fits the product experience.
-
-### Choose Epoch when
-
-- Your application prioritizes a 1–3 minute testnet experience.
-- Epoch test USDC matches the application flow.
-- You want the SDK to handle quoting, Compact deposits, and solver
-  coordination.
-- You accept Epoch's allocator and solver as additional trust and availability
-  boundaries.
-
-Do not choose only by headline time. Compare the asset, fee model, trust
-boundary, recovery responsibility, and API surface your application must own.
+Choose by asset support, provider trust boundary, recovery model, and the
+states your application must expose—not timing alone.
 
 ## Model completion correctly
 
-A cross-chain transfer is not one status. Persist enough information to resume
-tracking after navigation or reload and expose these states separately:
+A cross-chain transfer is not one status. Your application should distinguish:
 
-1. Source signature requested.
-2. Source transaction submitted.
-3. Source finality reached.
-4. Bridge message or intent observed.
-5. Destination transaction submitted.
-6. Destination settlement reached.
-7. Destination funds are spendable.
+<Steps>
 
-The last two steps are not always the same:
+**Source authorization and submission** — the user approves and submits the
+source-chain action.
 
-- **Agglayer, Sepolia → Miden:** the bridge can deliver a note before the asset
-  is spendable. The recipient must consume the note in the Miden wallet.
-- **Agglayer, Miden → Sepolia:** the current Gateway service auto-claims the
-  ready exit on Sepolia. Completion means that claim transaction settled.
-- **Epoch:** completion means the destination-chain status row settled. Do not
-  stop polling merely because an intermediate source or allocator row succeeded.
+**Provider acceptance** — Agglayer observes the bridge action or Epoch accepts
+the intent.
 
-## Privacy boundary
+**Destination settlement** — the provider completes its destination-chain
+transaction.
 
-Bridging crosses a public interoperability boundary. Even when the Miden
-account and its later activity are private, your application should tell users
-which source and destination transaction hashes, asset amounts, recipient
-encodings, and provider routing data become observable.
+**Funds become spendable** — the destination wallet discovers and, on Miden,
+consumes the delivered note.
 
-## Next
+</Steps>
 
-- [Integrate Agglayer](./agglayer.md)
-- [Integrate Epoch](./epoch.md)
+On Miden, delivery can create a note that the recipient's wallet still needs
+to discover and consume. Do not report spendable funds only because the
+provider reports a successful destination transaction.
+
+## Documentation boundary
+
+<Callout variant="info" title="Miden integration guide, provider API reference">
+These pages explain how each provider fits into a Miden application and
+identify the Miden-specific integration details. Continue in the provider's
+documentation for current SDK methods, deployment addresses, supported assets,
+fees, recovery operations, and production guidance.
+</Callout>

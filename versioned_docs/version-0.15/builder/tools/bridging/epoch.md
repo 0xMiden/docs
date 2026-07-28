@@ -1,10 +1,10 @@
 ---
-title: Integrate Epoch
-description: Add quote-and-solve Miden-to-EVM and EVM-to-Miden flows with the Epoch intent SDK.
+title: Epoch on Miden
+description: Integrate Epoch intents between Miden and Ethereum Sepolia.
 sidebar_position: 3
 ---
 
-# Integrate Epoch
+# Epoch on Miden
 
 Epoch gives a Miden application an intent-based bridge surface: request a
 quote, let the user authorize the source collateral, submit the intent, and
@@ -14,11 +14,17 @@ The current reference integration supports Epoch test USDC between Miden
 testnet and Ethereum Sepolia in both directions, with a typical testnet time of
 1–3 minutes.
 
-:::warning Epoch test USDC
+<Callout variant="info" title="Why the Miden guide includes implementation">
+Epoch's SDK documentation defines the provider workflow. This guide owns the
+Miden-specific integration: virtual chain configuration, P2IDE collateral,
+wallet callbacks, destination-aware completion, and note recovery.
+</Callout>
+
+<Callout variant="warn" title="Epoch test USDC">
 The Sepolia token in this integration is Epoch's 18-decimal test token, not
 Circle's canonical Sepolia USDC. It maps to a 6-decimal USDC faucet on Miden.
 Do not interchange the addresses or decimal assumptions.
-:::
+</Callout>
 
 ## Why Epoch is faster
 
@@ -346,8 +352,23 @@ resource is locked and which recovery transaction will be signed.
   transport stack.
 - Use a destination-aware polling reducer; source settlement is not completion.
 
-## Reference implementation
+## Continue with Epoch
+
+<CardGrid cols={2}>
+  <Card title="Miden integration example ↗" href="https://docs.epochprotocol.xyz/integration-examples#miden-integration-example" eyebrow="Official · Provider">
+    Review Epoch's current Miden task data, collateral model, and supported
+    provider workflow.
+  </Card>
+  <Card title="Epoch SDK integration guide ↗" href="https://docs.epochprotocol.xyz/integration-guides/sdk-integration-guide" eyebrow="Official · SDK">
+    Check current SDK initialization, quoting, submission, status, and recovery
+    APIs.
+  </Card>
+</CardGrid>
+
+### Miden implementation references
 
 - [Epoch integration in the bridge portal](https://github.com/0xMiden/bridge-portal/tree/main/src/app/lib/epoch)
 - [Full Epoch bridging tutorial](../../tutorials/recipes/web/bridging_with_epoch_tutorial.md)
 - [Runnable bridging application](https://github.com/0xMiden/tutorials/tree/main/examples/bridging-app)
+- [Epoch SDK reference](https://docs.epochprotocol.xyz/integration-guides/sdk-reference)
+- [Supported chains and tokens](https://docs.epochprotocol.xyz/supported-chains-and-tokens)
