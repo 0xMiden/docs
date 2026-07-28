@@ -37,7 +37,7 @@ Developer tools for building on and interacting with the Miden network. Use the 
   <Card title="Note Transport" href="./note-transport/" eyebrow="Private notes · Relay">
     Offchain relay service for delivering private note payloads between senders and recipients.
   </Card>
-  <Card title="Bridging" href="./bridging/" eyebrow="Interop · Testnets">
-    Testnet bridge tooling and interoperability guides, starting with the mock 1Click bridge sandbox.
+  <Card title="Bridging" href="./bridging/" eyebrow="Agglayer · Epoch">
+    Compare bridge timing and tradeoffs, then integrate Agglayer or Epoch into a Miden application.
   </Card>
 </CardGrid>

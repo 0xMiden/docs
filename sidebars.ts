@@ -283,9 +283,8 @@ const sidebars: SidebarsConfig = {
           label: "Bridging",
           link: { type: "doc", id: "builder/tools/bridging/index" },
           items: [
-            "builder/tools/bridging/testnet-sandbox",
-            "builder/tools/bridging/flows",
-            "builder/tools/bridging/api-reference",
+            "builder/tools/bridging/agglayer",
+            "builder/tools/bridging/epoch",
           ],
         },
         "builder/tools/midenup",
