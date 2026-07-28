@@ -119,6 +119,54 @@ const config: Config = {
             from: `/${stableVersion}/reference/protocol/asset`,
             to: "https://docs.miden.xyz/reference/protocol/asset/",
           },
+          {
+            from: "/builder/tools/bridging/testnet-sandbox",
+            to: "/builder/tools/bridging/",
+          },
+          {
+            from: "/builder/tools/bridging/flows",
+            to: "/builder/tools/bridging/",
+          },
+          {
+            from: "/builder/tools/bridging/api-reference",
+            to: "/builder/tools/bridging/",
+          },
+          {
+            from: "/next/builder/tools/bridging/testnet-sandbox",
+            to: "/next/builder/tools/bridging/",
+          },
+          {
+            from: "/next/builder/tools/bridging/flows",
+            to: "/next/builder/tools/bridging/",
+          },
+          {
+            from: "/next/builder/tools/bridging/api-reference",
+            to: "/next/builder/tools/bridging/",
+          },
+          {
+            from: "/0.15/builder/tools/bridging/testnet-sandbox",
+            to: "/builder/tools/bridging/",
+          },
+          {
+            from: "/0.15/builder/tools/bridging/flows",
+            to: "/builder/tools/bridging/",
+          },
+          {
+            from: "/0.15/builder/tools/bridging/api-reference",
+            to: "/builder/tools/bridging/",
+          },
+          {
+            from: "/0.14/builder/tools/bridging/testnet-sandbox",
+            to: "/builder/tools/bridging/",
+          },
+          {
+            from: "/0.14/builder/tools/bridging/flows",
+            to: "/builder/tools/bridging/",
+          },
+          {
+            from: "/0.14/builder/tools/bridging/api-reference",
+            to: "/builder/tools/bridging/",
+          },
         ],
         // Use createRedirects for v0.12 → v0.13 path migrations
         // This ensures redirects are only created for paths that exist
