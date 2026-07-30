@@ -1,46 +1,59 @@
-import React from "react";
+import React, { useState } from "react";
 import Link from "@docusaurus/Link";
 import Layout from "@theme/Layout";
 import useDocusaurusContext from "@docusaurus/useDocusaurusContext";
 import HeroVisual from "@site/src/components/HeroVisual";
 import styles from "./index.module.css";
 
-type Role = {
+type Path = {
   eyebrow: string;
   title: string;
   desc: string;
   to: string;
+  meta: string;
+  primary?: boolean;
 };
 
-const ROLES: Role[] = [
+const INSTALL_COMMAND = "cargo install midenup && midenup init";
+
+const PATHS: Path[] = [
   {
-    eyebrow: "Smart contract dev",
-    title: "Build contracts in Rust",
-    desc: "Accounts, notes, and transactions with the Miden SDK — private by default, typed storage, client-side proving. Compile to MASM and deploy.",
-    to: "/builder/smart-contracts",
+    eyebrow: "Recommended start",
+    title: "Build your first smart contract",
+    desc: "Create an account component in Rust, compile it to MASM, and prove its state transition locally before sending it to the network.",
+    to: "/builder/get-started/your-first-smart-contract",
+    meta: "Rust · MASM · client-side proving",
+    primary: true,
   },
   {
-    eyebrow: "Integrating Miden",
-    title: "Wire Miden into your app",
-    desc: "Web and React SDKs for wallet flows, private notes, and client-side proving. Signer integrations out of the box.",
+    eyebrow: "SDK integration",
+    title: "Connect an application",
+    desc: "Use the Web, React, or Rust client to create accounts, move assets, and work with private notes.",
     to: "/builder/tools",
+    meta: "Web · React · Rust",
   },
   {
-    eyebrow: "Protocol curious",
-    title: "Understand the zkVM",
-    desc: "Protocol specs, VM internals, constraints, and the path from Rust → MASM → proof.",
+    eyebrow: "Protocol and research",
+    title: "Understand how Miden works",
+    desc: "Trace execution through accounts, notes, the VM, and the recursive proof system.",
     to: "/reference",
-  },
-  {
-    eyebrow: "zk researcher",
-    title: "Dig into Miden VM",
-    desc: "Execution trace, chiplets, advice provider, and the recursive proof pipeline.",
-    to: "/reference/miden-vm",
+    meta: "Protocol · VM · proofs",
   },
 ];
 
 export default function Home(): JSX.Element {
   const { siteConfig } = useDocusaurusContext();
+  const [commandCopied, setCommandCopied] = useState(false);
+
+  const copyInstallCommand = async () => {
+    try {
+      await navigator.clipboard.writeText(INSTALL_COMMAND);
+      setCommandCopied(true);
+      window.setTimeout(() => setCommandCopied(false), 1600);
+    } catch {
+      // Clipboard access can be blocked in embedded previews.
+    }
+  };
 
   return (
     <Layout
@@ -79,6 +92,28 @@ export default function Home(): JSX.Element {
                   Install midenup <span aria-hidden="true">→</span>
                 </Link>
               </div>
+              <div className={styles.installCommand}>
+                <div className={styles.installCommandHeader}>
+                  <span>Install the toolchain</span>
+                  <span>Rust + Cargo</span>
+                </div>
+                <div className={styles.installCommandBody}>
+                  <code>
+                    <span aria-hidden="true">$</span> {INSTALL_COMMAND}
+                  </code>
+                  <button
+                    type="button"
+                    onClick={copyInstallCommand}
+                    className={styles.copyCommand}
+                    aria-label="Copy the midenup install command"
+                  >
+                    <span aria-hidden="true">{commandCopied ? "✓" : "⎘"}</span>
+                    <span aria-live="polite">
+                      {commandCopied ? "Copied" : "Copy"}
+                    </span>
+                  </button>
+                </div>
+              </div>
             </div>
             <div className={styles.heroVisual}>
               <HeroVisual />
@@ -86,17 +121,24 @@ export default function Home(): JSX.Element {
           </div>
         </section>
 
-        {/* ---- ROLE CARDS ---- */}
+        {/* ---- PATHS ---- */}
         <section className={styles.section}>
           <p className={styles.sectionEyebrow}>Start a path</p>
-          <h2 className={styles.sectionTitle}>Pick where you land.</h2>
-          <div className={styles.roleGrid}>
-            {ROLES.map((r) => (
-              <Link key={r.to} to={r.to} className={styles.roleCard}>
-                <span className={styles.roleEyebrow}>{r.eyebrow}</span>
-                <h3 className={styles.roleTitle}>{r.title}</h3>
-                <p className={styles.roleDesc}>{r.desc}</p>
-                <span className={styles.roleArrow} aria-hidden="true">→</span>
+          <h2 className={styles.sectionTitle}>Choose what you need next.</h2>
+          <div className={styles.pathGrid}>
+            {PATHS.map((path) => (
+              <Link
+                key={path.to}
+                to={path.to}
+                className={`${styles.pathCard} ${
+                  path.primary ? styles.pathCardPrimary : ""
+                }`}
+              >
+                <span className={styles.pathEyebrow}>{path.eyebrow}</span>
+                <h3 className={styles.pathTitle}>{path.title}</h3>
+                <p className={styles.pathDesc}>{path.desc}</p>
+                <span className={styles.pathMeta}>{path.meta}</span>
+                <span className={styles.pathArrow} aria-hidden="true">→</span>
               </Link>
             ))}
           </div>
