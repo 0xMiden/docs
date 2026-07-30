@@ -59,6 +59,9 @@ namespace = "miden:counter-account/counter-contract@0.1.0"
 [dependencies]
 miden-core = "*"
 miden-protocol = "*"
+
+[package.metadata.miden]
+supported-types = ["RegularAccountImmutableCode"]
 ```
 
 The increment note depends on the counter account's generated WIT so it can call the counter interface:
@@ -70,7 +73,8 @@ version = "0.1.0"
 
 [lib]
 kind = "note"
-namespace = "miden:increment-note/increment-note@0.1.0"
+# Notes export a package-derived interface (`miden-<package>`), matching the `#[note]` macro.
+namespace = "miden:increment-note/miden-increment-note@0.1.0"
 
 [dependencies]
 miden-core = "*"
@@ -88,11 +92,11 @@ You can build individual contracts by navigating to their directory and running 
 ```bash title=">_ Terminal"
 # Build the counter account contract
 cd contracts/counter-account
-miden build
+cargo miden build
 
 # Build the increment note contract
 cd ../increment-note
-miden build
+cargo miden build
 ```
 
 This compiles the Rust contract code into a Miden package (`.masp` file), making it ready for deployment and interaction.
@@ -198,7 +202,7 @@ trait CounterContract {
 }
 ```
 
-The `#[component_storage]` attribute marks the storage struct for this Miden [Account component](/reference/protocol/account), while the `#[component]` trait defines the component's public interface. The `count_map` field is a `StorageMap` stored in a named storage slot of the account. In the v0.15-aligned SDK, storage slots are identified by name rather than explicit index numbers — the slot name is derived automatically from the component's package name and field name (e.g., `miden::component::miden_counter_account::count_map`).
+The `#[component_storage]` attribute marks the storage struct for this Miden [Account component](/reference/protocol/account), while the `#[component]` trait defines the component's public interface. The `count_map` field is a `StorageMap` stored in a named storage slot of the account. In the v0.15-aligned SDK, storage slots are identified by name rather than explicit index numbers — the slot name is derived automatically from the component's manifest namespace and field name (e.g., `counter_account::counter_contract::count_map`).
 
 **Important**: Storage slots in Miden hold `Word` values, which are composed of four field elements (`Felt`). Each `Felt` is a 64-bit unsigned integer (u64). The `StorageMap` provides a key-value interface within a single storage slot, allowing you to store multiple key-value pairs within the four-element word structure.
 

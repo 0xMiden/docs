@@ -111,7 +111,7 @@ This process shows how Miden contracts are deployed through state changes rather
 
 ## How the Scripts Work
 
-The integration scripts work by connecting to the Miden client and then building contracts from the Miden package files. These package files are generated when you run `miden build` inside each contract directory, but the scripts handle this compilation step automatically - you don't need to manually build the contracts before running the scripts.
+The integration scripts work by connecting to the Miden client and then building contracts from the Miden package files. These package files are generated when you run `cargo miden build` inside each contract directory, but the scripts handle this compilation step automatically - you don't need to manually build the contracts before running the scripts.
 
 Next, we look into how the scripts convert your Rust contract code into deployable Miden contracts.
 
@@ -151,7 +151,7 @@ The `build_project_in_dir()` function:
 - Takes the path to your contract's Rust source code
 - Compiles the Rust code into a Miden package (`.masp` file)
 - Generates a package containing the compiled contract bytecode and metadata
-- This is equivalent to manually running `miden build` in each contract directory
+- This is equivalent to manually running `cargo miden build` in each contract directory
 
 These packages contain all the information needed to deploy and interact with your contracts on the Miden network.
 
@@ -167,7 +167,7 @@ let initial_count = Word::default();
 
 // Use the slot name generated for the component's manifest namespace and field name.
 let counter_storage_slot =
-    StorageSlotName::new("miden::component::miden_counter_account::count_map").unwrap();
+    StorageSlotName::new("counter_account::counter_contract::count_map").unwrap();
 let storage_slots = vec![StorageSlot::with_map(
     counter_storage_slot.clone(),
     StorageMap::with_entries([(count_storage_map_key, initial_count)]).unwrap(),
@@ -193,9 +193,9 @@ The `create_account_from_package()` function:
 - Combines it with the provided configuration (storage, settings, etc.)
 - Creates a deployable Miden account that can be used in transactions
 
-**Important**: Accounts that use storage must have their storage slots specified when instantiating the account. In the v0.15-aligned SDK, storage slots are identified by name rather than index. The slot name follows the pattern `miden::component::<package_name>::<field_name>`. We define the storage configuration with:
+**Important**: Accounts that use storage must have their storage slots specified when instantiating the account. In the v0.15-aligned SDK, storage slots are identified by name rather than index. The slot name follows the pattern `<package>::<interface>::<field_name>`, derived from the component's manifest namespace. We define the storage configuration with:
 
-- A named `StorageMap` slot (`miden::component::miden_counter_account::count_map`)
+- A named `StorageMap` slot (`counter_account::counter_contract::count_map`)
 - The counter key `[0, 0, 0, 1]`, wrapped as a `StorageMapKey`, with initial value `[0, 0, 0, 0]` (representing count = 0)
 
 This pre-initialization ensures the account's storage is properly configured before deployment.

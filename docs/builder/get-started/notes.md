@@ -81,10 +81,11 @@ use miden_client::{
         component::{
             AccessControl, AuthScheme, AuthSingleSig, BasicWallet, BurnPolicyConfig,
             FungibleFaucet, MintPolicyConfig, PolicyRegistration, TokenName, TokenPolicyManager,
-            TransferPolicy, create_fungible_faucet,
+            create_fungible_faucet,
         },
         AccountBuilder, AccountType,
     },
+    asset::{AssetAmount, FungibleAsset, TokenSymbol},
     auth::AuthSecretKey,
     builder::ClientBuilder,
     keystore::{FilesystemKeyStore, Keystore},
@@ -93,7 +94,6 @@ use miden_client::{
     transaction::TransactionRequestBuilder,
 };
 use miden_client_sqlite_store::ClientBuilderSqliteExt;
-use miden_protocol::asset::{AssetAmount, FungibleAsset, TokenSymbol};
 use miden_standards::AuthMethod;
 use rand::RngCore;
 use std::sync::Arc;
@@ -162,9 +162,7 @@ async fn main() -> anyhow::Result<()> {
         .build()?;
     let policies = TokenPolicyManager::new()
         .with_mint_policy(MintPolicyConfig::AllowAll, PolicyRegistration::Active)?
-        .with_burn_policy(BurnPolicyConfig::AllowAll, PolicyRegistration::Active)?
-        .with_send_policy(TransferPolicy::AllowAll, PolicyRegistration::Active)?
-        .with_receive_policy(TransferPolicy::AllowAll, PolicyRegistration::Active)?;
+        .with_burn_policy(BurnPolicyConfig::AllowAll, PolicyRegistration::Active)?;
 
     let alice_account = account_builder.build()?;
     let faucet_account = create_fungible_faucet(
@@ -298,10 +296,11 @@ use miden_client::{
         component::{
             AccessControl, AuthScheme, AuthSingleSig, BasicWallet, BurnPolicyConfig,
             FungibleFaucet, MintPolicyConfig, PolicyRegistration, TokenName, TokenPolicyManager,
-            TransferPolicy, create_fungible_faucet,
+            create_fungible_faucet,
         },
         Account, AccountBuilder, AccountType,
     },
+    asset::{AssetAmount, AssetCallbackFlag, AssetVaultKey, FungibleAsset, TokenSymbol},
     auth::AuthSecretKey,
     builder::ClientBuilder,
     keystore::{FilesystemKeyStore, Keystore},
@@ -310,9 +309,6 @@ use miden_client::{
     transaction::TransactionRequestBuilder,
 };
 use miden_client_sqlite_store::ClientBuilderSqliteExt;
-use miden_protocol::asset::{
-    AssetAmount, AssetCallbackFlag, AssetVaultKey, FungibleAsset, TokenSymbol,
-};
 use miden_standards::AuthMethod;
 use rand::RngCore;
 use std::sync::Arc;
@@ -382,9 +378,7 @@ async fn main() -> anyhow::Result<()> {
         .build()?;
     let policies = TokenPolicyManager::new()
         .with_mint_policy(MintPolicyConfig::AllowAll, PolicyRegistration::Active)?
-        .with_burn_policy(BurnPolicyConfig::AllowAll, PolicyRegistration::Active)?
-        .with_send_policy(TransferPolicy::AllowAll, PolicyRegistration::Active)?
-        .with_receive_policy(TransferPolicy::AllowAll, PolicyRegistration::Active)?;
+        .with_burn_policy(BurnPolicyConfig::AllowAll, PolicyRegistration::Active)?;
 
     let alice_account = account_builder.build()?;
     let faucet_account = create_fungible_faucet(
@@ -595,10 +589,11 @@ use miden_client::{
         component::{
             AccessControl, AuthScheme, AuthSingleSig, BasicWallet, BurnPolicyConfig,
             FungibleFaucet, MintPolicyConfig, PolicyRegistration, TokenName, TokenPolicyManager,
-            TransferPolicy, create_fungible_faucet,
+            create_fungible_faucet,
         },
         Account, AccountBuilder, AccountId, AccountType,
     },
+    asset::{AssetAmount, AssetCallbackFlag, AssetVaultKey, FungibleAsset, TokenSymbol},
     auth::AuthSecretKey,
     builder::ClientBuilder,
     keystore::{FilesystemKeyStore, Keystore},
@@ -607,9 +602,6 @@ use miden_client::{
     transaction::TransactionRequestBuilder,
 };
 use miden_client_sqlite_store::ClientBuilderSqliteExt;
-use miden_protocol::asset::{
-    AssetAmount, AssetCallbackFlag, AssetVaultKey, FungibleAsset, TokenSymbol,
-};
 use miden_standards::AuthMethod;
 use rand::RngCore;
 use std::sync::Arc;
@@ -679,9 +671,7 @@ async fn main() -> anyhow::Result<()> {
         .build()?;
     let policies = TokenPolicyManager::new()
         .with_mint_policy(MintPolicyConfig::AllowAll, PolicyRegistration::Active)?
-        .with_burn_policy(BurnPolicyConfig::AllowAll, PolicyRegistration::Active)?
-        .with_send_policy(TransferPolicy::AllowAll, PolicyRegistration::Active)?
-        .with_receive_policy(TransferPolicy::AllowAll, PolicyRegistration::Active)?;
+        .with_burn_policy(BurnPolicyConfig::AllowAll, PolicyRegistration::Active)?;
 
     let alice_account = account_builder.build()?;
     let faucet_account = create_fungible_faucet(

@@ -127,6 +127,10 @@ Copy the Rust code example into the file, then run:
 cargo run --bin demo --release
 ```
 
+:::note
+The first `cargo run` pulls the pinned nightly toolchain and compiles ~400 crates, so it can take a few minutes. Later runs are incremental and much faster.
+:::
+
 ### TypeScript Environment
 
 If you already created `miden-app` during [installation](./setup/installation#typescript-project), you can reuse it. Otherwise, scaffold a new Vite vanilla-ts project:
@@ -276,18 +280,17 @@ use miden_client::{
     account::{
         component::{
             AccessControl, AuthScheme, BurnPolicyConfig, FungibleFaucet, MintPolicyConfig,
-            PolicyRegistration, TokenName, TokenPolicyManager, TransferPolicy,
-            create_fungible_faucet,
+            PolicyRegistration, TokenName, TokenPolicyManager, create_fungible_faucet,
         },
         AccountType,
     },
+    asset::{AssetAmount, TokenSymbol},
     auth::AuthSecretKey,
     builder::ClientBuilder,
     keystore::{FilesystemKeyStore, Keystore},
     rpc::{Endpoint, GrpcClient},
 };
 use miden_client_sqlite_store::ClientBuilderSqliteExt;
-use miden_protocol::asset::{AssetAmount, TokenSymbol};
 use miden_standards::AuthMethod;
 use rand::RngCore;
 use std::sync::Arc;
@@ -340,9 +343,7 @@ async fn main() -> anyhow::Result<()> {
         .build()?;
     let policies = TokenPolicyManager::new()
         .with_mint_policy(MintPolicyConfig::AllowAll, PolicyRegistration::Active)?
-        .with_burn_policy(BurnPolicyConfig::AllowAll, PolicyRegistration::Active)?
-        .with_send_policy(TransferPolicy::AllowAll, PolicyRegistration::Active)?
-        .with_receive_policy(TransferPolicy::AllowAll, PolicyRegistration::Active)?;
+        .with_burn_policy(BurnPolicyConfig::AllowAll, PolicyRegistration::Active)?;
     let faucet_account = create_fungible_faucet(
         init_seed,
         faucet,

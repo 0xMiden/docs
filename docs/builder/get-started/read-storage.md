@@ -76,7 +76,7 @@ async fn main() -> anyhow::Result<()> {
     // READ PUBLIC STATE OF THE COUNTER ACCOUNT
     //------------------------------------------------------------
 
-    let counter_account_id = AccountId::from_hex("0x224a96d294e10d006aef3d4f1b0876")?;
+    let counter_account_id = AccountId::from_hex("0x81cd2cf2dc5031f167a0eadc053ba2")?;
 
     client.import_account_by_id(counter_account_id).await?;
 
@@ -88,7 +88,7 @@ async fn main() -> anyhow::Result<()> {
 
     // Read the count from the counter account's named storage map slot
     let slot_name = StorageSlotName::new(
-        "miden::component::miden_counter_account::count_map"
+        "counter_account::counter_contract::count_map"
     )?;
     let count_key = Word::from([0u32, 0, 0, 1]);
     let count = counter_account
@@ -108,14 +108,14 @@ export async function demo() {
     // Initialize client to connect with the Miden Testnet.
     const client = await MidenClient.createTestnet();
 
-    const counterAccountId = "0x224a96d294e10d006aef3d4f1b0876";
+    const counterAccountId = "0x81cd2cf2dc5031f167a0eadc053ba2";
 
     // Fetch the counter account (imports it into the local store if needed).
     const counter = await client.accounts.getOrImport(counterAccountId);
 
     // Get the count from the counter account by querying its storage map
     // using the named storage slot and counter key.
-    const slotName = "miden::component::miden_counter_account::count_map";
+    const slotName = "counter_account::counter_contract::count_map";
     const counterKey = new Word(BigUint64Array.from([0n, 0n, 0n, 1n]));
     const count = counter.storage().getMapItem(slotName, counterKey);
 
@@ -141,12 +141,12 @@ You can also query the assets (tokens) held by an account:
 ```rust title="integration/src/bin/token-balance.rs"
 use miden_client::{
     account::{Account, AccountId},
+    asset::{AssetCallbackFlag, AssetVaultKey},
     builder::ClientBuilder,
     keystore::FilesystemKeyStore,
     rpc::{Endpoint, GrpcClient},
 };
 use miden_client_sqlite_store::ClientBuilderSqliteExt;
-use miden_protocol::asset::{AssetCallbackFlag, AssetVaultKey};
 use std::sync::Arc;
 
 #[tokio::main]
