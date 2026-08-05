@@ -32,15 +32,19 @@ To run the code examples in this guide, you'll need to set up a development envi
 
 Let's interact with a counter contract deployed on the Miden testnet. This contract maintains a simple counter value in a named storage map slot.
 
+:::note
+This example needs the ID of a deployed counter account. [Your First Smart Contract](./your-first-smart-contract/deploy) walks through deploying one — come back here with that account's ID, or use any public counter account whose ID you already know. The deploy script logs the counter account ID in its structured (`Debug`) form; print `account.id().to_hex()` to get the `0x…` string these examples expect.
+:::
+
 ### Reading the Count of a Counter contract
 
 ```rust title="integration/src/bin/read-count.rs"
+use integration::helpers::{counter_storage_slot, COUNTER_STORAGE_KEY};
 use miden_client::{
-    account::{Account, AccountId, StorageSlotName},
+    account::{Account, AccountId},
     builder::ClientBuilder,
     keystore::FilesystemKeyStore,
     rpc::{Endpoint, GrpcClient},
-    Word,
 };
 use miden_client_sqlite_store::ClientBuilderSqliteExt;
 use std::sync::Arc;
@@ -76,7 +80,8 @@ async fn main() -> anyhow::Result<()> {
     // READ PUBLIC STATE OF THE COUNTER ACCOUNT
     //------------------------------------------------------------
 
-    let counter_account_id = AccountId::from_hex("0x81cd2cf2dc5031f167a0eadc053ba2")?;
+    // Replace this with the ID of the counter account you deployed (see the note above).
+    let counter_account_id = AccountId::from_hex("0x...")?;
 
     client.import_account_by_id(counter_account_id).await?;
 
@@ -86,14 +91,11 @@ async fn main() -> anyhow::Result<()> {
         .ok_or_else(|| anyhow::anyhow!("Account not found"))?
         .try_into()?;
 
-    // Read the count from the counter account's named storage map slot
-    let slot_name = StorageSlotName::new(
-        "counter_account::counter_contract::count_map"
-    )?;
-    let count_key = Word::from([0u32, 0, 0, 1]);
+    // Read the count from the counter account's named storage map slot. Both the slot
+    // name and the map key come from the project's `integration/src/helpers.rs`.
     let count = counter_account
         .storage()
-        .get_map_item(&slot_name, count_key)?;
+        .get_map_item(&counter_storage_slot()?, COUNTER_STORAGE_KEY)?;
 
     println!("Count: {:?}", count);
 
@@ -108,7 +110,8 @@ export async function demo() {
     // Initialize client to connect with the Miden Testnet.
     const client = await MidenClient.createTestnet();
 
-    const counterAccountId = "0x81cd2cf2dc5031f167a0eadc053ba2";
+    // Replace this with the ID of the counter account you deployed (see the note above).
+    const counterAccountId = "0x...";
 
     // Fetch the counter account (imports it into the local store if needed).
     const counter = await client.accounts.getOrImport(counterAccountId);
@@ -129,8 +132,10 @@ export async function demo() {
 <summary>Expected output</summary>
 
 ```text
-Count: 1
+Count: Word([1, 0, 0, 0])
 ```
+
+The Rust example prints the raw `Word`; map values use a `[value, 0, 0, 0]` layout, so the count is the first element. The TypeScript example unpacks that word and logs the number directly.
 
 </details>
 
@@ -180,8 +185,9 @@ async fn main() -> anyhow::Result<()> {
     // READ TOKEN BALANCE OF AN ACCOUNT
     //------------------------------------------------------------
 
-    let alice_account_id = AccountId::from_hex("0x5b2840a923dedc102ea67e0c1eba3c")?;
-    let faucet_account_id = AccountId::from_hex("0x29dd1dc628d2842032e751ed1b5da7")?;
+    // Replace these with the IDs printed by the mint example in the previous section.
+    let alice_account_id = AccountId::from_hex("0x...")?;
+    let faucet_account_id = AccountId::from_hex("0x...")?;
 
     client.import_account_by_id(alice_account_id).await?;
 
@@ -191,9 +197,11 @@ async fn main() -> anyhow::Result<()> {
         .ok_or_else(|| anyhow::anyhow!("Account not found"))?
         .try_into()?;
 
+    // The callback flag is part of the vault key, so it must match the flag the asset
+    // was minted with — otherwise the lookup misses and the balance reads 0.
     let balance_key = AssetVaultKey::new_fungible(
         faucet_account_id,
-        AssetCallbackFlag::Disabled,
+        AssetCallbackFlag::Enabled,
     );
     let balance = alice_account.vault().get_balance(balance_key)?;
 
@@ -210,8 +218,9 @@ export async function demo() {
     // Initialize client to connect with the Miden Testnet.
     const client = await MidenClient.createTestnet();
 
-    const aliceId = "0x5b2840a923dedc102ea67e0c1eba3c";
-    const faucetId = "0x29dd1dc628d2842032e751ed1b5da7";
+    // Replace these with the IDs printed by the mint example in the previous section.
+    const aliceId = "0x...";
+    const faucetId = "0x...";
 
     // Fetch Alice's account (imports it into the local store if needed)
     // and query her balance for the faucet's token.

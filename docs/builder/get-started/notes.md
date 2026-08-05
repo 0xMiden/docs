@@ -81,11 +81,11 @@ use miden_client::{
         component::{
             AccessControl, AuthScheme, AuthSingleSig, BasicWallet, BurnPolicyConfig,
             FungibleFaucet, MintPolicyConfig, PolicyRegistration, TokenName, TokenPolicyManager,
-            create_fungible_faucet,
+            TransferPolicy, create_fungible_faucet,
         },
         AccountBuilder, AccountType,
     },
-    asset::{AssetAmount, FungibleAsset, TokenSymbol},
+    asset::{AssetAmount, AssetCallbackFlag, FungibleAsset, TokenSymbol},
     auth::AuthSecretKey,
     builder::ClientBuilder,
     keystore::{FilesystemKeyStore, Keystore},
@@ -162,7 +162,9 @@ async fn main() -> anyhow::Result<()> {
         .build()?;
     let policies = TokenPolicyManager::new()
         .with_mint_policy(MintPolicyConfig::AllowAll, PolicyRegistration::Active)?
-        .with_burn_policy(BurnPolicyConfig::AllowAll, PolicyRegistration::Active)?;
+        .with_burn_policy(BurnPolicyConfig::AllowAll, PolicyRegistration::Active)?
+        .with_send_policy(TransferPolicy::AllowAll, PolicyRegistration::Active)?
+        .with_receive_policy(TransferPolicy::AllowAll, PolicyRegistration::Active)?;
 
     let alice_account = account_builder.build()?;
     let faucet_account = create_fungible_faucet(
@@ -191,7 +193,10 @@ async fn main() -> anyhow::Result<()> {
     keystore.add_key(&faucet_key_pair, faucet_account.id()).await?;
 
     let amount: u64 = 1000;
-    let fungible_asset = FungibleAsset::new(faucet_account.id(), amount)?;
+    // Enable asset callbacks so the faucet's send/receive transfer policies run
+    // when this asset moves between accounts.
+    let fungible_asset = FungibleAsset::new(faucet_account.id(), amount)?
+        .with_callbacks(AssetCallbackFlag::Enabled);
 
     // Build transaction request to mint fungible asset to Alice's account
     // NOTE: This transaction will create a P2ID note (a Miden note containing the minted asset)
@@ -296,7 +301,7 @@ use miden_client::{
         component::{
             AccessControl, AuthScheme, AuthSingleSig, BasicWallet, BurnPolicyConfig,
             FungibleFaucet, MintPolicyConfig, PolicyRegistration, TokenName, TokenPolicyManager,
-            create_fungible_faucet,
+            TransferPolicy, create_fungible_faucet,
         },
         Account, AccountBuilder, AccountType,
     },
@@ -378,7 +383,9 @@ async fn main() -> anyhow::Result<()> {
         .build()?;
     let policies = TokenPolicyManager::new()
         .with_mint_policy(MintPolicyConfig::AllowAll, PolicyRegistration::Active)?
-        .with_burn_policy(BurnPolicyConfig::AllowAll, PolicyRegistration::Active)?;
+        .with_burn_policy(BurnPolicyConfig::AllowAll, PolicyRegistration::Active)?
+        .with_send_policy(TransferPolicy::AllowAll, PolicyRegistration::Active)?
+        .with_receive_policy(TransferPolicy::AllowAll, PolicyRegistration::Active)?;
 
     let alice_account = account_builder.build()?;
     let faucet_account = create_fungible_faucet(
@@ -407,7 +414,10 @@ async fn main() -> anyhow::Result<()> {
     keystore.add_key(&faucet_key_pair, faucet_account.id()).await?;
 
     let amount: u64 = 1000;
-    let fungible_asset = FungibleAsset::new(faucet_account.id(), amount)?;
+    // Enable asset callbacks so the faucet's send/receive transfer policies run
+    // when this asset moves between accounts.
+    let fungible_asset = FungibleAsset::new(faucet_account.id(), amount)?
+        .with_callbacks(AssetCallbackFlag::Enabled);
 
     // Build transaction request to mint fungible asset to Alice's account
     // NOTE: This transaction will create a P2ID note (a Miden note containing the minted asset)
@@ -475,9 +485,11 @@ async fn main() -> anyhow::Result<()> {
             .ok_or_else(|| anyhow::anyhow!("Account not found"))?
             .try_into()?;
         let vault = alice_account.vault();
+        // The callback flag is part of the vault key, so it must match the flag the
+        // asset was minted with — otherwise the lookup misses and the balance reads 0.
         let balance_key = AssetVaultKey::new_fungible(
             faucet_account.id(),
-            AssetCallbackFlag::Disabled,
+            AssetCallbackFlag::Enabled,
         );
         println!(
             "Alice's TEST token balance: {:?}",
@@ -558,7 +570,7 @@ Minting 1000 tokens to Alice...
 Mint transaction submitted successfully, ID: "0x7a2dbde87ea2f4d41b396d6d3f6bdb9a8d7e2a51555fa57064a1657ad70fca06"
 Waiting for note to be consumable...
 Consume transaction submitted successfully, ID: "0xa75872c498ee71cd6725aef9411d2559094cec1e1e89670dbf99c60bb8843481"
-Alice's TEST token balance: Ok(1000)
+Alice's TEST token balance: Ok(AssetAmount(1000))
 ```
 
 </details>
@@ -589,7 +601,7 @@ use miden_client::{
         component::{
             AccessControl, AuthScheme, AuthSingleSig, BasicWallet, BurnPolicyConfig,
             FungibleFaucet, MintPolicyConfig, PolicyRegistration, TokenName, TokenPolicyManager,
-            create_fungible_faucet,
+            TransferPolicy, create_fungible_faucet,
         },
         Account, AccountBuilder, AccountId, AccountType,
     },
@@ -671,7 +683,9 @@ async fn main() -> anyhow::Result<()> {
         .build()?;
     let policies = TokenPolicyManager::new()
         .with_mint_policy(MintPolicyConfig::AllowAll, PolicyRegistration::Active)?
-        .with_burn_policy(BurnPolicyConfig::AllowAll, PolicyRegistration::Active)?;
+        .with_burn_policy(BurnPolicyConfig::AllowAll, PolicyRegistration::Active)?
+        .with_send_policy(TransferPolicy::AllowAll, PolicyRegistration::Active)?
+        .with_receive_policy(TransferPolicy::AllowAll, PolicyRegistration::Active)?;
 
     let alice_account = account_builder.build()?;
     let faucet_account = create_fungible_faucet(
@@ -700,7 +714,10 @@ async fn main() -> anyhow::Result<()> {
     keystore.add_key(&faucet_key_pair, faucet_account.id()).await?;
 
     let amount: u64 = 1000;
-    let fungible_asset = FungibleAsset::new(faucet_account.id(), amount)?;
+    // Enable asset callbacks so the faucet's send/receive transfer policies run
+    // when this asset moves between accounts.
+    let fungible_asset = FungibleAsset::new(faucet_account.id(), amount)?
+        .with_callbacks(AssetCallbackFlag::Enabled);
 
     // Build transaction request to mint fungible asset to Alice's account
     // NOTE: This transaction will create a P2ID note (a Miden note containing the minted asset)
@@ -768,9 +785,11 @@ async fn main() -> anyhow::Result<()> {
             .ok_or_else(|| anyhow::anyhow!("Account not found"))?
             .try_into()?;
         let vault = alice_account.vault();
+        // The callback flag is part of the vault key, so it must match the flag the
+        // asset was minted with — otherwise the lookup misses and the balance reads 0.
         let balance_key = AssetVaultKey::new_fungible(
             faucet_account.id(),
-            AssetCallbackFlag::Disabled,
+            AssetCallbackFlag::Enabled,
         );
         println!(
             "Alice's TEST token balance: {:?}",
@@ -784,9 +803,12 @@ async fn main() -> anyhow::Result<()> {
     // SENDING TOKENS TO BOB
     //------------------------------------------------------------
 
-    let bob_account_id = AccountId::from_hex("0x103f8a1ad4b983104aec0412ab0b0d")?;
+    // Replace this with the ID of the account you want to send to — for example an
+    // Alice ID printed by an earlier run of this guide.
+    let bob_account_id = AccountId::from_hex("0x...")?;
     let send_amount = 100;
-    let fungible_asset_to_send = FungibleAsset::new(faucet_account.id(), send_amount)?;
+    let fungible_asset_to_send = FungibleAsset::new(faucet_account.id(), send_amount)?
+        .with_callbacks(AssetCallbackFlag::Enabled);
 
     let p2id_note = P2idNote::create(
         alice_account.id(),
@@ -869,8 +891,9 @@ export async function demo() {
     const balance = await client.accounts.getBalance(alice, faucet);
     console.log("Alice's TEST token balance:", Number(balance));
 
-    // Send 100 tokens from Alice to Bob.
-    const bobAccountId = "0x103f8a1ad4b983104aec0412ab0b0d";
+    // Send 100 tokens from Alice to Bob. Replace this with the ID of the account you
+    // want to send to — for example an Alice ID printed by an earlier run of this guide.
+    const bobAccountId = "0x...";
     console.log("Sending 100 tokens to Bob...");
     const { txId } = await client.transactions.send({
         account: alice,

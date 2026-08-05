@@ -280,7 +280,8 @@ use miden_client::{
     account::{
         component::{
             AccessControl, AuthScheme, BurnPolicyConfig, FungibleFaucet, MintPolicyConfig,
-            PolicyRegistration, TokenName, TokenPolicyManager, create_fungible_faucet,
+            PolicyRegistration, TokenName, TokenPolicyManager, TransferPolicy,
+            create_fungible_faucet,
         },
         AccountType,
     },
@@ -343,7 +344,9 @@ async fn main() -> anyhow::Result<()> {
         .build()?;
     let policies = TokenPolicyManager::new()
         .with_mint_policy(MintPolicyConfig::AllowAll, PolicyRegistration::Active)?
-        .with_burn_policy(BurnPolicyConfig::AllowAll, PolicyRegistration::Active)?;
+        .with_burn_policy(BurnPolicyConfig::AllowAll, PolicyRegistration::Active)?
+        .with_send_policy(TransferPolicy::AllowAll, PolicyRegistration::Active)?
+        .with_receive_policy(TransferPolicy::AllowAll, PolicyRegistration::Active)?;
     let faucet_account = create_fungible_faucet(
         init_seed,
         faucet,

@@ -62,12 +62,13 @@ Your project includes a comprehensive test file at `integration/tests/counter_te
 
 ```rust title="integration/tests/counter_test.rs"
 use integration::helpers::{
-    build_project_in_dir, create_testing_account_from_package, create_testing_note_from_package,
-    AccountCreationConfig, NoteCreationConfig,
+    build_project_in_dir, counter_storage_slot, create_testing_account_from_package,
+    create_testing_note_from_package, AccountCreationConfig, NoteCreationConfig,
+    COUNTER_STORAGE_KEY,
 };
 
 use miden_client::{
-    account::{StorageMap, StorageMapKey, StorageSlot, StorageSlotName},
+    account::{StorageMap, StorageMapKey, StorageSlot},
     auth::AuthSchemeId,
     transaction::RawOutputNote,
     Word,
@@ -95,16 +96,15 @@ async fn counter_test() -> anyhow::Result<()> {
         true,
     )?);
 
-    // Create the counter account with initial storage and no-auth auth component
-    let count_storage_key = Word::from([0u32, 0, 0, 1]);
+    // Create the counter account with initial storage and no-auth auth component.
+    // The slot name and map key come from `integration/src/helpers.rs`.
     let initial_count = Word::default();
 
-    // Use the slot name generated for the component's manifest namespace and field name.
-    let counter_storage_slot =
-        StorageSlotName::new("counter_account::counter_contract::count_map").unwrap();
+    let counter_storage_slot = counter_storage_slot()?;
     let storage_slots = vec![StorageSlot::with_map(
         counter_storage_slot.clone(),
-        StorageMap::with_entries([(StorageMapKey::new(count_storage_key), initial_count)]).unwrap(),
+        StorageMap::with_entries([(StorageMapKey::new(COUNTER_STORAGE_KEY), initial_count)])
+            .unwrap(),
     )];
     let counter_cfg = AccountCreationConfig {
         storage_slots,
@@ -146,7 +146,7 @@ async fn counter_test() -> anyhow::Result<()> {
     // Get the count from the updated counter account
     let count = counter_account
         .storage()
-        .get_map_item(&counter_storage_slot, count_storage_key)
+        .get_map_item(&counter_storage_slot, COUNTER_STORAGE_KEY)
         .expect("Failed to get counter value from storage slot");
 
     // Assert that the count value is equal to 1 after executing the transaction
@@ -205,14 +205,12 @@ let note_package = Arc::new(build_project_in_dir(
 
 ```rust
 // Create the counter account with initial storage and no-auth auth component
-let count_storage_key = Word::from([0u32, 0, 0, 1]);
 let initial_count = Word::default();
 
-let counter_storage_slot =
-    StorageSlotName::new("counter_account::counter_contract::count_map").unwrap();
+let counter_storage_slot = counter_storage_slot()?;
 let storage_slots = vec![StorageSlot::with_map(
     counter_storage_slot.clone(),
-    StorageMap::with_entries([(StorageMapKey::new(count_storage_key), initial_count)]).unwrap(),
+    StorageMap::with_entries([(StorageMapKey::new(COUNTER_STORAGE_KEY), initial_count)]).unwrap(),
 )];
 let counter_cfg = AccountCreationConfig {
     storage_slots,
@@ -277,7 +275,7 @@ mock_chain.prove_next_block()?;
 // Get the count from the updated counter account
 let count = counter_account
     .storage()
-    .get_map_item(&counter_storage_slot, count_storage_key)
+    .get_map_item(&counter_storage_slot, COUNTER_STORAGE_KEY)
     .expect("Failed to get counter value from storage slot");
 
 // Assert that the count value is equal to 1 after executing the transaction

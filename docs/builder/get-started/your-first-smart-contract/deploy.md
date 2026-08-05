@@ -39,7 +39,7 @@ The integration folder serves two essential functions in Miden development:
 
 ### 1. Contract Interaction Scripts (Binary Executables)
 
-Think of the scripts in `src/bin/` as Miden's equivalent to [**Foundry scripts**](https://getfoundry.sh/guides/scripting-with-solidity). These are executable Rust binaries that handle all your contract interactions:
+Think of the scripts in `src/bin/` as Miden's equivalent to [**Foundry scripts**](https://www.getfoundry.sh/forge/scripting). These are executable Rust binaries that handle all your contract interactions:
 
 - **Contract Deployment**: Scripts that create and deploy accounts to the network
 - **Function/Procedure Calls**: Scripts that interact with deployed contracts through notes or [transaction scripts](/reference/protocol/transaction#transaction-lifecycle)
@@ -160,14 +160,13 @@ These packages contain all the information needed to deploy and interact with yo
 Once we have the compiled packages, we convert them into deployable accounts and notes:
 
 ```rust
-// Configure initial storage for the counter account
-let count_storage_key = Word::from([0u32, 0, 0, 1]);
-let count_storage_map_key = StorageMapKey::new(count_storage_key);
+// Configure initial storage for the counter account. `COUNTER_STORAGE_KEY` and
+// `counter_storage_slot()` both come from `integration/src/helpers.rs`, so the key
+// and slot name stay in one place instead of being repeated as literals.
+let count_storage_map_key = StorageMapKey::new(COUNTER_STORAGE_KEY);
 let initial_count = Word::default();
 
-// Use the slot name generated for the component's manifest namespace and field name.
-let counter_storage_slot =
-    StorageSlotName::new("counter_account::counter_contract::count_map").unwrap();
+let counter_storage_slot = counter_storage_slot()?;
 let storage_slots = vec![StorageSlot::with_map(
     counter_storage_slot.clone(),
     StorageMap::with_entries([(count_storage_map_key, initial_count)]).unwrap(),
@@ -195,8 +194,8 @@ The `create_account_from_package()` function:
 
 **Important**: Accounts that use storage must have their storage slots specified when instantiating the account. In the v0.15-aligned SDK, storage slots are identified by name rather than index. The slot name follows the pattern `<package>::<interface>::<field_name>`, derived from the component's manifest namespace. We define the storage configuration with:
 
-- A named `StorageMap` slot (`counter_account::counter_contract::count_map`)
-- The counter key `[0, 0, 0, 1]`, wrapped as a `StorageMapKey`, with initial value `[0, 0, 0, 0]` (representing count = 0)
+- A named `StorageMap` slot, returned by the `counter_storage_slot()` helper (`counter_account::counter_contract::count_map`)
+- The counter key `COUNTER_STORAGE_KEY` (`[0, 0, 0, 1]`), wrapped as a `StorageMapKey`, with initial value `[0, 0, 0, 0]` (representing count = 0)
 
 This pre-initialization ensures the account's storage is properly configured before deployment.
 
