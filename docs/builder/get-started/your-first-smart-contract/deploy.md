@@ -91,10 +91,6 @@ Note publish transaction ID: "0xfc190c8edbf972115cd5f00b22c8eac06c9515d0403b84ff
 Consume transaction ID: "0xa1aa7971e146710df74a674b7e99d1968bec8d2db1c4da6077a7e22843c92045"
 ```
 
-:::note
-The counter account ID is logged in its structured form. To get the `0x…` string that `AccountId::from_hex()` expects — for example to read the counter back in [Read Storage Values](../read-storage) — print `account.id().to_hex()`.
-:::
-
 </details>
 
 Congratulations, you have successfully deployed the Counter Contract to the Miden Testnet, and incremented its count by one! You can verify your transaction on [MidenScan](https://testnet.midenscan.com) by searching for your transaction ID.
@@ -164,9 +160,7 @@ These packages contain all the information needed to deploy and interact with yo
 Once we have the compiled packages, we convert them into deployable accounts and notes:
 
 ```rust
-// Create the counter account with initial component storage. `COUNTER_STORAGE_KEY`
-// and `counter_storage_slot()` both come from `integration/src/helpers.rs`, so the
-// key and slot name stay in one place instead of being repeated as literals.
+// Configure initial storage for the counter account.
 let counter_storage_slot = counter_storage_slot()?;
 let mut init_storage_data = InitStorageData::default();
 init_storage_data
@@ -196,9 +190,9 @@ The `create_account_from_package()` function:
 **Important**: Accounts that use storage must have that storage seeded when instantiating the account. In the v0.15-aligned SDK, storage slots are identified by name rather than index. The slot name follows the pattern `<package>::<interface>::<field_name>`, derived from the component's manifest namespace. We seed the storage with:
 
 - A named `StorageMap` slot, returned by the `counter_storage_slot()` helper (`counter_account::counter_contract::count_map`)
-- The counter key `COUNTER_STORAGE_KEY` (`[0, 0, 0, 1]`), mapped to the initial value `0` (representing count = 0)
+- The counter key `COUNTER_STORAGE_KEY` (`[0, 0, 0, 1]`), mapped to the initial count `0`
 
-`InitStorageData` carries these seed values into `AccountComponent::from_package()`, which the helper calls for you.
+Map values are `Word`s, so `insert_map_entry` widens the `0_u64` count into the word `[0, 0, 0, 0]` before storing it. `InitStorageData` carries these seed values into `AccountComponent::from_package()`, which the helper calls for you.
 
 This pre-initialization ensures the account's storage is properly configured before deployment.
 

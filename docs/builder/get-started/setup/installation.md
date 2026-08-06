@@ -88,9 +88,7 @@ The Miden toolchain installer makes it easy to manage Miden components:
 cargo install midenup --version 1.0.0-alpha.1
 ```
 
-:::caution
-Pass `--version` explicitly. A bare `cargo install midenup` resolves to the latest **stable** release (0.3.2), which cannot read the current channel manifest and fails with `channel manifest v2.0.0 requires a newer version of midenup`.
-:::
+`1.0.0-alpha.1` is a pre-release, so `cargo install` only picks it up when the version is given explicitly.
 
 :::info
 To install from source instead, name the package explicitly — the repository contains more than one binary: `cargo install --git https://github.com/0xMiden/midenup.git midenup`
