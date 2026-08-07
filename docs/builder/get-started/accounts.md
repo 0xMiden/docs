@@ -127,10 +127,6 @@ Copy the Rust code example into the file, then run:
 cargo run --bin demo --release
 ```
 
-:::note
-The first `cargo run` pulls the pinned nightly toolchain and compiles ~400 crates, so it can take a few minutes. Later runs are incremental and much faster.
-:::
-
 ### TypeScript Environment
 
 If you already created `miden-app` during [installation](./setup/installation#typescript-project), you can reuse it. Otherwise, scaffold a new Vite vanilla-ts project:

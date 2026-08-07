@@ -85,10 +85,10 @@ v22.x.x  # or higher
 The Miden toolchain installer makes it easy to manage Miden components:
 
 ```bash title=">_ Terminal"
-cargo install midenup --version 1.0.0-alpha.1
+cargo install midenup
 ```
 
-`1.0.0-alpha.1` is a pre-release, so `cargo install` only picks it up when the version is given explicitly.
+To install a specific release, pass `--version` — this guide is written against `1.0.0-alpha.1`, which as a pre-release is only installed when named explicitly: `cargo install midenup --version 1.0.0-alpha.1`.
 
 :::info
 To install from source instead, name the package explicitly — the repository contains more than one binary: `cargo install --git https://github.com/0xMiden/midenup.git midenup`

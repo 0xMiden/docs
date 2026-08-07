@@ -192,7 +192,7 @@ The `create_account_from_package()` function:
 - A named `StorageMap` slot, returned by the `counter_storage_slot()` helper (`counter_account::counter_contract::count_map`)
 - The counter key `COUNTER_STORAGE_KEY` (`[0, 0, 0, 1]`), mapped to the initial count `0`
 
-Map values are `Word`s, so `insert_map_entry` widens the `0_u64` count into the word `[0, 0, 0, 0]` before storing it. `InitStorageData` carries these seed values into `AccountComponent::from_package()`, which the helper calls for you.
+`InitStorageData` carries these seed values into `AccountComponent::from_package()`, which the helper calls for you.
 
 This pre-initialization ensures the account's storage is properly configured before deployment.
 

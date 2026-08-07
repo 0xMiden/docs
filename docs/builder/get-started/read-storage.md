@@ -135,8 +135,6 @@ export async function demo() {
 Count: Word([1, 0, 0, 0])
 ```
 
-The Rust example prints the raw `Word` — four field elements, which is what every storage map value is. How those elements are used is up to the contract: this counter keeps its count in a single element and leaves the rest at zero, while another contract could use all four. The TypeScript example reads the count element out of the word and logs it as a number.
-
 </details>
 
 ## Reading Account Token Balances

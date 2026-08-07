@@ -52,8 +52,6 @@ test counter_test ... ok
 test result: ok. 1 passed; 0 failed; 0 ignored; 0 measured; 0 filtered out
 ```
 
-The test compiles both contracts before it runs, so the first invocation takes noticeably longer than later ones.
-
 ## Understanding the Mockchain Test
 
 Your project includes a comprehensive test file at `integration/tests/counter_test.rs` that demonstrates how to test the counter contract using the Mockchain. Let's walk through this test to understand the testing patterns:
