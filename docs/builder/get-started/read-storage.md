@@ -32,10 +32,6 @@ To run the code examples in this guide, you'll need to set up a development envi
 
 Let's interact with a counter contract deployed on the Miden testnet. This contract maintains a simple counter value in a named storage map slot.
 
-:::note
-This example needs the ID of a deployed counter account. [Your First Smart Contract](./your-first-smart-contract/deploy) walks through deploying one — come back here with that account's ID, or use any public counter account whose ID you already know. The deploy script logs the counter account ID in its structured (`Debug`) form; print `account.id().to_hex()` to get the `0x…` string these examples expect.
-:::
-
 ### Reading the Count of a Counter contract
 
 ```rust title="integration/src/bin/read-count.rs"
@@ -80,7 +76,10 @@ async fn main() -> anyhow::Result<()> {
     // READ PUBLIC STATE OF THE COUNTER ACCOUNT
     //------------------------------------------------------------
 
-    // Replace this with the ID of the counter account you deployed (see the note above).
+    // Paste the ID of your deployed counter account here; a wrong or stale ID fails
+    // with "Account not found". Deploy your own with
+    // `cargo run --bin increment_count --release` and print `account.id().to_hex()`
+    // to get the `0x…` string.
     let counter_account_id = AccountId::from_hex("0x...")?;
 
     client.import_account_by_id(counter_account_id).await?;
@@ -110,7 +109,10 @@ export async function demo() {
     // Initialize client to connect with the Miden Testnet.
     const client = await MidenClient.createTestnet();
 
-    // Replace this with the ID of the counter account you deployed (see the note above).
+    // Paste the ID of your deployed counter account here; a wrong or stale ID fails
+    // with "Account not found". Deploy your own with
+    // `cargo run --bin increment_count --release` and print `account.id().to_hex()`
+    // to get the `0x…` string.
     const counterAccountId = "0x...";
 
     // Fetch the counter account (imports it into the local store if needed).
