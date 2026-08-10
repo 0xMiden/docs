@@ -5,38 +5,10 @@ Consolidated documentation for the Miden rollup
 ---
 
 ## Documentation Dependency & Versioning Model
+:::tip IMPORTANT FOR CONTRIBUTORS
+Please note that version tags like v0.12.3 or v0.19.1 listed in the diagram below are for illustrative architecture purposes only. For actual contributions, always refer to the latest mainnet releases and modify source files strictly within the docs/ directory. Do not alter ingested legacy files.
+:::
 
-This documentation site combines content **authored in this repo** with content **ingested from external Miden repositories**. Understanding this ownership model is critical for contributors.
-
-### Dependency Diagram
-
-```mermaid
-flowchart TD
-    subgraph ThisRepo["0xMiden/miden-docs"]
-        subgraph DocsDir["docs/ (authored here)"]
-            BuilderDir["builder/"]
-            BuilderQS["builder/get-started/"]
-            BuilderSC["builder/smart-contracts/"]
-            BuilderTutorials["builder/tutorials/"]
-            BuilderTools["builder/tools/"]
-            BuilderGuardian["builder/miden-guardian/"]
-            BuilderMigration["builder/migration/"]
-            BuilderFAQ["builder/faq.md"]
-            BuilderGlossary["builder/glossary.md"]
-            ReferenceLanding["reference/index.md"]
-        end
-
-        subgraph VersionedDocs["versioned_docs/ (snapshots)"]
-            subgraph V012["version-0.12/"]
-                V012QS["quick-start/ (legacy)"]
-                V012Base["miden-base/"]
-                V012VM["miden-vm/"]
-                V012Node["miden-node/"]
-                V012Compiler["compiler/"]
-                V012Client["miden-client/"]
-                V012Tutorials["miden-tutorials/"]
-            end
-            subgraph V011["version-0.11/"]
                 V011Content["(same structure)"]
             end
             subgraph VCurrent["version-0.13+ / version-0.14"]
