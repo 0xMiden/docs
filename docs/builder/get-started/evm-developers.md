@@ -43,27 +43,37 @@ token.transfer(bob, 100);
 
 In Miden, the same transfer is two transactions connected by a note:
 
-```typescript title="P2ID transfer (TypeScript web client)"
+```typescript title="Tx 1 — Alice sends (creates the note)"
 import { MidenClient } from "@miden-sdk/miden-sdk";
 
 const client = await MidenClient.createTestnet();
 
-// Tx 1 (Alice): create a pay-to-ID note carrying 100 tokens, addressed to Bob.
-const { txId } = await client.transactions.send({
+// Create a pay-to-ID note carrying 100 tokens, addressed to Bob.
+const { txId, note } = await client.transactions.send({
   account: aliceWallet,
   to: bobWallet,
   token: faucet,
   amount: 100n,
   type: "private", // note data is not posted onchain
+  returnNote: true,
 });
+console.log("Created note:", note.id().toString());
+```
 
-// Tx 2 (Bob): consume the note; the tokens move into Bob's vault.
-await client.transactions.consume({ account: bobWallet, notes: noteId });
+```typescript title="Tx 2 — Bob consumes (in his own client)"
+// Private notes are delivered via the note transport network; Bob's
+// client fetches the ones addressed to him (endpoint is preconfigured
+// by createTestnet).
+await client.notes.fetchPrivate();
+
+// Consuming the note moves the tokens into Bob's vault.
+const [received] = await client.notes.listAvailable({ account: bobWallet });
+await client.transactions.consume({ account: bobWallet, notes: received });
 ```
 
 Two things are worth noticing:
 
-- **Alice's transaction is final on its own.** Bob does not need to be online; the note waits until he consumes it. Alice can even attach a `reclaimAfter` block number to reclaim the assets if Bob never does.
+- **Alice's transaction is final on its own.** Bob does not need to be online; the note waits until he consumes it. A `reclaimAfter` option also lets Alice reclaim the assets if Bob never consumes the note.
 - **The two transactions are unlinkable onchain** when the note is private — there is no global transfer event connecting sender and recipient.
 
 The "sealed envelope" intuition and the full mint → consume flow are covered in [Notes & Transactions](./notes).
