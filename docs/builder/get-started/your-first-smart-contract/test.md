@@ -147,7 +147,6 @@ async fn counter_test() -> anyhow::Result<()> {
         .get_map_item(&counter_storage_slot, COUNTER_STORAGE_KEY)
         .expect("Failed to get counter value from storage slot");
 
-    // Map values are returned as scalar words in `[value, 0, 0, 0]` layout.
     assert_eq!(
         count[0].as_canonical_u64(),
         1,
@@ -278,7 +277,6 @@ let count = mock_chain
     .get_map_item(&counter_storage_slot, COUNTER_STORAGE_KEY)
     .expect("Failed to get counter value from storage slot");
 
-// Map values are returned as scalar words in `[value, 0, 0, 0]` layout.
 assert_eq!(
     count[0].as_canonical_u64(),
     1,
@@ -291,8 +289,6 @@ assert_eq!(
 - We **add the executed transaction** to the mockchain and prove the next block, which commits the new account state
 - We **read the counter value** back from `mock_chain.committed_account()` — the committed state already reflects the transaction, so there is no need to apply the account delta by hand
 - We **assert that the count equals 1** - verifying the increment operation worked correctly
-
-Note the value layout: map values come back as words shaped `[value, 0, 0, 0]`, so the count lives in the first element, read here with `count[0].as_canonical_u64()`.
 
 The test verifies the complete flow: the increment note successfully increments the counter from 0 to 1, proving our smart contract works as expected.
 
