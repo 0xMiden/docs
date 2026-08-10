@@ -6,7 +6,7 @@ Consolidated documentation for the Miden rollup
 
 ## Documentation Dependency & Versioning Model
 :::tip IMPORTANT FOR CONTRIBUTORS
-Please note that version tags like v0.12.3 or v0.19.1 listed in the diagram below are for illustrative architecture purposes only. For actual contributions, always refer to the latest mainnet releases and modify source files strictly within the docs/ directory. Do not alter ingested legacy files.
+Please note that version tags like v0.12.3 or v0.19.1 shown in the diagram below are for illustrative architecture purposes only. For actual contributions, always refer to the latest mainnet releases and modify source files strictly within the docs/ directory. Do not alter ingested legacy files.
 :::
 
                 V011Content["(same structure)"]
