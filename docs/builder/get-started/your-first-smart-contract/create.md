@@ -95,11 +95,11 @@ You can build individual contracts by navigating to their directory and running 
 ```bash title=">_ Terminal"
 # Build the counter account contract
 cd contracts/counter-account
-cargo miden build
+miden build
 
 # Build the increment note contract
 cd ../increment-note
-cargo miden build
+miden build
 ```
 
 This compiles the Rust contract code into a Miden package (`.masp` file), making it ready for deployment and interaction.
@@ -303,7 +303,7 @@ Learn more about [note scripts in the Miden documentation](/reference/protocol/n
 
 ```rust
 #[note_script]
-fn run(self, _arg: Word, account: &mut CounterAccount) {
+fn run(self, _arg: Word, account: &mut Wallet) {
     let initial_value = account.get_count();
     account.increment_count();
     let expected_value = initial_value + Felt::from_u32(1);

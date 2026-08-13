@@ -111,7 +111,7 @@ This process shows how Miden contracts are deployed through state changes rather
 
 ## How the Scripts Work
 
-The integration scripts work by connecting to the Miden client and then building contracts from the Miden package files. These package files are generated when you run `cargo miden build` inside each contract directory, but the scripts handle this compilation step automatically - you don't need to manually build the contracts before running the scripts.
+The integration scripts work by connecting to the Miden client and then building contracts from the Miden package files. These package files are generated when you run `miden build` inside each contract directory, but the scripts handle this compilation step automatically - you don't need to manually build the contracts before running the scripts.
 
 Next, we look into how the scripts convert your Rust contract code into deployable Miden contracts.
 
@@ -151,7 +151,7 @@ The `build_project_in_dir()` function:
 - Takes the path to your contract's Rust source code
 - Compiles the Rust code into a Miden package (`.masp` file)
 - Generates a package containing the compiled contract bytecode and metadata
-- This is equivalent to manually running `cargo miden build` in each contract directory
+- This is equivalent to manually running `miden build` in each contract directory
 
 These packages contain all the information needed to deploy and interact with your contracts on the Miden network.
 
