@@ -39,7 +39,7 @@ The integration folder serves two essential functions in Miden development:
 
 ### 1. Contract Interaction Scripts (Binary Executables)
 
-Think of the scripts in `src/bin/` as Miden's equivalent to [**Foundry scripts**](https://getfoundry.sh/guides/scripting-with-solidity). These are executable Rust binaries that handle all your contract interactions:
+Think of the scripts in `src/bin/` as Miden's equivalent to [**Foundry scripts**](https://www.getfoundry.sh/forge/scripting). These are executable Rust binaries that handle all your contract interactions:
 
 - **Contract Deployment**: Scripts that create and deploy accounts to the network
 - **Function/Procedure Calls**: Scripts that interact with deployed contracts through notes or [transaction scripts](/reference/protocol/transaction#transaction-lifecycle)
@@ -83,12 +83,12 @@ cargo run --bin increment_count --release
 <summary>Expected Output</summary>
 
 ```text
-Account ID: V0(AccountIdV0 { prefix: 14134910893364381952, suffix: 3644349760121494784 })
-Sender account ID: "0xd85b347218c5a80052dbd47b2f36ad"
-Counter note hash: "0xf0e821396a896eb9983e682bc056021d57ddcaa43082f34597bf9e026421e566"
-Note publish transaction ID: "0xc6f080855724402cadf26650ffe993fe97a127a8f6c9c82ec621960e936e6d732
-Consume transaction ID: "0x2d1d8510e546ce0fbc22fa7d1a82322259d73cd1d7e0ca86622d0be70fab0548"
-Account delta: AccountDelta { account_id: V0(AccountIdV0 { prefix: 7255964780328958976, suffix: 2724050564200846336 }), storage: AccountStorageDelta { values: {}, maps: {0: StorageMapDelta({LexicographicWord(Word([0, 0, 0, 1])): Word([0, 0, 0, 1])})} }, vault: AccountVaultDelta { fungible: FungibleAssetDelta({}), non_fungible: NonFungibleAssetDelta({}) }, nonce_delta: 1 }
+Latest block: 1238402
+Account ID: V1(AccountIdV1 { suffix: 6091438912547090176, prefix: 14314767458661568337 })
+Sender account ID: "0x7d9c7007a5773c116bc58f9f28762b"
+Counter note hash: "0xa3642c5eb08d8298a2fb8ed7f268f13c4139771c77540768a7347c882f47ab4f"
+Note publish transaction ID: "0xfc190c8edbf972115cd5f00b22c8eac06c9515d0403b84ff697efa7093d6b8a7"
+Consume transaction ID: "0xa1aa7971e146710df74a674b7e99d1968bec8d2db1c4da6077a7e22843c92045"
 ```
 
 </details>
@@ -160,20 +160,14 @@ These packages contain all the information needed to deploy and interact with yo
 Once we have the compiled packages, we convert them into deployable accounts and notes:
 
 ```rust
-// Configure initial storage for the counter account
-let count_storage_key = Word::from([0u32, 0, 0, 1]);
-let count_storage_map_key = StorageMapKey::new(count_storage_key);
-let initial_count = Word::default();
-
-// Use the slot name generated for the component's manifest namespace and field name.
-let counter_storage_slot =
-    StorageSlotName::new("miden::component::miden_counter_account::count_map").unwrap();
-let storage_slots = vec![StorageSlot::with_map(
-    counter_storage_slot.clone(),
-    StorageMap::with_entries([(count_storage_map_key, initial_count)]).unwrap(),
-)];
+// Configure initial storage for the counter account.
+let counter_storage_slot = counter_storage_slot()?;
+let mut init_storage_data = InitStorageData::default();
+init_storage_data
+    .insert_map_entry(counter_storage_slot, COUNTER_STORAGE_KEY, 0_u64)
+    .context("Failed to seed counter storage")?;
 let counter_cfg = AccountCreationConfig {
-    storage_slots,
+    init_storage_data,
     ..Default::default()
 };
 
@@ -193,10 +187,12 @@ The `create_account_from_package()` function:
 - Combines it with the provided configuration (storage, settings, etc.)
 - Creates a deployable Miden account that can be used in transactions
 
-**Important**: Accounts that use storage must have their storage slots specified when instantiating the account. In the v0.15-aligned SDK, storage slots are identified by name rather than index. The slot name follows the pattern `miden::component::<package_name>::<field_name>`. We define the storage configuration with:
+**Important**: Accounts that use storage must have that storage seeded when instantiating the account. In the v0.15-aligned SDK, storage slots are identified by name rather than index. The slot name follows the pattern `<package>::<interface>::<field_name>`, derived from the component's manifest namespace. We seed the storage with:
 
-- A named `StorageMap` slot (`miden::component::miden_counter_account::count_map`)
-- The counter key `[0, 0, 0, 1]`, wrapped as a `StorageMapKey`, with initial value `[0, 0, 0, 0]` (representing count = 0)
+- A named `StorageMap` slot, returned by the `counter_storage_slot()` helper (`counter_account::counter_contract::count_map`)
+- The counter key `COUNTER_STORAGE_KEY` (`[0, 0, 0, 1]`), mapped to the initial count `0`
+
+`InitStorageData` carries these seed values into `AccountComponent::from_package()`, which the helper calls for you.
 
 This pre-initialization ensures the account's storage is properly configured before deployment.
 
@@ -205,14 +201,12 @@ This pre-initialization ensures the account's storage is properly configured bef
 Similarly, we convert the note package into an executable note:
 
 ```rust
-// Convert the increment note package into an executable note
-let counter_note = create_note_from_package(
-    &mut client,
-    note_package.clone(),
-    sender_account.id(),
-    NoteCreationConfig::default()
-)
-.context("Failed to create counter note from package")?;
+// Build the increment note directly from the compiled package.
+let counter_note = NoteBuilder::new(sender_account.id(), client.rng())
+    .package((*note_package).clone())
+    .tag(0)
+    .build()
+    .context("Failed to create counter note from package")?;
 
 // Publish the note to the network
 let note_publish_request = TransactionRequestBuilder::new()
@@ -221,11 +215,11 @@ let note_publish_request = TransactionRequestBuilder::new()
     .context("Failed to build note publish transaction request")?;
 ```
 
-The `create_note_from_package()` function:
+`NoteBuilder` (from `miden_standards::testing::note`):
 
-- Takes the compiled note script package
-- Combines it with the sender account ID and configuration
-- Creates an executable note containing the increment script logic
+- Takes the sender account ID and the client's RNG
+- Accepts the compiled note script package via `.package()`
+- Produces an executable note containing the increment script logic
 - The note can then be published to the network and consumed by the target (counter) account
 
 This demonstrates the complete workflow: Rust source code → compiled packages → deployable accounts/notes → network transactions.
