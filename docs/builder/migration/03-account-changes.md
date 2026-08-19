@@ -268,13 +268,18 @@ account.apply_delta(&delta)?;
 ```rust
 // After (0.16)
 let patch = executed_tx.account_patch();
+account.apply_patch(&patch)?;
+
+// Or build a fresh account from the patch instead of mutating one:
 let account = Account::try_from(&patch)?;
 ```
+
+`apply_patch` is the direct replacement for `apply_delta` and keeps the same in-place shape, so it is the smaller edit for existing code. The same rename applies further down: `AssetVault::apply_delta` became `apply_patch`, taking an `AccountVaultPatch`.
 
 ### Migration Steps
 
 1. Replace `account_delta()` with `account_patch()` on `ExecutedTransaction` and on client transaction results.
-2. Replace `Account::apply_delta` with construction from the patch.
+2. Replace `Account::apply_delta(&delta)` with `Account::apply_patch(&patch)`, or construct a new account with `Account::try_from(&patch)`.
 3. Leave `TransactionSummary::account_delta()` call sites alone — that one is intentionally still a delta.
 
 ---

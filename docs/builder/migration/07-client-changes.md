@@ -74,7 +74,7 @@ Beyond the account ID retyping, the schema diff also shows the `latest_account_a
 
 `TransactionResult::account_delta()` became `account_patch()`, and `Account::apply_delta` was replaced by construction from a patch. `TransactionSummary::account_delta()` is deliberately unchanged. This is covered in full under [Account Changes](./account-changes#account-updates-move-from-accountdelta-to-accountpatch).
 
-One import detail specific to the client: in 0.15 `AccountStorageDelta` lived in `miden_client::asset`; the 0.16 replacement `AccountStoragePatch` lives in `miden_client::account`. The module moved as well as the name.
+One import detail specific to the client: in 0.15 `AccountStorageDelta` lived in `miden_client::asset`; the 0.16 replacement `AccountStoragePatch` lives in `miden_client::account`. The module moved as well as the name. `StorageMapDelta` and `StorageSlotDelta` were dropped from `miden_client::asset` alongside it, while `AccountVaultDelta` remains there.
 
 ---
 
@@ -118,7 +118,7 @@ The account policy components were also renamed, a change absent from the change
 
 ### Summary
 
-`NoteScreener::can_consume` became `get_consumability`, and `can_consume_batch` became `get_batch_consumability`. A new `get_batch_consumability_for_account` was added, and `Client::get_consumable_notes(Some(account_id))` screens a single account.
+`NoteScreener::can_consume` became `get_consumability`, and `can_consume_batch` became `get_batch_consumability`. A new `get_batch_consumability_for_account` was added. `Client::get_consumable_notes` keeps its signature — passing a single account is now screened more efficiently, but nothing about the call changes.
 
 :::note The rename is cosmetic
 The changelog justifies it by saying the methods now return a consumption status per account rather than a boolean. They never returned a boolean — the return type is identical in 0.15 and 0.16. Rename the call sites; do not change how you handle the result.
@@ -140,7 +140,7 @@ The changelog justifies it by saying the methods now return a consumption status
 - **`TransactionRecord` gained a private field**, so struct literal construction no longer compiles.
 - **`send_notes` reads its payload from the advice provider** and requires a payload-commitment script argument. A `script_arg` passed alongside a `SendNotes` template is ignored.
 - **`AccountSmtForest` is generic over its backend**, and the root-staging API was removed.
-- **Response verification moved into `VerifyingRpcClient`.**
+- **Response verification moved into `VerifyingRpcClient`.** The built-in gRPC constructors now wrap the transport in it automatically, but `ClientBuilder::rpc` does **not** — passing your own `NodeRpcClient` compiles and runs while silently losing response verification. Wrap it yourself with `VerifyingRpcClient::new(..)`.
 
 ---
 

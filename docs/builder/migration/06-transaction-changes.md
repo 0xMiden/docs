@@ -124,15 +124,21 @@ Because `fee_conversion_info` consumes the auth arg, it **conflicts with a manua
 
 ### Summary
 
-Transaction inputs are encrypted ("sealed") before being submitted. `submit_proven_transaction` and `submit_proven_batch` take `SealedTransactionInputs`, and the RPC layer gained a `get_transaction_encryption_key` method plus a `miden_client::rpc::encryption` module.
+Transaction inputs are encrypted ("sealed") before being submitted. The RPC layer gained a `get_transaction_encryption_key` method plus a `miden_client::rpc::encryption` module.
 
 **This is a hard compatibility boundary.** A 0.16 node rejects plaintext submissions and an older node rejects sealed ones, so the client and node must be upgraded together.
+
+:::note Most applications do not change any code here
+`Client::submit_proven_transaction` keeps its 0.15 signature exactly — it still takes `impl Into<TransactionInputs>`, and sealing happens beneath it. Only the `NodeRpcClient` **trait** methods changed to take `SealedTransactionInputs`, so this is a source-breaking change solely for code that implements that trait.
+:::
+
+The requirement this does impose on every application is a **sync before submitting**: sealing resolves an encryption key against the chain state, so a client that has not synced the genesis and chain-tip headers fails with `ClientError::ChainValidationError`.
 
 ### Migration Steps
 
 1. Upgrade your node and client together. There is no configuration that makes a 0.16 client talk to a 0.15 node.
-2. Ensure the client has synced the genesis and chain-tip headers before submitting — sealing depends on them.
-3. If you implement the RPC client trait yourself, add `get_transaction_encryption_key`.
+2. Ensure the client has synced before submitting, or key resolution fails with `ChainValidationError`.
+3. If you implement `NodeRpcClient` yourself, update `submit_proven_transaction` and `submit_proven_batch` to take `SealedTransactionInputs`, and add `get_transaction_encryption_key`.
 
 :::note Key types are not re-exported from the encryption module
 The changelog states that `miden_client::rpc::encryption` re-exports the validator DSA key types. It does not — that module contains no `pub use` statements. Reach them via `miden_client::crypto::{ecdsa_k256_keccak, eddsa_25519_sha512}`.
