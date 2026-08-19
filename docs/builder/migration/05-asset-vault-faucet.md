@@ -1,81 +1,158 @@
 ---
 sidebar_position: 5
-title: "Assets, Vault & Faucet"
-description: "AssetAmount newtype, AssetVaultKey balance lookups, the unified FungibleFaucet component, and AssetComposition changes in v0.15"
+title: "Assets, Vault & Faucet Changes"
+description: "AssetVaultKey becomes AssetId, the old AssetId becomes AssetClass, and faucet factories split by authentication scheme"
 ---
 
-# Assets, Vault & Faucet
+# Assets, Vault & Faucet Changes
 
 :::warning Breaking Change
-Fungible amounts are now a validated `AssetAmount` newtype rather than a raw `u64`. The separate `BasicFungibleFaucet` and `NetworkFungibleFaucet` components are unified into a single `FungibleFaucet` (built with a `bon` builder) configured by a `TokenPolicyManager`. Vault balance lookups now take an `AssetVaultKey` instead of an `AccountId`.
+The asset model was renamed one level down. What was `AssetVaultKey` is now **`AssetId`**, and what was `AssetId` is now **`AssetClass`**. Because the name `AssetId` survives with a different meaning, a careless search-and-replace will compile and be wrong — do the `AssetId` → `AssetClass` rename first. Separately, the single `create_fungible_faucet` factory split into six auth-specific factories.
+:::
+
+## Quick Fix
+
+```rust
+// Before (0.15)
+let key: AssetVaultKey = asset.vault_key();
+let key = AssetVaultKey::new_fungible(faucet_id, callback_flag);
+
+// After (0.16)
+let id: AssetId = asset.id();
+let id = AssetId::new_fungible(faucet_id);   // callback flag now lives on the AccountId
+```
+
+If you encounter errors, continue reading for detailed migration steps.
+
+---
+
+## Summary
+
+The rename reflects a conceptual correction. The per-asset vault key is the thing that actually identifies an asset, so it took the name `AssetId`; the faucet-level identifier it used to share a name with describes a *class* of assets, so it became `AssetClass`.
+
+This is the most dangerous rename in the release precisely because it is not a removal. `AssetId` still exists after the upgrade, so code referring to it keeps compiling while silently meaning something different. Rename in the right order and let the compiler find the rest.
+
+:::note Several related types did not change
+`AssetAmount`, `AssetComposition`, and `AssetCallbackFlag` all existed in 0.15 and are unchanged. `AssetVault::get_balance` already returned `AssetAmount` in 0.15 — only its parameter type was renamed. If you saw `AssetAmount` described as new, that applies to the [client surface](./client-changes), not the protocol.
 :::
 
 ---
 
-## `FungibleAsset::amount()` / `get_balance()` return `AssetAmount`
+## `AssetVaultKey` → `AssetId`, and `AssetId` → `AssetClass`
 
 ### Summary
 
-A new validated `AssetAmount` newtype wraps fungible amounts. `FungibleAsset::amount()` now returns `AssetAmount` (was `u64`), and `AssetVault::get_balance()` returns `Result<AssetAmount, AssetError>` (was `Result<u64, AssetVaultError>`) **and takes an `AssetVaultKey` instead of an `AccountId`**. The vault key carries the asset's `AssetComposition`, so balance lookups are explicit about fungible‑vs‑non‑fungible.
+The vault key type was renamed to `AssetId`, the previous `AssetId` became `AssetClass`, and `Asset::vault_key()` became `Asset::id()`. `AssetIdHash` is the corresponding hash type.
 
 ### Affected Code
 
 ```rust
-// 0.15 — new API:
-use miden_protocol::asset::{AssetAmount, AssetCallbackFlag, AssetVaultKey};
-let amt: AssetAmount = fungible_asset.amount();
-let raw: u64 = amt.as_u64();                  // or: u64::from(amt)
-let key = AssetVaultKey::new_fungible(faucet_id, AssetCallbackFlag::Disabled);
-let bal: AssetAmount = vault.get_balance(key)?;
+// Before (0.15)
+let key: AssetVaultKey = asset.vault_key();
+let balance: AssetAmount = vault.get_balance(vault_key)?;
+let key = AssetVaultKey::new_fungible(faucet_id, callback_flag);
 ```
-`AssetAmount` implements `From<u8/u16/u32>` and `TryFrom<u64>` (validating against the max fungible amount), plus `Add`/`Sub` and `Display`.
+
+```rust
+// After (0.16)
+let id: AssetId = asset.id();
+let balance: AssetAmount = vault.get_balance(asset_id)?;
+let id = AssetId::new_fungible(faucet_id);
+// or, fully explicit:
+let id = AssetId::new(asset_class, faucet_id, composition);
+```
+
+Note that `AssetId::new_fungible` **no longer takes a callback flag**. Whether a faucet's assets trigger callbacks is encoded in the account ID itself, set at construction time via `AccountBuilder::with_asset_callbacks`.
+
+`Asset` itself is unchanged in shape — still an enum with `Fungible` and `NonFungible` variants — and `FungibleAsset::new(faucet_id, amount)` keeps its signature.
 
 ### Migration Steps
 
-1. Wrap `u64` amounts you pass into faucet/asset constructors in `AssetAmount` (`AssetAmount::from(n)` for small ints, `AssetAmount::try_from(n)` for `u64`).
-2. Unwrap `AssetAmount` back to `u64` with `.as_u64()` / `u64::from(_)` where a raw integer is needed.
-3. Replace `vault.get_balance(faucet_id)` with `vault.get_balance(AssetVaultKey::new_fungible(faucet_id, callback_flag))`.
-4. Update error handling from `AssetVaultError` to `AssetError` on `get_balance`.
+1. Rename `AssetId` → `AssetClass` **first**, throughout your codebase.
+2. Then rename `AssetVaultKey` → `AssetId`.
+3. Replace `asset.vault_key()` with `asset.id()`.
+4. Drop the callback-flag argument from `new_fungible` calls; set it on the account instead with `with_asset_callbacks`.
+5. Re-index any persisted vault or asset data. Serialized asset identifiers are not compatible across the rename.
+
+### Common Errors
+
+| Error Message | Cause | Solution |
+| --- | --- | --- |
+| `cannot find type AssetVaultKey` | Renamed | Use `AssetId`. |
+| `no method named vault_key` | Renamed | Use `id()`. |
+| `this function takes 1 argument but 2 were supplied` on `new_fungible` | Callback flag removed | Drop it; set `with_asset_callbacks` on the account. |
+| Type mismatch where `AssetId` used to work | `AssetId` now means the vault key | The old meaning is `AssetClass`. |
 
 ---
 
-## `FungibleFaucet` replaces `BasicFungibleFaucet` + `NetworkFungibleFaucet`
+## Faucet factories split by authentication scheme
 
 ### Summary
 
-The separate `BasicFungibleFaucet` and `NetworkFungibleFaucet` components were merged into a single **`FungibleFaucet`** component, and its old `FungibleFaucetBuilder` was replaced with a `bon`‑generated builder (`FungibleFaucet::builder()`). The constructor accepts a structured `TokenName` plus optional token‑metadata fields and an `AssetAmount` `max_supply`. A companion `FungibleTokenMetadata` component exposes the metadata via MASM getters. For the end‑to‑end client construction recipe (with `TokenPolicyManager`), see [(Rust) `FungibleFaucet` builder + `TokenPolicyManager`](./client-changes#rust-fungiblefaucet-builder--tokenpolicymanager-construction).
+`create_fungible_faucet` took an `AuthMethod` and an `AccessControl` argument and dispatched internally. Since `AuthMethod` was removed (see [Account Changes](./account-changes#approver-and-approverset-replace-raw-key-arguments)), the factory split into one function per authentication scheme, each taking a concrete auth component.
 
 ### Affected Code
 
 ```rust
-// 0.15 — new API:
-use miden_protocol::asset::{AssetAmount, TokenSymbol};
-use miden_standards::account::faucets::{FungibleFaucet, TokenName};
-let faucet = FungibleFaucet::builder()
-    .name(TokenName::new("My Token")?)
-    .symbol(TokenSymbol::new("MTK")?)
-    .decimals(8)
-    .max_supply(AssetAmount::from(1_000_000u32))
-    .build()?;
+// Before (0.15)
+pub fn create_fungible_faucet(
+    init_seed: [u8; 32],
+    faucet: FungibleFaucet,
+    account_type: AccountType,
+    auth_method: AuthMethod,
+    access_control: AccessControl,
+    token_policy_manager: TokenPolicyManager,
+) -> Result<Account, FungibleFaucetError>
 ```
+
+```rust
+// After (0.16)
+pub fn create_singlesig_user_fungible_faucet(
+    init_seed: [u8; 32],
+    faucet: FungibleFaucet,
+    auth_component: AuthSingleSig,
+    token_policy_manager: TokenPolicyManager,
+    account_type: AccountType,
+) -> Result<Account, FungibleFaucetError>
+```
+
+Note that the parameter **order** changed as well as the parameter list — `account_type` moved to the end.
+
+The full set of factories:
+
+| Faucet kind | v0.16 factory |
+| --- | --- |
+| Fungible, single signature | `create_singlesig_user_fungible_faucet` |
+| Fungible, multisig | `create_multisig_user_fungible_faucet` |
+| Fungible, guarded multisig | `create_guarded_user_fungible_faucet` |
+| Fungible, network account | `create_network_fungible_faucet` |
+| Non-fungible, user account | `create_user_non_fungible_faucet` |
+| Non-fungible, network account | `create_network_non_fungible_faucet` |
+
+Non-fungible faucet factories are new in this release; 0.15 shipped only the fungible factory.
 
 ### Migration Steps
 
-1. Replace `BasicFungibleFaucet` / `NetworkFungibleFaucet` imports with `FungibleFaucet`.
-2. Switch construction to `FungibleFaucet::builder()` with the required setters `name`, `symbol`, `decimals`, `max_supply`.
-3. Convert `max_supply` from `Felt` to `AssetAmount`.
+1. Choose the factory matching your authentication scheme and pass a concrete auth component instead of an `AuthMethod`.
+2. Drop the `access_control` argument. The factories install `Authority::AuthControlled` and the pausable components for you.
+3. Check the argument order — `account_type` is now last.
+4. Expect a different account ID for a faucet rebuilt from the same seed, since the component set and names changed.
+
+### Common Errors
+
+| Error Message | Cause | Solution |
+| --- | --- | --- |
+| `cannot find function create_fungible_faucet` | Split into per-scheme factories | Use the matching factory from the table. |
+| `cannot find type AuthMethod` | Removed | Pass a concrete auth component. |
+| Arguments of the wrong type | Parameter order changed | `account_type` moved to the end. |
 
 ---
 
-## `AssetComposition` and the `AssetVaultKey` composition byte
+## Common Errors
 
-### Summary
-
-A new **`AssetComposition`** enum (`None`, `Fungible`, `Custom`) discriminates assets, and the asset vault key's metadata byte now encodes the composition (plus the asset‑callback flag). `AssetVaultKey::new(asset_id, faucet_id, composition, callback_flag)` is the general constructor; `AssetVaultKey::new_fungible(faucet_id, callback_flag)` is the fungible shortcut. (`Custom` composition is reserved and currently rejected.)
-
-**What composition means:** it describes how two instances of the same asset combine in a vault — `None` (non‑fungible: instances never merge), `Fungible` (instances merge by summing amounts), and `Custom` (reserved for faucet‑defined logic; rejected at construction today). Because composition is carried in the key's metadata byte rather than derived from the faucet ID, the vault key is self‑describing. Read it back with `AssetVaultKey::composition()` and the callback flag with `AssetVaultKey::callback_flag()`. See the v0.15 <a href="/0.15/reference/protocol/asset/#encoding">asset encoding reference</a> and <a href="/0.15/reference/protocol/asset/#composition">composition reference</a> for the full layout, and [MASM Changes](./masm-changes#asset-vault-key-composition) for the procedure‑level effects.
-
-### Migration Steps
-
-1. Where you constructed a raw vault key word, use `AssetVaultKey::new_fungible` / `AssetVaultKey::new`.
-2. Branch on `AssetComposition` (via `AssetVaultKey::composition()`) instead of inspecting raw bits.
+| Error Message | Cause | Solution |
+| --- | --- | --- |
+| `cannot find type AssetVaultKey` | Renamed to `AssetId` | Rename, after renaming old `AssetId` to `AssetClass`. |
+| Silent behaviour change around asset identity | `AssetId` kept its name with a new meaning | Audit every `AssetId` reference. |
+| Persisted vault lookups miss after upgrading | Asset identifier serialization changed | Re-index persisted vault data. |
+| `cannot find function create_fungible_faucet` | Factories split | Use the auth-specific factory. |

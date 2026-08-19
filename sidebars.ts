@@ -320,7 +320,7 @@ const sidebars: SidebarsConfig = {
       link: { type: "doc", id: "builder/migration/index" },
       items: [
         "builder/migration/imports-dependencies",
-        "builder/migration/hashing-stack",
+        "builder/migration/hashing-crypto",
         "builder/migration/account-changes",
         "builder/migration/note-changes",
         "builder/migration/asset-vault-faucet",
