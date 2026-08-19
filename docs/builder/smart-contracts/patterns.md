@@ -57,11 +57,29 @@ let elapsed = current_block - last_block;
 
 For Felt arithmetic, values wrap modulo the prime field (no overflow panic), but the result may not be what you expect if you're treating Felts as integers. See [Types — Felt](./types#felt--field-elements) for details.
 
+### When to use Felt vs u64
+
+Use `Felt` when you need field-native behavior that must match the Miden VM exactly:
+
+- Hashing and commitment inputs
+- Storage words and protocol-defined field values
+- Arithmetic that is intentionally part of a field-based construction
+
+Use `u64` when you are working with business quantities and expect integer semantics:
+
+- Token amounts and balances
+- Fee calculations and proportional splits
+- Counters, limits, cooldowns, and similar control-flow values
+
+The `as_u64()` conversion is inexpensive and gives you standard Rust integer behavior. For DeFi-style
+logic, convert out of `Felt`, do the arithmetic in `u64`, and convert back with
+`Felt::from_u64_unchecked()` once you know the result is in range.
+
 ### Anti-patterns
 
 - **Don't store secrets in contract code** — contract code is visible onchain
 - **Don't skip nonce management** — prevents replay attacks
-- **Be careful with Felt division** — Felt division computes the multiplicative inverse, not integer division. Convert to `u64` first for integer-style operations
+- **Don't use Felt division for business logic** — convert to `u64` first when you need integer-style division or rounding
 
 ## `#![no_std]` environment
 

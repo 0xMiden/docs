@@ -67,6 +67,25 @@ x += felt!(1);          // x is now felt!(6)
 x *= felt!(2);          // x is now felt!(12)
 ```
 
+### Division
+
+`Felt` division only matches standard integer division when the result is exact. For `10 / 2`, both
+`u64` arithmetic and `Felt` arithmetic produce `5`. But for `20 / 3`, the Miden VM computes
+`20 * 3^(-1) mod p`, which yields a large field element instead of integer `6`.
+
+| Expression | `u64` result | `Felt` result |
+|------------|--------------|---------------|
+| `10 / 2` | `5` | `5` |
+| `20 / 3` | `6` | `6148914689804861447` |
+
+```rust
+let exact_u64 = 10_u64 / 2;            // 5
+let exact_felt = felt!(10) / felt!(2); // 5
+
+let integer_div = 20_u64 / 3;          // 6
+let field_div = felt!(20) / felt!(3);  // 6148914689804861447
+```
+
 :::note For business logic, prefer u64
 For computing amounts, balances, counters, or any value where overflow/underflow behavior matters, convert to `u64` first, perform the arithmetic, then convert back with `Felt::new(...).unwrap()` or explicit error handling.
 :::

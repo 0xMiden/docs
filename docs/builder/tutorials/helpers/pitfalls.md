@@ -338,6 +338,52 @@ Failure to validate before subtraction can lead to:
 
 ---
 
+## Felt Division Is Not Integer Division
+
+### Problem
+
+Using `/` on `Felt` values can look correct in simple cases and then break as soon as the division
+is not exact.
+
+```rust
+let exact = felt!(10) / felt!(2);   // 5
+let unexpected = felt!(20) / felt!(3);
+// 6148914689804861447, not 6
+```
+
+This is a common source of bugs for token amounts, fee calculations, and proportional splits, where
+developers usually expect integer division semantics.
+
+### Why This Happens
+
+`Felt` division in the Miden VM is field division. Instead of truncating or rounding, it multiplies
+by the multiplicative inverse of the divisor in the Goldilocks field.
+
+That means:
+
+- `10 / 2` works out to `5`, so the behavior can look harmless at first
+- `20 / 3` becomes `20 * 3^(-1) mod p`, which is `6148914689804861447`
+
+This is correct field arithmetic, but it is not the same operation as Rust integer division.
+
+### Solution
+
+For business logic, convert to `u64`, do the integer arithmetic there, and convert back only after
+the calculation is complete:
+
+```rust
+let total_amount: u64 = total.a.as_u64();
+let recipients: u64 = recipient_count.as_u64();
+
+let share = total_amount / recipients;
+let share_felt = Felt::from_u64_unchecked(share);
+```
+
+Use `Felt` division only when you explicitly need field semantics for protocol, algebraic, or
+cryptographic logic.
+
+---
+
 ## Wallet Component Requirement
 
 ### Problem
@@ -565,6 +611,7 @@ A Miden transaction commits to a state delta plus a set of consumed notes. A tra
 | Too many args | "4 words" error | Group into Words, use inputs |
 | Array reversal | Wrong data order | Be consistent with construction |
 | Felt underflow | Balance wraps to huge number | Validate before subtraction |
+| Felt division | Huge unexpected result from `/` | Convert to `u64` first |
 | Missing wallet | Asset operation fails | Add `BasicWallet` component |
 | Key mismatch | Zero balances | Use helper function for keys |
 | Note type | Wrong note visibility | Use 1 (Public) or 2 (Private) |
