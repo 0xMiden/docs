@@ -232,7 +232,7 @@ let (level, unsettled) = Verifier::new()
 let root: Word = unsettled.root();
 ```
 
-`ExecutionProof` now exposes `miden_proof() -> &StarkProof` and `deferred_proof() -> &DeferredProof`, with constructors `ExecutionProof::new(miden, deferred)` and `from_parts(bytes, hash_fn, deferred)`. The 0.15 public fields, the three-argument `new`, `stark_proof()`, `deferred_state()`, and `into_parts()` are gone.
+In VM 0.29.1, `ExecutionProof` exposes `miden_proof() -> &StarkProof` and `deferred_proof() -> &DeferredProof`, with constructors `ExecutionProof::new(miden, deferred)` and `from_parts(bytes, hash_fn, deferred)`. The 0.15 public fields, three-argument `new`, `stark_proof()`, `hash_fn()`, `precompile_requests()`, and `into_parts()` are gone. For a non-default partial-verification budget, configure `Verifier::with_max_deferred_elements(n)` before calling `verify_partial`.
 
 `verify_with_precompiles` and `verify_with_max_deferred_elements` are both removed. Precompile verification is no longer wired up by the caller: the deferred wire is rehydrated under the built-in `miden_precompiles::registry()` and bound to the STARK public inputs automatically.
 
