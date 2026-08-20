@@ -201,7 +201,7 @@ Package::read_from_bytes_unchecked(bytes)?
 
 `ExecutionProof` was restructured from `{ proof, hash_fn, pc_requests }` into two envelopes, `StarkProof` and `DeferredProof`, and **proof serialization changed** ([#3222](https://github.com/0xMiden/miden-vm/pull/3222)). The legacy proof-bound precompile request model was replaced by the deferred-DAG framework in `miden_core::deferred`.
 
-On the verification side, `verify(program_info, stack_inputs, stack_outputs, proof)` and `verify_with_precompiles(..)` were replaced by a `Verifier` type and a free `verify(proof, claim)` taking a single `ExecutionClaim` that bundles what used to be three arguments ([#3422](https://github.com/0xMiden/miden-vm/pull/3422), [#3447](https://github.com/0xMiden/miden-vm/pull/3447)).
+On the native side, `verify(program_info, stack_inputs, stack_outputs, proof)` and `verify_with_precompiles(..)` were replaced by a `Verifier` type and a free `verify(proof, claim)` taking a single `ExecutionClaim` ([#3422](https://github.com/0xMiden/miden-vm/pull/3422), [#3447](https://github.com/0xMiden/miden-vm/pull/3447)). Recursive MASM verification moved from `exec.vm::verify_proof` to `exec.vm::verify_vm_proof`; the new procedure consumes a claim commitment and returns the deferred root plus proof security parameters. Rust callers construct its request-addressed advice with `RecursiveVerifierInputs::for_request`.
 
 ### Affected Code
 
