@@ -675,7 +675,7 @@ article table td:not(:first-child):not(:last-child) {
 .theme-doc-markdown table td:last-child,
 article table th:last-child,
 article table td:last-child {
-  white-space: nowrap;
+  white-space: normal;
 }
 
 .theme-doc-markdown thead,
@@ -723,10 +723,14 @@ article tbody tr:hover {
 }
 
 /* Inline code inside tables stays legible */
+.theme-doc-markdown th code,
 .theme-doc-markdown td code,
+article th code,
 article td code {
   font-size: 13px;
   padding: 1px 4px;
+  white-space: normal;
+  overflow-wrap: anywhere;
 }
 
 /* ==========================================
