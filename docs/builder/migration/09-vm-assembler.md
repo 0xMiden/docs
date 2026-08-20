@@ -121,7 +121,7 @@ Also removed from the `miden_assembly` re-export surface: `Library`, `KernelLibr
 
 ### Summary
 
-The single core MASM package was split into `miden-core` (namespace `miden::core`) and `miden-precompiles` (namespace `miden::precompiles`), freeing the bare `miden` namespace for sibling packages such as `miden-protocol` ([#3459](https://github.com/0xMiden/miden-vm/pull/3459), [#3222](https://github.com/0xMiden/miden-vm/pull/3222)). **Both must be linked** — `miden-core` has a runtime dependency on `miden-precompiles`.
+The single core MASM package was split into `miden-core` (namespace `miden::core`) and `miden-precompiles` (namespace `miden::precompiles`), freeing the bare `miden` namespace for sibling packages such as `miden-protocol` ([#3459](https://github.com/0xMiden/miden-vm/pull/3459), [#3222](https://github.com/0xMiden/miden-vm/pull/3222)). Core records a dynamic dependency on precompiles. Link both with `CoreLibrary::packages()` during assembly, and load `&CoreLibrary` into the host for execution so its merged MAST forest is available.
 
 ### Affected Code
 
