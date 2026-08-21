@@ -6,6 +6,8 @@ description: "What a network account is in Miden v0.15, how to build and deploy 
 
 # Network Accounts
 
+<!-- docs-tests-harness: covered (AuthNetworkAccount, deployment, NetworkAccount::try_from, createNetworkNote) -->
+
 A **network account** is a public account that the network can transact against on the owner's behalf — no client needs to be online. When a note is addressed to a network account, the node's network transaction (NTX) builder executes the consuming transaction and commits the resulting state change. This is how you build always-available onchain contracts: counters, faucets, order books, and other components that must react to incoming notes without a user driving them.
 
 Two sides have to line up for network execution to happen:
