@@ -30,7 +30,7 @@ struct MyNote {
 }
 ```
 
-See [Note Scripts](./note-scripts) for the full `#[note]` pattern. The low-level `active_note::get_storage()` function is also available for advanced use cases:
+See [Note Scripts](./note-scripts.md) for the full `#[note]` pattern. The low-level `active_note::get_storage()` function is also available for advanced use cases:
 
 ```rust
 let storage: Vec<Felt> = active_note::get_storage();

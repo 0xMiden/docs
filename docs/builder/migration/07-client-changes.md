@@ -424,7 +424,7 @@ const proven2 = await wasmWebClient.proveTransaction(txResult);
 ## (Web) `InputNoteRecord.nullifier()` returns `string | undefined`
 
 ### Summary
-Because a 0.15 nullifier folds in the note's metadata (see [Nullifier now includes metadata and attachments commitment](./note-changes#nullifier-now-includes-metadata-and-attachments-commitment)), a **partial (metadata-less) input note record has no computable nullifier** — `InputNoteRecord.nullifier()` now returns `string | undefined`, pairing with `id()`'s `NoteId | undefined`. A record missing either is a partial note that sync has not yet completed.
+Because a 0.15 nullifier folds in the note's metadata (see [Nullifier now includes metadata and attachments commitment](./04-note-changes.md#nullifier-now-includes-metadata-and-attachments-commitment)), a **partial (metadata-less) input note record has no computable nullifier** — `InputNoteRecord.nullifier()` now returns `string | undefined`, pairing with `id()`'s `NoteId | undefined`. A record missing either is a partial note that sync has not yet completed.
 
 ### Migration Steps
 1. Guard `record.nullifier()` against `undefined` alongside the existing `record.id()` guard; treat records missing either as not-yet-consumable and skip them from listings.

@@ -28,13 +28,13 @@ Smart Contracts is the domain. Rust and Miden Assembly are authoring paths insid
 ## What this section covers
 
 <CardGrid cols={3}>
-  <Card title="Account components" href="./account-components" eyebrow="Compose accounts">
+  <Card title="Account components" docId="builder/smart-contracts/standards/account-components" eyebrow="Compose accounts">
     Use standard wallet, authentication, access-control, faucet, and metadata components.
   </Card>
-  <Card title="Standard notes" href="./standard-notes" eyebrow="Move assets">
+  <Card title="Standard notes" docId="builder/smart-contracts/standards/standard-notes" eyebrow="Move assets">
     Choose P2ID, P2IDE, SWAP, PSWAP, mint, and burn note scripts.
   </Card>
-  <Card title="Faucets and policies" href="./faucets-and-policies" eyebrow="Issue tokens">
+  <Card title="Faucets and policies" docId="builder/smart-contracts/standards/faucets-and-policies" eyebrow="Issue tokens">
     Build token faucets and choose mint, burn, send, and receive policy modules.
   </Card>
 </CardGrid>
@@ -59,5 +59,5 @@ You can mix both approaches. A typical application account starts with standard 
 
 - [Accounts](../accounts/) - components, storage, authentication, and account operations
 - [Notes](../notes/) - note model, note scripts, standard note types, and output notes
-- [Cross-component calls](../cross-component-calls) - calling component interfaces from scripts and components
+- [Cross-component calls](../cross-component-calls.md) - calling component interfaces from scripts and components
 - [`miden-standards` source](https://github.com/0xMiden/protocol/tree/next/crates/miden-standards) - current standards implementation

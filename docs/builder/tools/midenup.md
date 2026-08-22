@@ -105,13 +105,13 @@ Everything outside the alias table is forwarded to the underlying binary — e.g
 ## Related
 
 <CardGrid cols={3}>
-  <Card title="Installation" href="../get-started/setup/installation" eyebrow="Get started">
+  <Card title="Installation" docId="builder/get-started/setup/installation" eyebrow="Get started">
     Full environment setup — prerequisites, node install, first account.
   </Card>
-  <Card title="CLI basics" href="../get-started/setup/cli-basics" eyebrow="Commands">
+  <Card title="CLI basics" docId="builder/get-started/setup/cli-basics" eyebrow="Commands">
     Walk through `miden account`, `miden send`, `miden faucet`, and the rest.
   </Card>
-  <Card title="Network" href="./network" eyebrow="Testnet · Services">
+  <Card title="Network" docId="builder/tools/network" eyebrow="Testnet · Services">
     Endpoints the `miden` CLI points at — RPC, faucet, remote prover, block explorer.
   </Card>
 </CardGrid>

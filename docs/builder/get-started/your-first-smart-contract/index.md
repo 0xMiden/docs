@@ -31,13 +31,13 @@ The counter example is designed to teach core Miden concepts through a simple, u
 
 ## Prerequisites
 
-Before starting this guide, ensure you have completed the [Installation](../setup/installation) tutorial and have:
+Before starting this guide, ensure you have completed the [Installation](../setup/installation.md) tutorial and have:
 
 - **Rust toolchain** installed and configured
 - **midenup toolchain** installed with Miden CLI tools
 
 :::tip Prerequisites Required
-You need those development tools installed for this guide. If you haven't set up your environment yet, please complete the [installation](../setup/installation) guide first.
+You need those development tools installed for this guide. If you haven't set up your environment yet, please complete the [installation](../setup/installation.md) guide first.
 :::
 
 ## No Prior Experience Required
@@ -62,9 +62,9 @@ If you get stuck during this tutorial:
 
 This tutorial is divided into focused sections:
 
-1. **[Create Your Project](./create)** - Set up your workspace and understand the counter contract code
-2. **[Deploy Your Contract](./deploy)** - Learn the integration folder and deploy to testnet
-3. **[Test Your Contract](./test)** - Learn how to effectively test your contracts
+1. **[Create Your Project](./create.md)** - Set up your workspace and understand the counter contract code
+2. **[Deploy Your Contract](./deploy.md)** - Learn the integration folder and deploy to testnet
+3. **[Test Your Contract](./test.md)** - Learn how to effectively test your contracts
 
 Each section builds on the previous one, so we recommend following them in order.
 

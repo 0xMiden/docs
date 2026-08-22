@@ -21,10 +21,10 @@ You're here because you want to deploy a contract to Miden mainnet. MASM is a sm
 | **Mainnet production** | Supported today | In active development |
 | **Performance / cycle control** | Direct control over emitted instructions | Compiles via Wasm → MASM; less predictable |
 | **Learning curve** | Small instruction set, explicit stack semantics | Familiar Rust ergonomics |
-| **Miden Standards** | [Standards modules](../standards/) callable directly | Same standards via Rust bindings |
+| **Miden Standards** | [Standards modules](../standards/index.md) callable directly | Same standards via Rust bindings |
 | **Long-term direction** | Long-lived for system-level / performance-critical code | Will become the default authoring path once mature |
 
-For mainnet shipping today, the choice is straightforward: write MASM. Most production patterns — account components, note scripts, transaction scripts, P2ID and P2IDE flows, faucet policies — are already covered by [Miden Standards](../standards/), so most contracts compose existing standards rather than rolling everything from scratch.
+For mainnet shipping today, the choice is straightforward: write MASM. Most production patterns — account components, note scripts, transaction scripts, P2ID and P2IDE flows, faucet policies — are already covered by [Miden Standards](../standards/index.md), so most contracts compose existing standards rather than rolling everything from scratch.
 
 ## Where the language reference lives
 
@@ -47,7 +47,7 @@ In the meantime, the existing [Rust-based Miden Bank tutorial](../../tutorials/m
 
 ## See also
 
-- [Miden Standards](../standards/) — reusable account components, standard notes, faucet policies, callable from MASM.
+- [Miden Standards](../standards/index.md) — reusable account components, standard notes, faucet policies, callable from MASM.
 - [Reference → Miden VM → Assembly](/reference/miden-vm/user_docs/assembly/) — full language reference (instructions, stack semantics, control flow).
-- [Smart Contracts → Overview](../overview) — execution model and lifecycle (the concepts apply regardless of authoring language).
-- [Tools → Playground](../../tools/playground) — interactive browser-based MASM environment for quick experiments.
+- [Smart Contracts → Overview](../overview.md) — execution model and lifecycle (the concepts apply regardless of authoring language).
+- [Tools → Playground](../../tools/playground.md) — interactive browser-based MASM environment for quick experiments.

@@ -54,7 +54,7 @@ Returns note metadata:
 let metadata: NoteMetadata = output_note::get_metadata(note_idx);
 ```
 
-On the v0.15 protocol side, `NoteMetadata` combines `PartialNoteMetadata` (sender, note type, tag) with attachment headers and the attachments commitment. See [Reading Notes — Note metadata](./reading-notes#note-metadata) for details.
+On the v0.15 protocol side, `NoteMetadata` combines `PartialNoteMetadata` (sender, note type, tag) with attachment headers and the attachments commitment. See [Reading Notes — Note metadata](./reading-notes.md#note-metadata) for details.
 
 ## Note attachments
 

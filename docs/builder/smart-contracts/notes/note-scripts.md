@@ -91,7 +91,7 @@ pub fn run(self, _arg: Word, account: &mut Wallet) {
 }
 ```
 
-Declare the account wrapper with `#[account(package::Interface)]` and point `miden-project.toml` at the dependency's generated WIT — see [Cross-Component Calls](../cross-component-calls).
+Declare the account wrapper with `#[account(package::Interface)]` and point `miden-project.toml` at the dependency's generated WIT — see [Cross-Component Calls](../cross-component-calls.md).
 
 ### Without account access
 
@@ -135,7 +135,7 @@ impl CounterNote {
 }
 ```
 
-This note takes the active account as `&mut CounterAccount` and calls the counter component through its generated interface. See [Cross-Component Calls](../cross-component-calls).
+This note takes the active account as `&mut CounterAccount` and calls the counter component through its generated interface. See [Cross-Component Calls](../cross-component-calls.md).
 
 ## miden-project.toml for note scripts
 
@@ -161,5 +161,5 @@ counter-account = { wit = "../counter-account/target/generated-wit/" }
 
 ## Related
 
-- [Cross-Component Calls](../cross-component-calls) — how `#[account(...)]` wrappers and generated interfaces work
-- [Transaction Context](../transactions/transaction-context) — transaction scripts with `#[tx_script]`
+- [Cross-Component Calls](../cross-component-calls.md) — how `#[account(...)]` wrappers and generated interfaces work
+- [Transaction Context](../transactions/transaction-context.md) — transaction scripts with `#[tx_script]`

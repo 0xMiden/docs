@@ -176,7 +176,7 @@ let initial: Word = storage::get_initial_map_item(slot_id, &key);
 
 These functions return values from before any modifications in the current transaction.
 
-For Felt and Word conversion details, see [Types](../types). To export your own types for public APIs, see [Custom Types](./custom-types). For common storage patterns like access control and rate limiting, see [Patterns](../patterns).
+For Felt and Word conversion details, see [Types](../types.md). To export your own types for public APIs, see [Custom Types](./custom-types.md). For common storage patterns like access control and rate limiting, see [Patterns](../patterns.md).
 
 :::info API Reference
 Full API docs on docs.rs: [`miden::storage`](https://docs.rs/miden/latest/miden/storage/)

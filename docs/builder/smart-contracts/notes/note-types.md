@@ -157,8 +157,8 @@ SwapNote::create(
 
 Returns a tuple of `(Note, NoteDetails)` — the SWAP note to submit and the expected payback note details (for tracking).
 
-`NoteAttachments` is defined in `miden-protocol`. Use `NoteAttachments::empty()` when the note does not need auxiliary data — see [note attachments](./output-notes#note-attachments) for the underlying SDK API.
+`NoteAttachments` is defined in `miden-protocol`. Use `NoteAttachments::empty()` when the note does not need auxiliary data — see [note attachments](./output-notes.md#note-attachments) for the underlying SDK API.
 
 ## More note types
 
-For writing custom note scripts, see [Note Scripts](./note-scripts). For the transaction context and `#[tx_script]`, see [Transaction Context](../transactions/transaction-context).
+For writing custom note scripts, see [Note Scripts](./note-scripts.md). For the transaction context and `#[tx_script]`, see [Transaction Context](../transactions/transaction-context.md).

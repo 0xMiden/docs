@@ -21,7 +21,7 @@ Before v0.15, network accounts were a storage mode (`AccountStorageMode::Network
 
 ## What makes an account a network account
 
-`AuthNetworkAccount` writes a standardized [`StorageMap`](./storage) slot named `miden::standards::auth::network_account::allowed_note_scripts`. Off-chain services and the node's NTX builder treat the presence of that slot as the signal that an account is a network account. The slot holds a **note allowlist**: the set of note script roots the account is willing to consume. A note whose script root is not in the allowlist is rejected during authentication.
+`AuthNetworkAccount` writes a standardized [`StorageMap`](./storage.md) slot named `miden::standards::auth::network_account::allowed_note_scripts`. Off-chain services and the node's NTX builder treat the presence of that slot as the signal that an account is a network account. The slot holds a **note allowlist**: the set of note script roots the account is willing to consume. A note whose script root is not in the allowlist is rejected during authentication.
 
 Since **v0.15.2**, the component also holds a second allowlist of permitted **transaction script roots** (`miden::standards::auth::network_account::allowed_tx_scripts`). It is empty by default, and the network auth procedure **rejects any transaction that runs a transaction script whose root is not in this allowlist** — a scriptless transaction has no script and is always accepted. Consuming a note does not need a transaction script, so a note-only network account leaves it empty. But if the account is reached by a *custom transaction script* — for example a scripted deploy, or a scripted interaction — that script's root must be allowlisted too, or the transaction is rejected. (Before v0.15.2 the component banned transaction scripts outright, and its note-allowlist constructor was named `with_allowlist` rather than `with_allowed_notes`.)
 
@@ -153,7 +153,7 @@ Rust: [`AuthNetworkAccount`](https://docs.rs/miden-standards/latest/miden_standa
 ## Related
 
 - [Network transactions tutorial](../../tutorials/recipes/rust/network_transactions_tutorial.md) — end-to-end Rust walkthrough: build, deploy, and drive a network counter contract
-- [Authentication](./authentication) — the auth component pattern `AuthNetworkAccount` builds on
-- [Storage](./storage) — how the allowlist `StorageMap` slot is laid out
+- [Authentication](./authentication.md) — the auth component pattern `AuthNetworkAccount` builds on
+- [Storage](./storage.md) — how the allowlist `StorageMap` slot is laid out
 - [Account changes](../../migration/03-account-changes.md) — the v0.14 → v0.15 removal of `AccountStorageMode::Network`
-- [Account components](../standards/account-components) — composing wallet, faucet, and access-control components
+- [Account components](../standards/account-components.md) — composing wallet, faucet, and access-control components

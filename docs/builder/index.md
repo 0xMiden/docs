@@ -8,36 +8,36 @@ pagination_next: null
 
 Miden is a zero-knowledge layer 2 where every account is an independent state machine and state is private by default. You author accounts, notes, and transactions in Rust, compile them to Miden Assembly (MASM), and prove them client-side — the network verifies each proof without ever seeing your private state.
 
-This is the developer's entry point. **New to Miden?** Start with [Get started](./get-started) to install the toolchain and send your first transaction, then build [Your first smart contract](./get-started/your-first-smart-contract), and dip into the [Reference](../reference) when you want to know how it all works underneath. Already oriented? Jump straight to any section below.
+This is the developer's entry point. **New to Miden?** Start with [Get started](./get-started/index.md) to install the toolchain and send your first transaction, then build [Your first smart contract](./get-started/your-first-smart-contract/index.md), and dip into the [Reference](../reference/index.md) when you want to know how it all works underneath. Already oriented? Jump straight to any section below.
 
 ## Start here
 
 <CardGrid cols={2}>
-  <Card title="Get started" href="./get-started" eyebrow="Install & run">
+  <Card title="Get started" docId="builder/get-started/index" eyebrow="Install & run">
     Install midenup, create a wallet, and send your first transaction — in under ten minutes.
   </Card>
-  <Card title="Your first smart contract" href="./get-started/your-first-smart-contract" eyebrow="Tutorial">
+  <Card title="Your first smart contract" docId="builder/get-started/your-first-smart-contract/index" eyebrow="Tutorial">
     Walk through writing, proving, and deploying a counter contract in Rust.
   </Card>
 </CardGrid>
 
 <Callout variant="tip" title="Testnet & faucet">
-Building against the public testnet? Grab free test assets from the [faucet](https://faucet.testnet.miden.io/), and find every public endpoint — RPC, block explorer, status — on the [Network](./tools/network) page.
+Building against the public testnet? Grab free test assets from the [faucet](https://faucet.testnet.miden.io/), and find every public endpoint — RPC, block explorer, status — on the [Network](./tools/network.md) page.
 </Callout>
 
 ## Build
 
 <CardGrid cols={2}>
-  <Card title="Smart contracts" href="./smart-contracts" eyebrow="Reference">
+  <Card title="Smart contracts" docId="builder/smart-contracts/index" eyebrow="Reference">
     Accounts, notes, storage, components, transactions — the full Rust SDK surface.
   </Card>
-  <Card title="Tutorials" href="./tutorials" eyebrow="Walkthroughs">
+  <Card title="Tutorials" docId="builder/tutorials/index" eyebrow="Walkthroughs">
     Real-world examples: the Miden Bank, private multisig, custom note scripts.
   </Card>
-  <Card title="Development helpers" href="./tutorials#development-helpers" eyebrow="How-to">
+  <Card title="Development helpers" docId="builder/tutorials/index" hash="#development-helpers" eyebrow="How-to">
     Testing, debugging, and common pitfalls when writing Miden programs.
   </Card>
-  <Card title="Tools" href="./tools" eyebrow="Clients & CLI">
+  <Card title="Tools" docId="builder/tools/index" eyebrow="Clients & CLI">
     Rust, Web, and React SDKs · playground · block explorer · CLI.
   </Card>
 </CardGrid>
@@ -45,10 +45,10 @@ Building against the public testnet? Grab free test assets from the [faucet](htt
 ## Ship
 
 <CardGrid cols={2}>
-  <Card title="Migration" href="./migration" eyebrow="v0.14 → v0.15">
+  <Card title="Migration" docId="builder/migration/index" eyebrow="v0.14 → v0.15">
     Breaking changes, renames, and new features across accounts, notes, transactions, MASM, and the client.
   </Card>
-  <Card title="Miden Guardian" href="./miden-guardian" eyebrow="Account state">
+  <Card title="Miden Guardian" docId="builder/miden-guardian/index" eyebrow="Account state">
     Backup, sync, and coordinate private account state across devices.
   </Card>
   <Card title="Private multisig" href="./miden-guardian/reference/multisig-sdk" eyebrow="Solutions">
@@ -59,10 +59,10 @@ Building against the public testnet? Grab free test assets from the [faucet](htt
 ## Reference
 
 <CardGrid cols={2}>
-  <Card title="FAQ" href="./faq" eyebrow="Questions">
+  <Card title="FAQ" docId="builder/faq" eyebrow="Questions">
     Frequently asked questions about Miden.
   </Card>
-  <Card title="Glossary" href="./glossary" eyebrow="Terminology">
+  <Card title="Glossary" docId="builder/glossary" eyebrow="Terminology">
     Key terms and definitions used throughout the docs.
   </Card>
 </CardGrid>

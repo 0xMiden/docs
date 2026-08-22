@@ -117,7 +117,7 @@ For standard flows:
 - The recipient discovers and consumes the note.
 - The recipient's account must be able to receive the asset, usually by including `BasicWallet`.
 
-This is the same two-transaction note model described in [What are Notes?](../notes/introduction).
+This is the same two-transaction note model described in [What are Notes?](../notes/introduction.md).
 
 ## Burn returned assets
 
@@ -139,7 +139,7 @@ If you only need additional public methods, compose the faucet account with an e
 
 ## Related pages
 
-- [Account components](./account-components) - composing faucets with standard auth and ownership components
-- [Standard notes](./standard-notes) - mint and burn notes
-- [Assets, Vault, and Faucet migration notes](../../migration/asset-vault-faucet) - asset and faucet changes
+- [Account components](./account-components.md) - composing faucets with standard auth and ownership components
+- [Standard notes](./standard-notes.md) - mint and burn notes
+- [Assets, Vault, and Faucet migration notes](../../migration/05-asset-vault-faucet.md) - asset and faucet changes
 - [`miden-standards` faucet source](https://github.com/0xMiden/protocol/tree/next/crates/miden-standards/src/account/faucets) - current implementation

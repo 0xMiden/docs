@@ -6,7 +6,7 @@ description: "Call methods across account components and from note scripts."
 
 # Cross-Component Calls
 
-Miden [components](./accounts/components) can call each other's methods. Since accounts can have multiple components (e.g., wallet + auth + custom logic), those components need to communicate. [Note scripts](./notes/note-scripts) also need to call methods on the account's components to transfer assets.
+Miden [components](./accounts/components.md) can call each other's methods. Since accounts can have multiple components (e.g., wallet + auth + custom logic), those components need to communicate. [Note scripts](./notes/note-scripts.md) also need to call methods on the account's components to transfer assets.
 
 ## How it works
 
