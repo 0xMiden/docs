@@ -74,11 +74,6 @@ const OG_IMAGE_RULES: OgImageRule[] = [
     description: "Assisted self-custody flows for safer account recovery and operation.",
   },
   {
-    pathPrefix: "/builder/private-multisig",
-    image: "private-multisig.png",
-    description: "Account patterns for private approvals and coordinated execution.",
-  },
-  {
     pathPrefix: "/builder/smart-contracts/accounts",
     image: "smart-contract-accounts.png",
     description: "Account components, storage, authentication, and account operations.",

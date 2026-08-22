@@ -14,8 +14,8 @@ validator is operated by a separate entity from the network operator.
 It may also be useful if you want to understand how Miden network infrastructure is currently architected and how it
 works.
 
-If you want to develop against a disposable local network, use [Local Network Development](/local-network-development).
-If you want to run a non-sequencing node for an existing network, use the [Full Node Guide](/full-node/).
+If you want to develop against a disposable local network, use [Local Network Development](../local-network-development.md).
+If you want to run a non-sequencing node for an existing network, use the [Full Node Guide](../full-node/index.md).
 
-Start with [Overview](/network-operator/overview) for the service roles and an example deployment, then use
-[Installation](/network-operator/installation) to select the matching binaries or images.
+Start with [Overview](./overview.md) for the service roles and an example deployment, then use
+[Installation](./installation.md) to select the matching binaries or images.

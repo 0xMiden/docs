@@ -11,7 +11,7 @@ transactions, and subscribing to committed blocks and block proofs.
 The API uses standard gRPC status codes. Some methods also include additional Miden-specific error codes in status
 details for stable client-side handling.
 
-See [Official Network URLs](/official-network-urls) for public RPC endpoints on official networks.
+See [Official Network URLs](../official-network-urls.md) for public RPC endpoints on official networks.
 
 ## Schema
 
@@ -55,5 +55,5 @@ The RPC server supports:
 | Block streaming        | `BlockSubscription`, `ProofSubscription`                                                                        |
 | Network note debugging | `GetNetworkNoteStatus`                                                                                          |
 
-See [Public RPC](/rpc/public-api) for endpoint summaries, [Subscriptions](/rpc/subscriptions) for stream semantics, and
-[Errors and Limits](/rpc/errors-and-limits) for request limits, content negotiation, and method-specific error codes.
+See [Public RPC](./public-api.md) for endpoint summaries, [Subscriptions](./subscriptions.md) for stream semantics, and
+[Errors and Limits](./errors-and-limits.md) for request limits, content negotiation, and method-specific error codes.

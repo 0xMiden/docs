@@ -48,9 +48,10 @@
   font-size: 15px;
   font-family: var(--font-sans);
   color: var(--color-text);
-  display: inline-flex;
-  align-items: center;
-  gap: 0.4rem;
+  display: inline-block;
+  position: relative;
+  word-break: normal;
+  overflow-wrap: break-word;
 }
 
 [data-theme="dark"] .pagination-nav__label {
@@ -59,6 +60,9 @@
 
 .pagination-nav__link--prev .pagination-nav__label::before {
   content: "←";
+  position: absolute;
+  top: 0;
+  right: calc(100% + 0.4rem);
   color: var(--color-muted);
   font-family: var(--font-mono);
   transition: transform var(--t-base) var(--ease-out-expo);
@@ -69,24 +73,27 @@
   transform: translateX(-2px);
 }
 
-.pagination-nav__link--next .pagination-nav__label::after {
+.pagination-nav__link--next .pagination-nav__label::before {
   content: "→";
+  position: absolute;
+  top: 0;
+  right: calc(100% + 0.4rem);
   color: var(--color-muted);
   font-family: var(--font-mono);
   transition: transform var(--t-base) var(--ease-out-expo);
 }
 
-.pagination-nav__link--next:hover .pagination-nav__label::after {
+.pagination-nav__link--next:hover .pagination-nav__label::before {
   color: var(--color-brand);
   transform: translateX(2px);
 }
 
-.pagination-nav__link--next {
-  text-align: right;
+.pagination-nav__link--next .pagination-nav__label::after {
+  content: none;
 }
 
-.pagination-nav__link--next .pagination-nav__label {
-  flex-direction: row-reverse;
+.pagination-nav__link--next {
+  text-align: right;
 }
 
 /* Neutralize the old legacy pseudo-element arrow characters */

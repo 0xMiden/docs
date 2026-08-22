@@ -85,6 +85,7 @@ use miden_client::{
         },
         AccountBuilder, AccountType,
     },
+    asset::{AssetAmount, AssetCallbackFlag, FungibleAsset, TokenSymbol},
     auth::AuthSecretKey,
     builder::ClientBuilder,
     keystore::{FilesystemKeyStore, Keystore},
@@ -93,7 +94,6 @@ use miden_client::{
     transaction::TransactionRequestBuilder,
 };
 use miden_client_sqlite_store::ClientBuilderSqliteExt;
-use miden_protocol::asset::{AssetAmount, FungibleAsset, TokenSymbol};
 use miden_standards::AuthMethod;
 use rand::RngCore;
 use std::sync::Arc;
@@ -193,7 +193,10 @@ async fn main() -> anyhow::Result<()> {
     keystore.add_key(&faucet_key_pair, faucet_account.id()).await?;
 
     let amount: u64 = 1000;
-    let fungible_asset = FungibleAsset::new(faucet_account.id(), amount)?;
+    // Enable asset callbacks so the faucet's send/receive transfer policies run
+    // when this asset moves between accounts.
+    let fungible_asset = FungibleAsset::new(faucet_account.id(), amount)?
+        .with_callbacks(AssetCallbackFlag::Enabled);
 
     // Build transaction request to mint fungible asset to Alice's account
     // NOTE: This transaction will create a P2ID note (a Miden note containing the minted asset)
@@ -255,7 +258,7 @@ export async function demo() {
         amount: 1000n,
         type: "public",  // note visibility
     });
-    console.log("Mint transaction submitted successfully, ID:", txId.toString());
+    console.log("Mint transaction submitted successfully, ID:", txId.toHex());
 }
 ```
 
@@ -302,6 +305,7 @@ use miden_client::{
         },
         Account, AccountBuilder, AccountType,
     },
+    asset::{AssetAmount, AssetCallbackFlag, AssetVaultKey, FungibleAsset, TokenSymbol},
     auth::AuthSecretKey,
     builder::ClientBuilder,
     keystore::{FilesystemKeyStore, Keystore},
@@ -310,9 +314,6 @@ use miden_client::{
     transaction::TransactionRequestBuilder,
 };
 use miden_client_sqlite_store::ClientBuilderSqliteExt;
-use miden_protocol::asset::{
-    AssetAmount, AssetCallbackFlag, AssetVaultKey, FungibleAsset, TokenSymbol,
-};
 use miden_standards::AuthMethod;
 use rand::RngCore;
 use std::sync::Arc;
@@ -413,7 +414,10 @@ async fn main() -> anyhow::Result<()> {
     keystore.add_key(&faucet_key_pair, faucet_account.id()).await?;
 
     let amount: u64 = 1000;
-    let fungible_asset = FungibleAsset::new(faucet_account.id(), amount)?;
+    // Enable asset callbacks so the faucet's send/receive transfer policies run
+    // when this asset moves between accounts.
+    let fungible_asset = FungibleAsset::new(faucet_account.id(), amount)?
+        .with_callbacks(AssetCallbackFlag::Enabled);
 
     // Build transaction request to mint fungible asset to Alice's account
     // NOTE: This transaction will create a P2ID note (a Miden note containing the minted asset)
@@ -481,9 +485,11 @@ async fn main() -> anyhow::Result<()> {
             .ok_or_else(|| anyhow::anyhow!("Account not found"))?
             .try_into()?;
         let vault = alice_account.vault();
+        // The callback flag is part of the vault key, so it must match the flag the
+        // asset was minted with — otherwise the lookup misses and the balance reads 0.
         let balance_key = AssetVaultKey::new_fungible(
             faucet_account.id(),
-            AssetCallbackFlag::Disabled,
+            AssetCallbackFlag::Enabled,
         );
         println!(
             "Alice's TEST token balance: {:?}",
@@ -533,7 +539,7 @@ export async function demo() {
     });
     console.log(
         "Mint transaction submitted successfully, ID:",
-        mintResult.txId.toString(),
+        mintResult.txId.toHex(),
     );
 
     // List notes available to Alice and consume them — tokens move into her vault.
@@ -545,11 +551,16 @@ export async function demo() {
     });
     console.log(
         "Consume transaction submitted successfully, ID:",
-        consumeResult.txId.toString(),
+        consumeResult.txId.toHex(),
     );
 
-    // Read Alice's TEST token balance directly via the accounts resource.
-    const balance = await client.accounts.getBalance(alice, faucet);
+    // Fetch Alice again so her vault reflects the consumed note.
+    const updatedAlice = await client.accounts.get(alice);
+    if (!updatedAlice) {
+        throw new Error("Alice's account was not found");
+    }
+
+    const balance = updatedAlice.vault().getBalance(faucet.id());
     console.log("Alice's TEST token balance:", Number(balance));
 }
 ```
@@ -564,7 +575,7 @@ Minting 1000 tokens to Alice...
 Mint transaction submitted successfully, ID: "0x7a2dbde87ea2f4d41b396d6d3f6bdb9a8d7e2a51555fa57064a1657ad70fca06"
 Waiting for note to be consumable...
 Consume transaction submitted successfully, ID: "0xa75872c498ee71cd6725aef9411d2559094cec1e1e89670dbf99c60bb8843481"
-Alice's TEST token balance: Ok(1000)
+Alice's TEST token balance: Ok(AssetAmount(1000))
 ```
 
 </details>
@@ -597,8 +608,9 @@ use miden_client::{
             FungibleFaucet, MintPolicyConfig, PolicyRegistration, TokenName, TokenPolicyManager,
             TransferPolicy, create_fungible_faucet,
         },
-        Account, AccountBuilder, AccountId, AccountType,
+        Account, AccountBuilder, AccountType,
     },
+    asset::{AssetAmount, AssetCallbackFlag, AssetVaultKey, FungibleAsset, TokenSymbol},
     auth::AuthSecretKey,
     builder::ClientBuilder,
     keystore::{FilesystemKeyStore, Keystore},
@@ -607,9 +619,6 @@ use miden_client::{
     transaction::TransactionRequestBuilder,
 };
 use miden_client_sqlite_store::ClientBuilderSqliteExt;
-use miden_protocol::asset::{
-    AssetAmount, AssetCallbackFlag, AssetVaultKey, FungibleAsset, TokenSymbol,
-};
 use miden_standards::AuthMethod;
 use rand::RngCore;
 use std::sync::Arc;
@@ -710,7 +719,10 @@ async fn main() -> anyhow::Result<()> {
     keystore.add_key(&faucet_key_pair, faucet_account.id()).await?;
 
     let amount: u64 = 1000;
-    let fungible_asset = FungibleAsset::new(faucet_account.id(), amount)?;
+    // Enable asset callbacks so the faucet's send/receive transfer policies run
+    // when this asset moves between accounts.
+    let fungible_asset = FungibleAsset::new(faucet_account.id(), amount)?
+        .with_callbacks(AssetCallbackFlag::Enabled);
 
     // Build transaction request to mint fungible asset to Alice's account
     // NOTE: This transaction will create a P2ID note (a Miden note containing the minted asset)
@@ -778,9 +790,11 @@ async fn main() -> anyhow::Result<()> {
             .ok_or_else(|| anyhow::anyhow!("Account not found"))?
             .try_into()?;
         let vault = alice_account.vault();
+        // The callback flag is part of the vault key, so it must match the flag the
+        // asset was minted with — otherwise the lookup misses and the balance reads 0.
         let balance_key = AssetVaultKey::new_fungible(
             faucet_account.id(),
-            AssetCallbackFlag::Disabled,
+            AssetCallbackFlag::Enabled,
         );
         println!(
             "Alice's TEST token balance: {:?}",
@@ -794,9 +808,28 @@ async fn main() -> anyhow::Result<()> {
     // SENDING TOKENS TO BOB
     //------------------------------------------------------------
 
-    let bob_account_id = AccountId::from_hex("0x103f8a1ad4b983104aec0412ab0b0d")?;
+    // Create Bob's account so this example is self-contained.
+    let mut bob_seed = [0u8; 32];
+    client.rng().fill_bytes(&mut bob_seed);
+    let bob_key_pair = AuthSecretKey::new_falcon512_poseidon2();
+    let bob_account = AccountBuilder::new(bob_seed)
+        .account_type(AccountType::Public)
+        .with_auth_component(AuthSingleSig::new(
+            bob_key_pair.public_key().to_commitment(),
+            AuthScheme::Falcon512Poseidon2,
+        ))
+        .with_component(BasicWallet)
+        .build()?;
+
+    client.add_account(&bob_account, false).await?;
+    keystore.add_key(&bob_key_pair, bob_account.id()).await?;
+
+    println!("Bob's account ID: {:?}", bob_account.id().to_hex());
+
+    let bob_account_id = bob_account.id();
     let send_amount = 100;
-    let fungible_asset_to_send = FungibleAsset::new(faucet_account.id(), send_amount)?;
+    let fungible_asset_to_send = FungibleAsset::new(faucet_account.id(), send_amount)?
+        .with_callbacks(AssetCallbackFlag::Enabled);
 
     let p2id_note = P2idNote::create(
         alice_account.id(),
@@ -862,7 +895,7 @@ export async function demo() {
     });
     console.log(
         "Mint transaction submitted successfully, ID:",
-        mintResult.txId.toString(),
+        mintResult.txId.toHex(),
     );
 
     const notes = await client.notes.listAvailable({ account: alice });
@@ -873,24 +906,35 @@ export async function demo() {
     });
     console.log(
         "Consume transaction submitted successfully, ID:",
-        consumeResult.txId.toString(),
+        consumeResult.txId.toHex(),
     );
 
-    const balance = await client.accounts.getBalance(alice, faucet);
+    // Fetch Alice again so her vault reflects the consumed note.
+    const updatedAlice = await client.accounts.get(alice);
+    if (!updatedAlice) {
+        throw new Error("Alice's account was not found");
+    }
+
+    const balance = updatedAlice.vault().getBalance(faucet.id());
     console.log("Alice's TEST token balance:", Number(balance));
 
+    // Create Bob's account so this example is self-contained.
+    const bob = await client.accounts.create({
+        storage: "public",
+    });
+    console.log("Bob's account ID:", bob.id().toString());
+
     // Send 100 tokens from Alice to Bob.
-    const bobAccountId = "0x103f8a1ad4b983104aec0412ab0b0d";
     console.log("Sending 100 tokens to Bob...");
     const { txId } = await client.transactions.send({
         account: alice,
-        to: bobAccountId,
+        to: bob,
         token: faucet,
         amount: 100n,
         type: "public",
         waitForConfirmation: true,
     });
-    console.log("Send transaction submitted successfully, ID:", txId.toString());
+    console.log("Send transaction submitted successfully, ID:", txId.toHex());
 }
 ```
 
@@ -903,7 +947,8 @@ Faucet account ID: 0xe48c43d6ad6496201bcfa585a5a4b6
 Minting 1000 tokens to Alice...
 Mint transaction submitted successfully, ID: 0x948a0eef754068b3126dd3261b6b54214fa5608fb13c5e5953faf59bad79c75f
 Consume transaction submitted successfully, ID: 0xc69ab84b784120abe858bb536aebda90bd2067695f11d5da93ab0b704f39ad78
-Alice's TEST token balance: 100
+Alice's TEST token balance: 1000
+Bob's account ID: 0x103f8a1ad4b983104aec0412ab0b0d
 Send 100 tokens to Bob note transaction ID: "0x51ac27474ade3a54adadd50db6c2b9a2ede254c5f9137f93d7a970f0bc7d66d5"
 ```
 

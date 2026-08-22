@@ -643,8 +643,9 @@
    width proportionally. */
 .theme-doc-markdown table,
 article table {
-  display: table;
+  display: block;
   width: 100%;
+  max-width: 100%;
   min-width: 100%;
   table-layout: auto;
   border: 1px solid var(--color-border);
@@ -654,7 +655,9 @@ article table {
   border-spacing: 0;
   margin: 1.5rem 0;
   box-shadow: var(--shadow-sm);
-  overflow: hidden; /* clip content at the rounded corners */
+  overflow-x: auto;
+  overflow-y: hidden;
+  -webkit-overflow-scrolling: touch;
 }
 
 /* Narrow trailing columns (common pattern — "Part" numbers, short
@@ -724,17 +727,6 @@ article tbody tr:hover {
 article td code {
   font-size: 13px;
   padding: 1px 4px;
-}
-
-@media (max-width: 768px) {
-  .theme-doc-markdown table,
-  article table {
-    display: block;
-    max-width: 100%;
-    overflow-x: auto;
-    overflow-y: hidden;
-    -webkit-overflow-scrolling: touch;
-  }
 }
 
 /* ==========================================
@@ -995,49 +987,66 @@ article td code {
    16.1) SEARCH BUTTON - DocSearch-style pill
    ========================================== */
 
-/* Detached mode search button (pill shape) */
-.aa-DetachedSearchButton {
-  min-width: 220px;
-  border-radius: var(--radius-pill);
-  padding: 0 8px 0 12px;
-  height: 32px;
-  background: var(--color-surface);
+/* Detached mode search button — scoped to beat the plugin's late defaults */
+.navbar .aa-DetachedSearchButton {
+  width: clamp(11rem, 18vw, 14rem);
+  min-width: 0;
+  height: 36px;
+  padding: 0 0.75rem;
   border: 1px solid var(--color-border);
-  transition: border-color var(--t-base) var(--ease-out-expo),
-              background var(--t-base) var(--ease-out-expo);
+  border-radius: var(--radius-lg);
+  background: var(--color-surface);
   display: flex;
   align-items: center;
-  gap: 8px;
+  gap: 0.625rem;
   cursor: pointer;
+  box-shadow: inset 0 1px 0 color-mix(in oklab, white 45%, transparent);
+  transition:
+    border-color var(--t-base) var(--ease-out-expo),
+    background var(--t-base) var(--ease-out-expo),
+    box-shadow var(--t-base) var(--ease-out-expo),
+    transform var(--t-fast) var(--ease-out-expo);
 }
 
-.aa-DetachedSearchButton:hover {
+.navbar .aa-DetachedSearchButton:hover {
   border-color: var(--color-border-strong);
   background: var(--color-surface-hover);
 }
 
+.navbar .aa-DetachedSearchButton:active {
+  transform: translateY(1px);
+}
+
+.navbar .aa-DetachedSearchButton:focus-visible {
+  outline: none;
+  border-color: var(--color-border-strong);
+  box-shadow:
+    inset 0 1px 0 color-mix(in oklab, white 45%, transparent),
+    var(--shadow-focus);
+}
+
 /* Search icon */
-.aa-DetachedSearchButtonIcon {
-  width: 14px;
-  height: 14px;
+.navbar .aa-DetachedSearchButtonIcon {
+  width: 16px;
+  height: 16px;
   color: var(--color-muted);
 }
 
 /* Placeholder text */
-.aa-DetachedSearchButtonPlaceholder {
+.navbar .aa-DetachedSearchButtonPlaceholder {
   font-size: 13px;
   color: var(--color-muted);
 }
 
 /* Keyboard shortcut keys container */
-.aa-DetachedSearchButtonKeys {
+.navbar .aa-DetachedSearchButtonKeys {
   display: flex;
   gap: 2px;
   margin-left: auto;
 }
 
 /* Individual keycap — mono, hairline border */
-.aa-DetachedSearchButtonKey {
+.navbar .aa-DetachedSearchButtonKey {
   display: inline-flex;
   align-items: center;
   justify-content: center;
@@ -1058,14 +1067,24 @@ article td code {
     border-color var(--t-fast) var(--ease-out-expo);
 }
 
-.aa-DetachedSearchButton:hover .aa-DetachedSearchButtonKey {
+.navbar .aa-DetachedSearchButton:hover .aa-DetachedSearchButtonKey {
   color: var(--color-brand);
   border-color: color-mix(in oklab, var(--color-brand) 35%, var(--color-border));
 }
 
 /* Hide shortcut keys on mobile */
 @media (max-width: 996px) {
-  .aa-DetachedSearchButtonKeys {
+  .navbar .aa-DetachedSearchButton {
+    width: 10rem;
+  }
+
+  .navbar .aa-DetachedSearchButtonKeys {
     display: none;
+  }
+}
+
+@media (max-width: 480px) {
+  .navbar .aa-DetachedSearchButton {
+    width: 7rem;
   }
 }

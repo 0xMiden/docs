@@ -22,7 +22,7 @@ Stateful services follow the same general lifecycle:
 ```
 
 `bootstrap` is a one-time initialization step for an empty data directory. It anchors the service to a trusted genesis
-block. See [Bootstrap and Genesis](/network-operator/bootstrap-and-genesis) for the network bootstrap flow.
+block. See [Bootstrap and Genesis](./bootstrap-and-genesis.md) for the network bootstrap flow.
 
 `migrate` applies storage migrations required by the installed binary. Run it after upgrading a stateful service binary
 and before starting that service with the upgraded version. It cannot be run on an empty data directory; bootstrap must

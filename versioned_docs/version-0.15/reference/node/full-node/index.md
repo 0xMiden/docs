@@ -17,5 +17,5 @@ Use this guide when you want your own RPC endpoint or local replicated state for
 The lifecycle pages use the `miden-node` command directly. Choose an installation method first, then follow the quick
 start.
 
-Start with [Installation](/full-node/installation) and [Quick Start](/full-node/quick-start), then use the remaining
+Start with [Installation](./installation.md) and [Quick Start](./quick-start.md), then use the remaining
 pages for detailed bootstrap, operation, RPC, migration, and configuration guidance.

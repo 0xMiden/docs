@@ -51,8 +51,8 @@ Building against the public testnet? Grab free test assets from the [faucet](htt
   <Card title="Miden Guardian" href="./miden-guardian" eyebrow="Account state">
     Backup, sync, and coordinate private account state across devices.
   </Card>
-  <Card title="Private multisig" href="./private-multisig" eyebrow="Solutions">
-    Multi-party threshold signature workflows built on Miden.
+  <Card title="Private multisig" href="./miden-guardian/reference/multisig-sdk" eyebrow="Solutions">
+    Multi-party threshold signature workflows powered by Guardian.
   </Card>
 </CardGrid>
 

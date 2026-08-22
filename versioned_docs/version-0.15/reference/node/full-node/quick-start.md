@@ -9,7 +9,7 @@ import Tabs from "@theme/Tabs"; import TabItem from "@theme/TabItem";
 
 # Quick Start
 
-Launch a testnet full node after completing [Installation](/full-node/installation).
+Launch a testnet full node after completing [Installation](./installation.md).
 
 <Tabs groupId="full-node-runtime" defaultValue="native">
   <TabItem value="native" label="Native binary">
@@ -75,4 +75,4 @@ grpcurl -plaintext localhost:57291 rpc.Api/Status
 The `-plaintext` flag is required for the local full node RPC listener because it does not use TLS.
 
 Replace `testnet`, `<release-tag>`, and `https://rpc.testnet.miden.io` with the network, version, and upstream source
-you intend to follow. See [Official Network URLs](/official-network-urls) for public official network endpoints.
+you intend to follow. See [Official Network URLs](../official-network-urls.md) for public official network endpoints.

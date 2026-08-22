@@ -281,13 +281,13 @@ use miden_client::{
         },
         AccountType,
     },
+    asset::{AssetAmount, TokenSymbol},
     auth::AuthSecretKey,
     builder::ClientBuilder,
     keystore::{FilesystemKeyStore, Keystore},
     rpc::{Endpoint, GrpcClient},
 };
 use miden_client_sqlite_store::ClientBuilderSqliteExt;
-use miden_protocol::asset::{AssetAmount, TokenSymbol};
 use miden_standards::AuthMethod;
 use rand::RngCore;
 use std::sync::Arc;

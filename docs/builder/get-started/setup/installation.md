@@ -88,8 +88,10 @@ The Miden toolchain installer makes it easy to manage Miden components:
 cargo install midenup
 ```
 
+To install a specific release, pass `--version` — this guide is written against `1.0.0-alpha.1`, which as a pre-release is only installed when named explicitly: `cargo install midenup --version 1.0.0-alpha.1`.
+
 :::info
-Until published to crates.io, install using: `cargo install --git https://github.com/0xMiden/midenup.git`
+To install from source instead, name the package explicitly — the repository contains more than one binary: `cargo install --git https://github.com/0xMiden/midenup.git midenup`
 :::
 
 **Initialize midenup**

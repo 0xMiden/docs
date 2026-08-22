@@ -11,6 +11,7 @@
 /* Main docs content area - wider to fill space */
 .theme-doc-markdown {
   max-width: 100%; /* Use full available width */
+  min-width: 0;
 }
 
 /* ThemeClassNames.docs.docSidebarMenu */
@@ -578,11 +579,6 @@ aside[class*="docSidebarContainer"] .menu__caret {
 .sidebar-cat--guardian > .menu__link::before {
   -webkit-mask-image: url("/img/sidebar-icons/guardian.svg");
   mask-image: url("/img/sidebar-icons/guardian.svg");
-}
-.sidebar-cat--private-multisig > .menu__list-item-collapsible > .menu__link::before,
-.sidebar-cat--private-multisig > .menu__link::before {
-  -webkit-mask-image: url("/img/sidebar-icons/private-multisig.svg");
-  mask-image: url("/img/sidebar-icons/private-multisig.svg");
 }
 
 /* Icon brightens on active / hover */

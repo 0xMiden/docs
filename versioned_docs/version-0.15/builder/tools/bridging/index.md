@@ -1,61 +1,80 @@
 ---
-sidebar_position: 1
 title: Bridging
-description: "Testnet bridge tooling and interoperability guides for Miden builders."
-pagination_prev: null
+description: Choose a third-party bridge integration for a Miden application.
+sidebar_position: 1
 ---
 
 # Bridging
 
-Bridging docs cover testnet bridge tooling and interoperability workflows for
-builders integrating Miden with external networks and intent systems.
+Miden applications can use third-party interoperability providers to move
+assets between Miden testnet and Ethereum Sepolia.
 
-The first guide in this section is the mock NEAR Intents 1Click-style bridge
-sandbox for Sepolia native ETH and public Miden testnet. Future bridge docs can
-be added beside it, including AggLayer bridging and Epoch bridging, without
-making any single guide the canonical production bridge path.
+These are provider integrations available to Miden developers, not
+Miden-owned bridge products or APIs.
 
 <Callout variant="warn" title="Testnet only">
-The current bridge sandbox is developer testing infrastructure. It is not a
-production bridge, not a mainnet integration path, and must not be used with
-mainnet funds.
+The assets, deployments, timings, and endpoints described here are for testnet
+development. Confirm current support in the provider's documentation before
+building or funding an integration.
 </Callout>
 
-## Start here
+## Choose an integration
 
-<CardGrid cols={3}>
-  <Card title="Testnet sandbox" href="./testnet-sandbox" eyebrow="Sepolia + Miden testnet">
-    Run the mock 1Click Bridge API locally and reproduce the Sepolia-to-Miden
-    and Miden-to-Sepolia testing flow.
+<CardGrid cols={2}>
+  <Card title="Agglayer bridge" href="./agglayer" eyebrow="10–20 min · Sepolia ETH">
+    Integrate directly with Agglayer's bridge lifecycle and the Miden-specific
+    account and note flow.
   </Card>
-  <Card title="Bridge flows" href="./flows" eyebrow="Diagrams">
-    Understand the actors, solver role, public Miden notes, and inbound/outbound
-    lifecycle.
-  </Card>
-  <Card title="API reference" href="./api-reference" eyebrow="/v0">
-    Integration shape for `/v0/tokens`, `/v0/quote`, `/v0/deposit/submit`, and
-    `/v0/status`.
+  <Card title="Epoch intents" href="./epoch" eyebrow="1–3 min · Test USDC">
+    Request a quote, authorize the source asset, and let Epoch coordinate
+    destination fulfillment.
   </Card>
 </CardGrid>
 
-## Current scope
-
-| Area | Status | Notes |
+| | Agglayer | Epoch |
 | --- | --- | --- |
-| Mock NEAR Intents 1Click bridge sandbox | Available | Testnet-only local service for app integration testing. |
-| AggLayer bridging | Planned | Add as a sibling guide when the developer-facing flow is stable. |
-| Epoch bridging | Planned | Add as a sibling guide when the developer-facing flow is stable. |
+| Typical testnet time | 10–20 minutes | 1–3 minutes |
+| Current reference asset | Sepolia ETH ↔ Miden ETH | Epoch test USDC on Sepolia ↔ Miden USDC |
+| Integration model | Agglayer bridge transaction and lifecycle | Quote-and-solve intent SDK |
+| Provider boundary | Agglayer and its Miden-side integration service | Epoch allocator and solver |
+| Best fit | Direct Agglayer interoperability | Faster intent-based USDC movement |
 
-## When to use this section
+The timing ranges are observations, not service-level agreements. Source
+finality, provider observation, proof or solver availability, destination
+settlement, and Miden note synchronization can all affect the final duration.
 
-Use these docs when you need to:
+Choose by asset support, provider trust boundary, recovery model, and the
+states your application must expose—not timing alone.
 
-- point an app at a local mock Bridge API;
-- test bridge-like quote, deposit, status, and claim flows against public
-  testnets;
-- understand how public Miden notes can represent bridge deposits or payouts;
-- collect evidence with Sepolia transaction hashes and Miden transaction IDs.
+## Model completion correctly
 
-For core account, note, and transaction concepts, start with the Smart Contracts
-section instead. For testnet RPC, explorer, faucet, and remote prover endpoints,
-see [Network](../network).
+A cross-chain transfer is not one status. Your application should distinguish:
+
+<Steps>
+
+**Source authorization and submission** — the user approves and submits the
+source-chain action.
+
+**Provider acceptance** — Agglayer observes the bridge action or Epoch accepts
+the intent.
+
+**Destination settlement** — the provider completes its destination-chain
+transaction.
+
+**Funds become spendable** — the destination wallet discovers and, on Miden,
+consumes the delivered note.
+
+</Steps>
+
+On Miden, delivery can create a note that the recipient's wallet still needs
+to discover and consume. Do not report spendable funds only because the
+provider reports a successful destination transaction.
+
+## Documentation boundary
+
+<Callout variant="info" title="Miden integration guide, provider API reference">
+These pages explain how each provider fits into a Miden application and
+identify the Miden-specific integration details. Continue in the provider's
+documentation for current SDK methods, deployment addresses, supported assets,
+fees, recovery operations, and production guidance.
+</Callout>

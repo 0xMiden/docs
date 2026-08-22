@@ -3,7 +3,7 @@ refs: # exact, immutable refs per source repo (tags or release branches)
   protocol: "refs/tags/v0.15.3"
   node: "refs/tags/v0.15.0"
   miden-client: "refs/tags/v0.15.2"
-  tutorials: "refs/heads/kbg/chore/v15-migration"
+  tutorials: "refs/heads/main"
   miden-vm: "refs/tags/v0.23.4"
   compiler: "refs/tags/v0.8.1"
   guardian: "refs/tags/v0.15.0"

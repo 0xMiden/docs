@@ -32,7 +32,7 @@ The public RPC endpoints use TLS. Tools such as `grpcurl` use the host name and 
 grpcurl rpc.testnet.miden.io:443 rpc.Api/Status
 ```
 
-See [gRPC API](/rpc) for schema discovery, endpoint groups, subscriptions, limits, and method-specific errors.
+See [gRPC API](./rpc/index.md) for schema discovery, endpoint groups, subscriptions, limits, and method-specific errors.
 
 ## Genesis Block
 

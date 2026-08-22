@@ -35,6 +35,7 @@ on:
       miden_tutorials_ref: { required: false }
       guardian_ref: { required: false }
       note_transport_ref: { required: false }
+      bridge_portal_ref: { required: false }
 
   # Auto-run when manifest changes on a branch (NOT main — prevents re-triggering on merge)
   push:
@@ -57,6 +58,7 @@ jobs:
       REPO_TUTORIALS: 0xMiden/tutorials
       REPO_GUARDIAN: OpenZeppelin/guardian
       REPO_NOTE_TRANSPORT: 0xMiden/note-transport-service
+      REPO_BRIDGE_PORTAL: 0xMiden/bridge-portal
     steps:
       - name: Checkout aggregator
         uses: actions/checkout@v4
@@ -71,6 +73,8 @@ jobs:
 
       - name: Parse release manifest (and merge with manual inputs)
         id: manifest
+        env:
+          INPUT_BRIDGE_PORTAL_REF: ${{ inputs.bridge_portal_ref }}
         run: |
           node - <<'NODE'
           const fs = require('fs');
@@ -80,8 +84,9 @@ jobs:
           const read = (p) => fs.existsSync(p) ? fs.readFileSync(p, 'utf8') : '';
           const m = YAML.parse(read(path) || '{}') || {};
 
-          // Prefer manual inputs if provided; else manifest; else fallback to "main"
-          const getRef = (input, manifestVal) => input && input.trim() ? input.trim() : (manifestVal || 'main');
+          // Prefer manual inputs, then the manifest, then each repository's development branch.
+          const getRef = (input, manifestVal, fallback = 'main') =>
+            input && input.trim() ? input.trim() : (manifestVal || fallback);
 
           const inputs = {
             version_label: process.env.INPUT_VERSION_LABEL || ''
@@ -92,7 +97,7 @@ jobs:
           // Build outputs
           const out = {
             version_label: inputs.version_label || (m.version || '').trim(),
-            miden_node_ref:      getRef(process.env.INPUT_MIDEN_NODE_REF,      refs['node']),
+            miden_node_ref:      getRef(process.env.INPUT_MIDEN_NODE_REF,      refs['node'], 'next'),
             miden_vm_ref:        getRef(process.env.INPUT_MIDEN_VM_REF,        refs['miden-vm']),
             miden_base_ref:      getRef(process.env.INPUT_MIDEN_BASE_REF,      refs['protocol']),
             miden_client_ref:    getRef(process.env.INPUT_MIDEN_CLIENT_REF,    refs['miden-client']),
@@ -100,6 +105,7 @@ jobs:
             miden_tutorials_ref: getRef(process.env.INPUT_MIDEN_TUTORIALS_REF, refs['tutorials']),
             guardian_ref:        getRef(process.env.INPUT_GUARDIAN_REF,        refs['guardian']),
             note_transport_ref:  getRef(process.env.INPUT_NOTE_TRANSPORT_REF,  refs['note-transport']),
+            bridge_portal_ref:   getRef(process.env.INPUT_BRIDGE_PORTAL_REF,   refs['bridge-portal']),
           };
 
           if (!out.version_label) {
@@ -132,6 +138,7 @@ jobs:
           validate "${REPO_TUTORIALS}" "${{ steps.manifest.outputs.miden_tutorials_ref }}"
           validate "${REPO_GUARDIAN}"       "${{ steps.manifest.outputs.guardian_ref }}"
           validate "${REPO_NOTE_TRANSPORT}" "${{ steps.manifest.outputs.note_transport_ref }}"
+          validate "${REPO_BRIDGE_PORTAL}"  "${{ steps.manifest.outputs.bridge_portal_ref }}"
 
       - name: Checkout sources at validated refs
         run: |
@@ -153,6 +160,7 @@ jobs:
           checkout_ref "${REPO_TUTORIALS}" "${{ steps.manifest.outputs.miden_tutorials_ref }}" vendor/tutorials
           checkout_ref "${REPO_GUARDIAN}"       "${{ steps.manifest.outputs.guardian_ref }}"       vendor/guardian
           checkout_ref "${REPO_NOTE_TRANSPORT}" "${{ steps.manifest.outputs.note_transport_ref }}" vendor/note-transport-service
+          checkout_ref "${REPO_BRIDGE_PORTAL}"  "${{ steps.manifest.outputs.bridge_portal_ref }}"  vendor/bridge-portal
 
       # ============================================================
       # v0.4 IA: Aggregate into nested structure (TEMPORARY)
@@ -171,6 +179,7 @@ jobs:
           rm -f  docs/builder/tools/clients/common-errors.md
           rm -f  docs/builder/tools/clients/_category_.yml
           rm -rf docs/builder/tools/cli
+          rm -rf docs/builder/tools/bridging
           # tutorials: only clean ingested subdirs/files; preserve locally-authored rust-compiler/, index.md, _category_.json, recipes/_category_.json, recipes/{rust,web}/_category_.json
           rm -rf docs/builder/tutorials/miden-bank
           rm -rf docs/builder/tutorials/components
@@ -209,6 +218,15 @@ jobs:
             cp -r vendor/compiler/docs/external/src/* docs/reference/compiler/
             echo "Synced compiler → docs/reference/compiler"
           fi
+
+          # Rebase root-absolute internal links before snapshotting the release.
+          # Ingested reference sections are authored as standalone sites, so links
+          # such as "/full-node/installation" need to become relative links before
+          # docs:version freezes them under a versioned route.
+          for section in protocol miden-vm node compiler; do
+            [ -d "docs/reference/$section" ] || continue
+            node scripts/rebase-ingested-links.mjs "docs/reference/$section"
+          done
 
           # Builder docs → docs/builder/*
           # Sync tutorials into tutorials — selective ingest.
@@ -254,6 +272,9 @@ jobs:
             if [ -d "vendor/tutorials/docs/src/img" ]; then
               cp -r vendor/tutorials/docs/src/img docs/builder/tutorials/recipes/
             fi
+            # Rebase links whose source paths changed when mounted under the
+            # docs IA (recipe depth and Miden Bank card targets).
+            node scripts/fix-ingested-tutorial-links.mjs docs/builder/tutorials
             # Restore locally-authored files over vendor versions.
             git checkout HEAD -- docs/builder/tutorials/miden-bank/index.md 2>/dev/null || true
             git checkout HEAD -- docs/builder/tutorials/recipes/_category_.json 2>/dev/null || true
@@ -296,6 +317,12 @@ jobs:
             echo "Synced note-transport-service → docs/builder/tools/note-transport"
           fi
 
+          if [ -d "vendor/bridge-portal/docs/external/src/bridging" ]; then
+            mkdir -p docs/builder/tools/bridging
+            cp -r vendor/bridge-portal/docs/external/src/bridging/. docs/builder/tools/bridging/
+            echo "Synced bridge-portal → docs/builder/tools/bridging"
+          fi
+
           echo "Content aggregation complete. Final docs structure:"
           ls -la docs/
           echo "Reference subdirs:"
@@ -310,6 +337,10 @@ jobs:
           VERSION="${{ steps.manifest.outputs.version_label }}"
           echo "Creating Docusaurus version: $VERSION"
           npm run docusaurus -- docs:version "$VERSION"
+          # Freeze resolvable root-absolute links to their new version by making
+          # them relative inside the snapshot. This keeps authored links such as
+          # /reference/protocol/... from drifting to a newer stable release.
+          node scripts/rebase-ingested-links.mjs "versioned_docs/version-$VERSION"
 
       # CRITICAL: Clean up docs/ to maintain canonical-source architecture
       # docs/ must only contain authored content (builder/, reference/ landing pages)
@@ -332,6 +363,7 @@ jobs:
           rm -f  docs/builder/tools/clients/common-errors.md
           rm -f  docs/builder/tools/clients/_category_.yml
           rm -rf docs/builder/tools/cli
+          rm -rf docs/builder/tools/bridging
           # tutorials: only clean ingested subdirs/files; preserve locally-authored rust-compiler/, index.md, _category_.json, recipes/_category_.json, recipes/{rust,web}/_category_.json
           rm -rf docs/builder/tutorials/miden-bank
           rm -rf docs/builder/tutorials/components

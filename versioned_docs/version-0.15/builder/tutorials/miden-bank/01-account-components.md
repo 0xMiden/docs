@@ -262,11 +262,11 @@ miden build
 
 This compiles the Rust code to Miden Assembly and generates:
 
-- `target/miden/release/bank_account.masp` - The compiled package
+- `target/miden/release/bank-account.masp` - The compiled package
 - `target/generated-wit/` - WIT interface files for other contracts to use
 
 :::note Cosmetic build errors
-With the part2 compiler the build prints non-fatal `MAST`-serialization `ERROR` lines on every run. These are cosmetic — the build still succeeds and produces the `.masp` package.
+The build prints non-fatal `MAST`-serialization `ERROR` lines on every run. These are cosmetic — the build still succeeds and produces the `.masp` package.
 :::
 
 ## Optional: Verify Your Code

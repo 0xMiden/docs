@@ -1,5 +1,5 @@
 #!/usr/bin/env node
-// Rebase root-absolute internal links in an ingested reference section.
+// Rebase root-absolute internal links within an ingested docs tree.
 //
 // Each section under docs/reference/<x>/ is ingested from a repo whose docs are
 // their OWN standalone Docusaurus site (baseUrl "/"), so internal links are
@@ -7,21 +7,22 @@
 // /reference/<x>/ here — and served per-version (/next/…, /0.15/…, bare) — those
 // absolute links lose both the mount prefix AND the version segment, so they 404.
 //
-// We convert each root-absolute link to a RELATIVE link to the target `.md` file.
+// We convert each resolvable root-absolute link to a RELATIVE link to the target
+// `.md` file. The input may be a reference section or a complete version snapshot.
 // Docusaurus resolves relative `.md` links at build time, version-aware and
 // validated by onBrokenLinks — so they work in every version the section appears
 // in, and survive being snapshotted by cut-versions.
 //
-// Usage: node scripts/rebase-ingested-links.mjs <sectionDir>
+// Usage: node scripts/rebase-ingested-links.mjs <docsTreeDir>
 // Unresolvable targets (e.g. cross-site or genuinely dead) are left untouched and
 // reported, so the build's link checker still surfaces them.
 
 import { readdirSync, statSync, readFileSync, writeFileSync, existsSync } from "fs";
 import { join, relative, dirname, posix } from "path";
 
-const sectionDir = process.argv[2];
-if (!sectionDir || !existsSync(sectionDir)) {
-  console.error(`rebase-ingested-links: section dir not found: ${sectionDir}`);
+const docsTreeDir = process.argv[2];
+if (!docsTreeDir || !existsSync(docsTreeDir)) {
+  console.error(`rebase-ingested-links: docs tree not found: ${docsTreeDir}`);
   process.exit(0); // no-op rather than fail the deploy if a section is absent
 }
 
@@ -31,8 +32,9 @@ const walk = (dir) =>
     return statSync(p).isDirectory() ? walk(p) : [p];
   });
 
-// Resolve a section-root-absolute target (e.g. "full-node/installation",
-// "full-node/", "rpc") to an actual doc file under the section, or null.
+// Resolve a tree-root-absolute target (e.g. "full-node/installation" when the
+// tree is a reference section, or "reference/node/full-node/installation" when
+// the tree is a full version snapshot) to an actual doc file, or null.
 const resolveTarget = (targetPath) => {
   const clean = targetPath.replace(/^\//, "").replace(/\/$/, "");
   const noExt = clean.replace(/\.mdx?$/, "");
@@ -40,7 +42,7 @@ const resolveTarget = (targetPath) => {
     ? ["index.md", "index.mdx"]
     : [`${noExt}.md`, `${noExt}.mdx`, `${noExt}/index.md`, `${noExt}/index.mdx`];
   for (const c of candidates) {
-    const abs = join(sectionDir, c);
+    const abs = join(docsTreeDir, c);
     if (existsSync(abs)) return abs;
   }
   return null;
@@ -54,7 +56,7 @@ const unresolved = [];
 // excluding protocol-relative ("//") and pure anchors. Capture target + optional #anchor.
 const LINK_RE = /(\]\()(\/(?!\/)[^)\s#]*)(#[^)\s]*)?(\))/g;
 
-for (const file of walk(sectionDir)) {
+for (const file of walk(docsTreeDir)) {
   if (!/\.mdx?$/.test(file)) continue;
   const src = readFileSync(file, "utf8");
   let touched = false;
@@ -62,7 +64,7 @@ for (const file of walk(sectionDir)) {
   const out = src.replace(LINK_RE, (m, open, target, anchor = "", close) => {
     const resolved = resolveTarget(target);
     if (!resolved) {
-      unresolved.push(`${relative(sectionDir, file)} -> ${target}`);
+      unresolved.push(`${relative(docsTreeDir, file)} -> ${target}`);
       return m; // leave untouched; build link-checker will flag if truly broken
     }
     // Relative path from the current file's directory to the target file (POSIX).
@@ -80,6 +82,6 @@ for (const file of walk(sectionDir)) {
 }
 
 console.log(
-  `rebase-ingested-links: ${sectionDir} — rebased ${linksRebased} link(s) across ${filesChanged} file(s)` +
+  `rebase-ingested-links: ${docsTreeDir} — rebased ${linksRebased} link(s) across ${filesChanged} file(s)` +
     (unresolved.length ? `; ${unresolved.length} unresolved (left as-is):\n  - ${unresolved.join("\n  - ")}` : "")
 );

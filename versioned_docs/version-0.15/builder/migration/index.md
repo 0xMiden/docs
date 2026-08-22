@@ -1,6 +1,7 @@
 ---
 title: "v0.15 Migration Guide"
 description: "Complete guide for upgrading from Miden v0.14 to v0.15"
+pagination_prev: null
 ---
 
 # Miden Testnet 0.15.0

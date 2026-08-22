@@ -44,7 +44,7 @@
   position: relative;
   z-index: 1;
   display: grid;
-  grid-template-columns: 1.1fr 1fr;
+  grid-template-columns: minmax(0, 1.1fr) minmax(0, 1fr);
   align-items: center;
   gap: clamp(1.5rem, 4vw, 4rem);
   max-width: 1200px;
@@ -52,9 +52,13 @@
   padding: 0 clamp(1.25rem, 4vw, 2.5rem);
 }
 
+.heroInner > * {
+  min-width: 0;
+}
+
 @media (max-width: 900px) {
   .heroInner {
-    grid-template-columns: 1fr;
+    grid-template-columns: minmax(0, 1fr);
     text-align: left;
   }
 }
@@ -175,10 +179,102 @@
   color: var(--color-muted);
 }
 
+.installCommand {
+  width: min(100%, 36rem);
+  margin-top: 1.25rem;
+  overflow: hidden;
+  border: 1px solid var(--color-border);
+  border-radius: var(--radius-lg);
+  background: color-mix(in oklab, var(--color-bg) 88%, transparent);
+  box-shadow: var(--shadow-sm);
+}
+
+.installCommandHeader {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 1rem;
+  padding: 0.45rem 0.75rem;
+  border-bottom: 1px solid var(--color-border);
+  font-family: var(--font-eyebrow);
+  font-size: 10px;
+  font-weight: 500;
+  letter-spacing: 0.08em;
+  text-transform: uppercase;
+  color: var(--color-muted);
+  background: var(--color-surface);
+}
+
+.installCommandBody {
+  display: flex;
+  align-items: center;
+  gap: 0.75rem;
+  min-width: 0;
+  padding: 0.7rem 0.75rem;
+}
+
+.installCommandBody code {
+  min-width: 0;
+  flex: 1;
+  overflow-x: auto;
+  border: 0;
+  padding: 0;
+  font-family: var(--font-mono);
+  font-size: 12px;
+  line-height: 1.5;
+  color: var(--color-text);
+  background: transparent;
+  white-space: nowrap;
+}
+
+.installCommandBody code span {
+  color: var(--color-brand);
+  user-select: none;
+}
+
+.copyCommand {
+  display: inline-flex;
+  flex: 0 0 auto;
+  align-items: center;
+  gap: 0.35rem;
+  min-width: 4.75rem;
+  justify-content: center;
+  padding: 0.4rem 0.6rem;
+  border: 1px solid var(--color-border);
+  border-radius: var(--radius-sm);
+  font-family: var(--font-sans);
+  font-size: 12px;
+  font-weight: 500;
+  color: var(--color-muted);
+  background: var(--color-bg);
+  cursor: pointer;
+  transition:
+    color var(--t-fast) linear,
+    border-color var(--t-base) var(--ease-out-expo),
+    background var(--t-base) var(--ease-out-expo),
+    transform var(--t-fast) var(--ease-out-expo);
+}
+
+.copyCommand:hover {
+  color: var(--color-text);
+  border-color: var(--color-border-strong);
+  background: var(--color-surface-hover);
+}
+
+.copyCommand:active {
+  transform: translateY(1px);
+}
+
+.copyCommand:focus-visible {
+  outline: none;
+  box-shadow: var(--shadow-focus);
+}
+
 .heroVisual {
   display: flex;
   justify-content: center;
   align-items: center;
+  min-width: 0;
   min-height: 300px;
 }
 
@@ -188,7 +284,7 @@
   }
 }
 
-/* ---- Role cards section ---- */
+/* ---- Paths section ---- */
 
 .section {
   position: relative;
@@ -218,13 +314,14 @@
   color: var(--color-ink);
 }
 
-.roleGrid {
+.pathGrid {
   display: grid;
-  grid-template-columns: repeat(auto-fit, minmax(260px, 1fr));
+  grid-template-columns: minmax(0, 1.35fr) minmax(0, 1fr);
+  grid-template-rows: repeat(2, minmax(0, 1fr));
   gap: 1rem;
 }
 
-.roleCard {
+.pathCard {
   position: relative;
   display: flex;
   flex-direction: column;
@@ -241,18 +338,53 @@
     background var(--t-base) var(--ease-out-expo);
 }
 
-.roleCard:hover {
+.pathCardPrimary {
+  grid-row: 1 / span 2;
+  min-height: 19rem;
+  justify-content: flex-end;
+  padding: clamp(1.5rem, 4vw, 2.25rem);
+  background:
+    radial-gradient(
+      circle at 88% 12%,
+      color-mix(in oklab, var(--color-brand) 14%, transparent),
+      transparent 42%
+    ),
+    var(--color-card-bg);
+}
+
+.pathCardPrimary .pathTitle {
+  max-width: 22rem;
+  font-size: clamp(1.5rem, 3vw, 2rem);
+  letter-spacing: -0.02em;
+}
+
+.pathCardPrimary .pathDesc {
+  max-width: 34rem;
+  font-size: 15px;
+}
+
+.pathCard:hover {
   border-color: var(--color-border-strong);
   background: var(--color-card-bg-hover);
   transform: translateY(-2px);
 }
 
-.roleCard:focus-visible {
+.pathCardPrimary:hover {
+  background:
+    radial-gradient(
+      circle at 88% 12%,
+      color-mix(in oklab, var(--color-brand) 18%, transparent),
+      transparent 46%
+    ),
+    var(--color-card-bg-hover);
+}
+
+.pathCard:focus-visible {
   outline: none;
   box-shadow: var(--shadow-focus);
 }
 
-.roleEyebrow {
+.pathEyebrow {
   font-family: var(--font-eyebrow);
   font-size: 11px;
   font-weight: 500;
@@ -261,20 +393,31 @@
   color: var(--color-muted);
 }
 
-.roleTitle {
+.pathTitle {
   font-size: 17px;
   font-weight: 600;
   color: var(--color-text);
   margin: 0.125rem 0 0.25rem;
 }
 
-.roleDesc {
+.pathDesc {
   font-size: 13.5px;
   line-height: 1.5;
   color: var(--color-muted);
+  margin-bottom: 1.5rem;
 }
 
-.roleArrow {
+.pathMeta {
+  margin-top: auto;
+  padding-top: 0.75rem;
+  border-top: 1px dashed var(--color-border);
+  font-family: var(--font-mono);
+  font-size: 10px;
+  letter-spacing: 0.04em;
+  color: var(--color-muted);
+}
+
+.pathArrow {
   position: absolute;
   right: 1rem;
   bottom: 1rem;
@@ -284,9 +427,27 @@
               color var(--t-base) var(--ease-out-expo);
 }
 
-.roleCard:hover .roleArrow {
+.pathCardPrimary .pathArrow {
+  right: 2rem;
+  bottom: 2rem;
+  font-size: 18px;
+}
+
+.pathCard:hover .pathArrow {
   transform: translateX(3px);
   color: var(--color-brand);
+}
+
+@media (max-width: 760px) {
+  .pathGrid {
+    grid-template-columns: 1fr;
+    grid-template-rows: auto;
+  }
+
+  .pathCardPrimary {
+    grid-row: auto;
+    min-height: 16rem;
+  }
 }
 
 /* ---- Try-it-now ---- */
