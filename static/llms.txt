@@ -6,6 +6,7 @@
 - [Next / unstable builder docs](https://docs.miden.xyz/next/builder/): Current development builder docs, currently labeled 0.15 unstable.
 - [Next / unstable reference](https://docs.miden.xyz/next/reference/): Current development protocol, VM, node, and compiler docs.
 - [Agent skill](https://docs.miden.xyz/skill.md): Compact Miden context for AI coding assistants.
+- Building a JavaScript or React app: the `@miden-sdk/*` npm packages ship their own agent guidance, an `AGENTS.md` index plus a `skills/` directory readable at `node_modules/@miden-sdk/<pkg>/`. It is version-matched to the installed release, so prefer it over this site for API specifics. `npm create @miden-sdk@latest` copies it into the project.
 - [GitHub organization](https://github.com/0xMiden): Source repositories.
 
 ## Builder Documentation
@@ -68,7 +69,8 @@
 - [docs](https://github.com/0xMiden/docs): Docusaurus documentation site.
 - [protocol](https://github.com/0xMiden/protocol): Protocol types, account model, notes, assets, transactions, and MASM protocol library.
 - [miden-vm](https://github.com/0xMiden/miden-vm): Virtual machine and assembler.
-- [miden-client](https://github.com/0xMiden/miden-client): Rust client, Web SDK, and React SDK.
+- [rust-sdk](https://github.com/0xMiden/rust-sdk): Rust client library and CLI. Formerly `miden-client`.
+- [web-sdk](https://github.com/0xMiden/web-sdk): `@miden-sdk/miden-sdk`, `@miden-sdk/react`, and `@miden-sdk/vite-plugin`.
 - [node](https://github.com/0xMiden/node): Miden node implementation.
 - [compiler](https://github.com/0xMiden/compiler): Rust-to-MASM compiler.
 - [tutorials](https://github.com/0xMiden/tutorials): Tutorial source content.
