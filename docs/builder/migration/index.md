@@ -98,6 +98,7 @@ Big themes in 0.16:
 | **Fees moved into the auth procedure** | The kernel no longer burns the fee automatically. The auth procedure reads `FeeConversionInfo` from the transaction's auth args and emits a `TX_FEE` note. On a fee-charging chain, requests signed by `AuthSingleSig`/`AuthMultisig` must call `TransactionRequestBuilder::fee_conversion_info(info, salt)`. |
 | **MASM gained an explicit module tree** | A `.masm` file is only included if its parent declares it with `mod`/`pub mod` — an undeclared file is *silently dropped*. `use` split into module imports and braced item imports, aliases moved from `->` to `as`, and imports resolve globally. |
 | **Account updates became absolute** | `AccountDelta` → **`AccountPatch`** for account updates (`ExecutedTransaction`, `AccountUpdateDetails`, client results). `TransactionSummary::account_delta()` deliberately stays relative. |
+| **Signed summaries bind their reference block** | A summary now only authorizes an execution at the block it was derived at, so multisig and offline co-signing flows break silently — every party derives a different summary at its own sync height. Capture a **`ChainAnchor`** and have all of them execute against it. Nothing fails to compile. |
 | **Auth is no longer a special builder slot** | `AccountBuilder::with_auth_component` is gone; auth components pass through `with_component(s)` and are found by their `@auth_script` attribute. Keys are wrapped in a new **`Approver`** / `ApproverSet`. `AuthMethod` and `AuthSingleSigAcl` are removed. |
 | **Asset identity renamed one level down** | `AssetVaultKey` → **`AssetId`**, and the old `AssetId` → **`AssetClass`**. Because `AssetId` survives with a new meaning, careless renaming compiles and is wrong. |
 | **`Library` is gone; `Package` is the only artifact** | `Library`/`KernelLibrary` were deleted, `link_*_library` collapsed into `link_package`, `*_from_dir` became `*_from_root`, and `.masl` no longer exists. MAST `0.0.4` / package `6.0.0` are not backward compatible. |
@@ -147,8 +148,8 @@ Work through these sections in order for a complete migration:
 | [3. Account Changes](./account-changes) | `with_auth_component` removed, `Approver`/`ApproverSet`, component name changes, `AccountPatch` |
 | [4. Note Changes](./note-changes) | Typed note builders, `MAX_ASSETS_PER_NOTE` 64 → 16, unified mint/burn scripts |
 | [5. Assets, Vault & Faucet](./asset-vault-faucet) | `AssetVaultKey` → `AssetId`, old `AssetId` → `AssetClass`, split faucet factories |
-| [6. Transaction Changes](./transaction-changes) | Fees paid by the auth procedure, sealed transaction inputs, `TransactionSummary` |
-| [7. Client Changes](./client-changes) | Store recreation, node compatibility, Rust/Web/React/CLI changes |
+| [6. Transaction Changes](./transaction-changes) | Fees paid by the auth procedure, sealed transaction inputs, `TransactionSummary`, `ChainAnchor` |
+| [7. Client Changes](./client-changes) | Store recreation, node compatibility, chain-anchored execution, Rust/Web/React/CLI changes |
 | [8. MASM Changes](./masm-changes) | `mod` declarations, new import syntax, debug decorators removed, protocol procedure moves |
 | [9. VM & Assembler Changes](./vm-assembler) | `Library` → `Package`, MAST `0.0.4`, `ExecutionClaim`, `miden-project.toml` |
 | [10. Rust Contract SDK & Compiler](./rust-sdk-compiler) | `#[account_procedure]`, `#[account(..)]` generating traits, toolchain version skew |
@@ -172,6 +173,7 @@ Complete these steps to verify your migration:
 - [ ] Move auth components out of `with_auth_component` and wrap keys in `Approver` / `ApproverSet`
 - [ ] Rename `AssetId` → `AssetClass` **first**, then `AssetVaultKey` → `AssetId`
 - [ ] Replace `account_delta()` with `account_patch()` — but leave `TransactionSummary::account_delta()` alone
+- [ ] If you collect signatures over a summary across clients, capture a `ChainAnchor` and derive, verify, and execute the transaction against it
 - [ ] Rewrite `XNote::create(..)` calls as builders, and cap notes at 16 assets
 - [ ] Recompute stored ECDSA public-key commitments, MMR peak commitments, and empty domain-separated hashes
 - [ ] Replace `Library`/`KernelLibrary` with `Package`, and `link_*_library` with `link_package`
