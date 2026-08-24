@@ -39,9 +39,9 @@ If you encounter errors, continue reading for detailed migration steps.
 
 In 0.15 each standard note was a unit struct — `pub struct P2idNote;` — with a `create` associated function that took every parameter positionally and returned a finished `Note`. In 0.16 each is a real struct holding its fields, built through a `bon` builder and converted to a `Note` with `Into`.
 
-The practical benefits are that optional parameters are now actually optional rather than positional, and that the intermediate typed value is inspectable before you convert it. The practical cost is that every call site changes.
+The cost is that every call site changes. The benefit is worth more than a mechanical rewrite, so it is worth pausing on before you reach for search-and-replace: each standard note is now a distinct type, which means your own functions can take a `P2idNote` or a `SwapNote` instead of a bare `Note`. What used to be a runtime check — is this really a P2ID note? — becomes a signature the compiler enforces, and the conversion to `Note` happens once, at the boundary where you actually need one. Optional parameters also stop being positional, and the typed value is inspectable before you convert it.
 
-The asset limit change is the one to watch, because it is a runtime error rather than a compile error, and it only triggers for notes carrying more than 16 assets.
+Watch the asset limit separately. Nothing about it is visible at compile time, so your build stays green and only notes carrying more than 16 assets fail, at the point they are built.
 
 ---
 
@@ -100,10 +100,11 @@ The same builder treatment applies to `MintNote`, `BurnNote`, `PswapNote`, and `
 
 ### Migration Steps
 
-1. Replace every `XNote::create(..)` call with the corresponding `XNote::builder()` chain, ending in `.build()?` and `.into()`.
+1. Replace every `XNote::create(..)` call with the corresponding `XNote::builder()` chain ending in `.build()?`, then `.into()` wherever a `Note` is required.
 2. Replace the trailing `rng` argument with `.generate_serial_number(&mut rng)`.
 3. Use `.assets(..)` for a collection or `.asset(..)` repeatedly for individual assets.
 4. For `P2ideNote`, set only the optional parameters you actually need. `reclaimer` still defaults to the sender, so existing "sender can reclaim" behaviour is preserved without changes.
+5. Push the `.into()` outward while you are here. Any function of yours that only ever handles one kind of note can take the typed note instead of a `Note`, which turns a runtime check into a compile-time guarantee; convert once, where a `Note` is genuinely needed.
 
 ### Common Errors
 

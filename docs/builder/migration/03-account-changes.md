@@ -23,10 +23,8 @@ let account = AccountBuilder::new(init_seed)
 // After (0.16)
 let account = AccountBuilder::new(init_seed)
     .account_type(AccountType::Public)
-    .with_components([
-        AuthSingleSig::new(Approver::new(pub_key, auth_scheme)).into(),
-        BasicWallet.into(),
-    ])
+    .with_component(AuthSingleSig::new(Approver::new(pub_key, auth_scheme)))
+    .with_component(BasicWallet)
     .build()?;
 ```
 
@@ -44,17 +42,13 @@ Three independent shifts land on accounts in this release.
 
 **Component names were normalised**, which changes commitments. Every standard component's `NAME` dropped its `components::` segment. Since the name feeds component metadata, and metadata feeds the storage schema commitment, this silently changes account commitments even when nothing else about your account changed.
 
-:::note `AccountType` did not change
-`AccountType` has been `Private` / `Public` since 0.15, and there is no separate `AccountStorageMode`. If you are coming from an older release, that collapse is covered in the [0.15 guide](https://docs.miden.xyz/0.15/builder/migration/account-changes).
-:::
-
 ---
 
 ## `AccountBuilder::with_auth_component` removed
 
 ### Summary
 
-`AccountBuilder` now takes all components uniformly through `with_component` and `with_components`, and identifies the auth component by its `@auth_script` MASM attribute.
+`AccountBuilder` now takes all components uniformly through `with_component`, and identifies the auth component by its `@auth_script` MASM attribute.
 
 ### Affected Code
 
@@ -62,16 +56,18 @@ Three independent shifts land on accounts in this release.
   let account = AccountBuilder::new(init_seed)
       .account_type(AccountType::Public)
 -     .with_auth_component(auth_component)
--     .with_component(BasicWallet)
-+     .with_components([auth_component.into(), BasicWallet.into()])
++     .with_component(auth_component)
+      .with_component(BasicWallet)
       .build()?;
 ```
+
+Reach for `with_component` whenever you are naming a component yourself — it takes `impl Into<AccountComponent>`, so no explicit `.into()` is needed. `with_components` is for the case where the count is not known at the call site: a configuration value that expands into one or several components depending on its variant. `AuthNetworkAccount` is the example in this release — see [Network accounts require a fee policy](#network-accounts-require-a-fee-policy).
 
 `AccountBuilder` also gained `with_asset_callbacks(AssetCallbackFlag)`. Whether a faucet's assets trigger callbacks is now encoded in the account ID rather than in separate storage, so this is set at construction time.
 
 ### Migration Steps
 
-1. Drop `with_auth_component` and pass the auth component through `with_component` or `with_components`.
+1. Drop `with_auth_component` and pass the auth component through `with_component`, like any other.
 2. If you author a custom auth component, make sure its entry procedure carries the `@auth_script` attribute — that is how the builder recognises it.
 3. If you build a faucet whose assets should trigger callbacks, set `with_asset_callbacks`.
 
@@ -79,7 +75,7 @@ Three independent shifts land on accounts in this release.
 
 | Error Message | Cause | Solution |
 | --- | --- | --- |
-| `no method named with_auth_component` | Method removed | Use `with_component` / `with_components`. |
+| `no method named with_auth_component` | Method removed | Use `with_component`. |
 | Build fails reporting no auth component | Custom component lacks the attribute | Annotate the entry procedure with `@auth_script`. |
 
 ---
@@ -320,7 +316,7 @@ let auth = AuthNetworkAccount::new(allowed_notes, manager)?;
 
 | Error Message | Cause | Solution |
 | --- | --- | --- |
-| `no method named with_auth_component` | Removed | Use `with_component(s)`. |
+| `no method named with_auth_component` | Removed | Use `with_component`, or `with_components` for `AuthNetworkAccount`. |
 | `this function takes 1 argument but 2 were supplied` | `AuthSingleSig::new` takes an `Approver` | Wrap in `Approver::new`. |
 | `cannot find type AuthMethod` / `AuthSingleSigAcl` | Removed | See the auth section above. |
 | `expected Result, found AccountCode` | `from_parts` is fallible | Add `?`. |
