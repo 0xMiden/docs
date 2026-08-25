@@ -51,3 +51,33 @@ In the meantime, the existing [Rust-based Miden Bank tutorial](../../tutorials/m
 - [Reference → Miden VM → Assembly](/reference/miden-vm/user_docs/assembly/) — full language reference (instructions, stack semantics, control flow).
 - [Smart Contracts → Overview](../overview) — execution model and lifecycle (the concepts apply regardless of authoring language).
 - [Tools → Playground](../../tools/playground) — interactive browser-based MASM environment for quick experiments.
+
+## Common Pitfalls
+
+### Procedure Hash Byte Order in `call.0xHEX`
+
+The MASP inspector displays procedure hashes in big-endian order per 8-byte chunk,
+but `call.0x<HEX>` requires little-endian order per chunk. Using the hash directly
+from the inspector will silently invoke a wrong or non-existent procedure, with no
+helpful error message.
+
+Convert the hash before use:
+
+```python
+masp = "1f92867d5acabdfdece9a4eb6d0c2ae19359c1a7ae1fa54e1fc16cc6ab2d94c0"
+chunks = [masp[i:i+16] for i in range(0, 64, 16)]
+call_hex = "".join(bytes.fromhex(c)[::-1].hex() for c in chunks)
+# Result: fdbdca5a7d86921fe12a0c6deba4e9ec4ea51faea7c15993c0942dabc66cc11f
+# Use: call.0xfdbdca5a7d86921fe12a0c6deba4e9ec4ea51faea7c15993c0942dabc66cc11f
+```
+
+---
+
+### Calling Procedures That Return Values (`call` vs `exec`)
+
+Using `call.0x<PROC_HASH>` to invoke a procedure that returns a `Felt` triggers
+`InvalidStackDepthOnReturn { depth: 17 }`. The component-model wrapper pushes the
+return value after `truncate_stack`, leaving the stack one element too deep.
+
+**Workaround:** Use `exec.0x<PROC_HASH>` instead, or redesign the procedure as void
+(no return value).
