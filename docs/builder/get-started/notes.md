@@ -455,7 +455,7 @@ async fn main() -> anyhow::Result<()> {
             .await?;
 
         if consumable_notes.is_empty() {
-            println!("Waiting for P2ID note to be comitted...");
+            println!("Waiting for P2ID note to be committed...");
             tokio::time::sleep(Duration::from_secs(2)).await;
             continue;
         }
@@ -760,7 +760,7 @@ async fn main() -> anyhow::Result<()> {
             .await?;
 
         if consumable_notes.is_empty() {
-            println!("Waiting for P2ID note to be comitted...");
+            println!("Waiting for P2ID note to be committed...");
             tokio::time::sleep(Duration::from_secs(2)).await;
             continue;
         }

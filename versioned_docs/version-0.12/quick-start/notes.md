@@ -431,7 +431,7 @@ async fn main() -> Result<(), Box<dyn std::error::Error>> {
             .collect::<Vec<_>>();
 
         if note_ids.len() == 0 {
-            println!("Waiting for P2ID note to be comitted...");
+            println!("Waiting for P2ID note to be committed...");
             tokio::time::sleep(Duration::from_secs(2)).await;
             continue;
         }
@@ -731,7 +731,7 @@ async fn main() -> Result<(), Box<dyn std::error::Error>> {
             .collect::<Vec<_>>();
 
         if note_ids.len() == 0 {
-            println!("Waiting for P2ID note to be comitted...");
+            println!("Waiting for P2ID note to be committed...");
             tokio::time::sleep(Duration::from_secs(2)).await;
             continue;
         }
