@@ -13,23 +13,26 @@ This guide covers essential Miden CLI commands for creating accounts, minting an
 Create a new Miden wallet account:
 
 ```bash title=">_ Terminal"
-miden client new-wallet
+miden client sync
+miden client new-wallet --deploy
 ```
 
 <details>
 <summary>Expected output</summary>
 
 ```text
+State synced to block <BLOCK_NUMBER>
+...
+Generated and stored Falcon512 authentication key in keystore.
 Successfully created new wallet.
-To view account details execute miden-client account --show 0x05bd1f642cd368800cc95956b2696a
-Config updated successfully
+To view account details execute miden client account -s 0x05bd1f642cd368800cc95956b2696a
 Setting account 0x05bd1f642cd368800cc95956b2696a as the default account ID.
-You can unset it with `miden-client account --default none`.
+You can unset it with `miden client account --default none`.
 ```
 
 </details>
 
-This command creates a basic wallet account with **private** storage, giving you full control while keeping your data confidential.
+The first command synchronizes the client with the latest network state. The second creates a basic wallet account with **private** storage and deploys it onchain, giving you full control while keeping your data confidential.
 
 ### View Your Account
 
@@ -43,9 +46,9 @@ miden client account
 <summary>Expected output</summary>
 
 ```text
-| Account ID | Type | Storage Mode | Nonce | Status |
-|------------|------|--------------|-------|--------|
-| 0x970e3e4dbcd09b8035532edaa87bc9 | Regular | private | 0 | New |
+| Account ID | Kind | Type | Nonce | Status |
+|------------|------|------|-------|--------|
+| 0x970e3e4dbcd09b8035532edaa87bc9 | Regular | private | 1 | Tracked |
 ```
 
 </details>
@@ -68,12 +71,12 @@ Account Information
 | Address           | mtst1qztsu0jdhngfhqp42vhd42rme9cqzkzy89e                                |
 | Account ID (hex)  | 0x970e3e4dbcd09b8035532edaa87bc9                                        |
 | Account Commitment| 0x404a762b9a19e70bc8752381b17f909bc0bbab02c0b4636d8923d088ac8ebc04      |
-| Type              | Regular                                                                   |
-| Storage mode      | private                                                                   |
+| Kind              | Regular                                                                   |
+| Type              | private                                                                   |
 | Code Commitment   | 0x6a11161925930dae89cc24cbddf0d161cead39b0fe88c262d4e790cff35be01d      |
 | Vault Root        | 0x3e128c57f6cfa0d44ab1308994171af13cb513422add28d1916b3ff254fef82d      |
 | Storage Root      | 0x5f95d38174f10c8ce91a0202763b0813fdcbb2714704cda411af6483ebc8d012      |
-| Nonce             | 0                                                                         |
+| Nonce             | 1                                                                         |
 
 Assets:
 
@@ -83,9 +86,11 @@ Assets:
 
 Storage:
 
-| Item Slot Index | Item Slot Type | Value/Commitment |
-|-----------------|----------------|------------------|
-| 0 | Value | 0xa52ef6357625c54a2eaefd11b8cfc2ee3429c37d9f8a827e23886857ea284834 |
+| Slot Name                                                | Slot Type | Value/Commitment                                                   |
+|----------------------------------------------------------|-----------|--------------------------------------------------------------------|
+| miden::standards::auth::singlesig::scheme                | Value     | 0x0200000000000000000000000000000000000000000000000000000000000000 |
+| miden::standards::auth::singlesig::pub_key               | Value     | 0x113697002c3061328fce8c1e26dc433c536e967c8b91f30d81517e47f5980b3c |
+| miden::standards::inspection::storage_schema::commitment | Value     | 0xb5724e35b8267d3be6bfc7d0ce50bfd6cce52de6da9f9e847ab24ac1bf7770f1 |
 ```
 
 </details>
@@ -110,7 +115,7 @@ miden client account --default <ACCOUNT_ID>
 
 ### Deploy Your Account
 
-The `miden client new-wallet` command above already deploys your account onchain automatically. You can verify your account is deployed by syncing and checking its status:
+The `miden client new-wallet --deploy` command above deploys your account onchain. You can verify the deployment by syncing and checking that its status is `Tracked`:
 
 ```bash title=">_ Terminal"
 miden client sync
@@ -162,7 +167,7 @@ Creates a minimal **Vite example project with Miden integration**, built on the 
 Initialize the client in your working directory when you want to test against a custom network endpoint or use different keys without touching your global config:
 
 ```bash title=">_ Terminal"
-miden client init --network devnet
+miden client init --local --network devnet
 ```
 
 Available networks:
@@ -173,17 +178,21 @@ Available networks:
 
 ### Important Files Created
 
-When you manually initialize the Miden client in your working directory, several local files are created:
+When you initialize the Miden client with `--local`, a `.miden/` directory is created in your working directory with the following files:
 
-- **`miden-client.toml`**: Configuration file with network settings
-- **`store.sqlite3`**: Database storing your account data and transaction history
-- **`keystore/`**: Directory containing your private keys (keep secure!)
-- **`templates/`**: Pre-built smart contract components
+- **`.miden/miden-client.toml`**: Configuration file with network settings
+- **`.miden/store.sqlite3`**: Database storing your account data and transaction history
+- **`.miden/keystore/`**: Directory containing your private keys (keep secure!)
+- **`.miden/packages/`**: Pre-built account component packages
 
 :::danger
-Private keys in the `keystore/` directory are **not encrypted**. Keep these files secure and never share them.
+Private keys in the `.miden/keystore/` directory are **not encrypted**. Keep these files secure and never share them.
 :::
 
-To return to your global client configuration, remove the local `miden-client.toml` (and any local store/keystore files you no longer need).
+To remove the local configuration and return to your global client configuration, run this command from the same working directory:
+
+```bash title=">_ Terminal"
+miden client clear-config
+```
 
 ---

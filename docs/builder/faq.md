@@ -100,4 +100,4 @@ faster quote-and-solve flow for test USDC. Both integrations are testnet-only.
 
 ## What does the gas fee model of Miden look like?
 
-Miden does not yet have a fully implemented fee model, work in progress.
+Miden v0.16 includes a transaction fee mechanism in which the account's authentication procedure creates a public `TX_FEE` note on fee-charging networks.

@@ -32,7 +32,7 @@ rustc --version
 <summary>Expected output</summary>
 
 ```text
-rustc 1.93.0-nightly (fa3155a64 2025-09-30)
+rustc 1.96.1 (31fca3adb 2026-06-26)
 ```
 
 </details>
@@ -120,10 +120,10 @@ which miden
 
 **Install Miden Toolchain**
 
-Install the latest stable Miden components:
+Install the toolchain for the public testnet and make it the default:
 
 ```bash title=">_ Terminal"
-midenup install stable
+midenup install testnet && midenup override testnet
 ```
 
 :::note
@@ -142,7 +142,7 @@ midenup show active-toolchain
 <summary>Expected output</summary>
 
 ```text
-stable
+testnet
 ```
 
 </details>
@@ -159,11 +159,11 @@ echo $PATH | tr ':' '\n' | grep cargo
 
 **"config error: missing field" when running `miden client` commands**
 
-If you have config files from a previous Miden installation, they may be incompatible with the current version. Delete the old config and database, then re-initialize:
+If you have configuration files from a previous Miden installation, they may be incompatible with the current version. Clear the active client configuration, then re-initialize it for testnet:
 
 ```bash title=">_ Terminal"
-rm -f miden-client.toml store.sqlite3
-miden client init
+miden client clear-config
+miden client init --network testnet
 ```
 
 ## Set Up a Project
@@ -186,7 +186,7 @@ The TypeScript examples use the [`@miden-sdk/miden-sdk`](https://www.npmjs.com/p
 ```bash title=">_ Terminal"
 npm create vite@latest miden-app -- --template vanilla-ts
 cd miden-app
-npm install @miden-sdk/miden-sdk@^0.15.0
+npm install @miden-sdk/miden-sdk@^0.16.0
 ```
 
 Open `src/main.ts` and replace its contents with a simple entry point that calls your demo:

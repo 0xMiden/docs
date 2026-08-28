@@ -111,7 +111,7 @@ This process shows how Miden contracts are deployed through state changes rather
 
 ## How the Scripts Work
 
-The integration scripts work by connecting to the Miden client and then building contracts from the Miden package files. These package files are generated when you run `miden build` inside each contract directory, but the scripts handle this compilation step automatically - you don't need to manually build the contracts before running the scripts.
+The integration scripts connect to the Miden client and compile each contract by invoking `miden build` as a separate process. After each build, the helper loads the generated Miden package into the native client. You don't need to build the contracts manually before running the script.
 
 Next, we look into how the scripts convert your Rust contract code into deployable Miden contracts.
 
@@ -148,10 +148,10 @@ let note_package = Arc::new(
 
 The `build_project_in_dir()` function:
 
-- Takes the path to your contract's Rust source code
-- Compiles the Rust code into a Miden package (`.masp` file)
-- Generates a package containing the compiled contract bytecode and metadata
-- This is equivalent to manually running `miden build` in each contract directory
+- Takes the path to a contract project
+- Invokes `miden build` in a separate process, using `--release` when requested
+- Resolves the generated `.masp` artifact under the project's `target/miden/` directory
+- Reads and deserializes the compiled package for the native client
 
 These packages contain all the information needed to deploy and interact with your contracts on the Miden network.
 
@@ -187,7 +187,7 @@ The `create_account_from_package()` function:
 - Combines it with the provided configuration (storage, settings, etc.)
 - Creates a deployable Miden account that can be used in transactions
 
-**Important**: Accounts that use storage must have that storage seeded when instantiating the account. In the v0.15-aligned SDK, storage slots are identified by name rather than index. The slot name follows the pattern `<package>::<interface>::<field_name>`, derived from the component's manifest namespace. We seed the storage with:
+**Important**: Accounts that use storage must have that storage seeded when instantiating the account. Storage slots are identified by name rather than index. The slot name follows the pattern `<package>::<interface>::<field_name>`, derived from the component's manifest namespace. We seed the storage with:
 
 - A named `StorageMap` slot, returned by the `counter_storage_slot()` helper (`counter_account::counter_contract::count_map`)
 - The counter key `COUNTER_STORAGE_KEY` (`[0, 0, 0, 1]`), mapped to the initial count `0`

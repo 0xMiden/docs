@@ -41,7 +41,7 @@ The project follows Miden's design philosophy of clean separation:
 - **`contracts/`**: Your primary working directory for writing Miden smart contract code
 - **`integration/`**: All onchain interactions, deployment scripts, and tests
 
-Each contract is organized as its own individual crate, providing independent versioning, dependencies, and clear isolation between different contracts. Each contract crate also includes a `miden-project.toml` file next to `Cargo.toml`; the Miden compiler uses it to identify the project kind, WIT namespace, and generated interface dependencies.
+Each contract is organized as its own individual crate, providing independent versioning, dependencies, and clear isolation between different contracts. Each contract crate also includes a `miden-project.toml` file next to `Cargo.toml`; the Miden compiler uses it to identify the project kind, WIT namespace, and compiled package dependencies.
 
 ### Project Manifests
 
@@ -57,6 +57,7 @@ kind = "account-component"
 # Full `miden:<package>/<interface>@<version>` id. The interface segment is the
 # kebab-cased component trait name (`CounterContract` -> `counter-contract`).
 namespace = "miden:counter-account/counter-contract@0.1.0"
+path = "src/lib.rs"
 
 [dependencies]
 miden-core = "*"
@@ -66,7 +67,8 @@ miden-protocol = "*"
 supported-types = ["RegularAccountImmutableCode"]
 ```
 
-The increment note depends on the counter account's generated WIT so it can call the counter interface:
+The increment note depends on the counter account package and the generated WIT
+that describes its callable interface:
 
 ```toml title="contracts/increment-note/miden-project.toml"
 [package]
@@ -77,6 +79,7 @@ version = "0.1.0"
 kind = "note"
 # Notes export a package-derived interface (`miden-<package>`), matching the `#[note]` macro.
 namespace = "miden:increment-note/miden-increment-note@0.1.0"
+path = "src/lib.rs"
 
 [dependencies]
 miden-core = "*"
@@ -87,6 +90,12 @@ counter-account = { path = "../counter-account" }
 [package.metadata.miden.dependencies]
 counter-account = { wit = "../counter-account/target/generated-wit/" }
 ```
+
+Build the contracts with `miden build` in dependency order, as shown below.
+Building the account first produces both its `.masp` package and the generated
+WIT consumed by the note's `#[account(...)]` wrapper. Plain `cargo check`,
+`cargo build`, and IDE analysis do not automatically build or stage those
+cross-component dependencies in the published SDK.
 
 ## Building Your Contracts
 
@@ -132,8 +141,10 @@ struct CounterContractStorage {
 #[component]
 trait CounterContract {
     /// Returns the current counter value stored in the contract's storage map.
+    #[account_procedure]
     fn get_count(&self) -> Felt;
     /// Increments the counter value stored in the contract's storage map by one.
+    #[account_procedure]
     fn increment_count(&mut self) -> Felt;
 }
 
@@ -185,7 +196,7 @@ These imports provide:
 - **`StorageMap`**: Key-value storage within account storage slots
 
 :::note[`felt` vs `Felt`]
-`Felt` is the field element type representing values in the Goldilocks prime field (p = 2^64 - 2^32 + 1). `felt!(1)` is a compile-time macro that creates `Felt` values from integer literals with compile-time range validation. Currently `felt!` only accepts values up to 2^32 (compiler limitation); for larger values use `Felt::from_u64_unchecked()`.
+`Felt` is the field element type representing values in the Goldilocks prime field (p = 2^64 - 2^32 + 1). `felt!(1)` creates a `Felt` from an integer literal and rejects out-of-range values at compile time. For runtime values, use the fallible `Felt::new(value)` and handle its `Result`.
 :::
 
 #### Contract Structure Definition
@@ -201,15 +212,17 @@ struct CounterContractStorage {
 #[component]
 trait CounterContract {
     /// Returns the current counter value stored in the contract's storage map.
+    #[account_procedure]
     fn get_count(&self) -> Felt;
     /// Increments the counter value stored in the contract's storage map by one.
+    #[account_procedure]
     fn increment_count(&mut self) -> Felt;
 }
 ```
 
-The `#[component_storage]` attribute marks the storage struct for this Miden [Account component](/reference/protocol/account), while the `#[component]` trait defines the component's public interface. The `count_map` field is a `StorageMap` stored in a named storage slot of the account. In the v0.15-aligned SDK, storage slots are identified by name rather than explicit index numbers — the slot name is derived automatically from the component's manifest namespace and field name (e.g., `counter_account::counter_contract::count_map`).
+The `#[component_storage]` attribute marks the storage struct for this Miden [Account component](/reference/protocol/account), while the `#[component]` trait defines the component's interface. Every callable trait method must carry `#[account_procedure]`; an unmarked method is not exported. The `count_map` field is a `StorageMap` stored in a named storage slot of the account. Storage slots are identified by name rather than explicit index numbers — the slot name is derived automatically from the component's manifest namespace and field name (e.g., `counter_account::counter_contract::count_map`).
 
-**Important**: Storage slots in Miden hold `Word` values, which are composed of four field elements (`Felt`). Each `Felt` is a 64-bit unsigned integer (u64). The `StorageMap` provides a key-value interface within a single storage slot, allowing you to store multiple key-value pairs within the four-element word structure.
+**Important**: Miden account storage is organized into named slots. Each slot holds either a single typed value or a key-value map. Here, `StorageMap<Word, Felt>` provides typed access to a map-backed slot, converting its keys and values to and from `Word`. Each `Word` consists of four field elements (`Felt`), and each `Felt` belongs to the Goldilocks prime field and is represented using 64 bits.
 
 #### Contract Implementation
 
@@ -270,7 +283,7 @@ impl IncrementNote {
 
 #### No-std Setup
 
-Similar to the account contract, the note script uses `#![no_std]` with the same allocator and panic handler setup.
+Like the account contract, the note script uses `#![no_std]` and enables the `alloc_error_handler` language feature.
 
 #### Miden Imports
 
