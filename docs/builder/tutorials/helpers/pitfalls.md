@@ -8,31 +8,33 @@ description: "Reference guide for known issues, limitations, and workarounds whe
 
 This reference documents known issues and limitations when developing with the Miden Rust compiler, along with recommended workarounds.
 
-## Felt Comparison Operators
+## Comparing Asset Amounts
 
 ### Problem
 
-Direct comparison operators (`<`, `>`, `<=`, `>=`) on `Felt` values produce incorrect results.
+`Felt` comparison operators work, but a field element is not a validated integer amount type.
+Reading an amount directly from an asset bypasses its fungibility and range checks, and subsequent
+arithmetic remains vulnerable to modular wraparound.
 
 ```rust
-// WRONG: This does NOT work correctly
-let a = Felt::new(100);
-let b = Felt::new(200);
-if a < b {  // May produce unexpected results!
+// Avoid decoding a token amount as a raw field element.
+let amount = asset.value[0];
+if amount <= felt!(1_000_000) {
     // ...
 }
 ```
 
 ### Solution
 
-Always convert Felt values to `u64` before comparing:
+Use `AssetAmount` for fungible token amounts. It has integer ordering and checked arithmetic:
 
 ```rust
-// CORRECT: Convert to u64 first
-let a = Felt::new(100);
-let b = Felt::new(200);
-if a.as_u64() < b.as_u64() {
-    // Works correctly
+use miden::AssetAmount;
+
+let a = AssetAmount::from(100_u32);
+let b = AssetAmount::from(200_u32);
+if a < b {
+    // Integer comparison
 }
 ```
 
@@ -40,21 +42,22 @@ if a.as_u64() < b.as_u64() {
 
 ```rust title="contracts/bank-account/src/lib.rs"
 // Validating deposit amount
-let amount = asset.unwrap_fungible().amount().as_u64();
+const MAX_DEPOSIT_AMOUNT: u32 = 1_000_000;
 
-// Use u64 comparison
+// Asset::amount() validates that the asset is fungible and returns AssetAmount.
+let amount = asset.amount();
+
+// Use integer comparison
 assert!(
-    amount <= MAX_DEPOSIT_AMOUNT,  // MAX_DEPOSIT_AMOUNT is u64
+    amount <= AssetAmount::from(MAX_DEPOSIT_AMOUNT),
     "Deposit exceeds maximum"
 );
 ```
 
-:::warning Always Use .as_u64()
-Any time you compare Felt values, convert them first. This applies to:
-- Amount comparisons
-- Balance checks
-- Index comparisons
-- Any numeric ordering
+:::warning Raw Felt values
+When a protocol API genuinely gives you a raw `Felt`, use `as_canonical_u64()` only after
+confirming that the value is intended to have integer semantics. For fungible assets, prefer
+`Asset::amount()` and keep the value as `AssetAmount`.
 :::
 
 ---
@@ -67,11 +70,6 @@ The Miden VM stack only allows direct access to the first 16 elements. Complex f
 
 ```
 invalid stack index: only the first 16 elements on the stack are directly accessible
-```
-
-This may also appear as:
-```
-values not found in advice provider
 ```
 
 ### Solution
@@ -132,47 +130,43 @@ for asset in assets {
 
 ---
 
-## Function Argument Limit (4 Words)
+## Exported Procedure Argument Limit (4 Words)
 
 ### Problem
 
-Miden functions can receive at most 4 Words (16 Felts) as arguments:
-
-```
-error: expected at most 4 words of arguments
-```
+Exported component procedures and direct cross-context calls can currently receive at most 4
+Words (16 Felts) as arguments.
 
 ```rust
-// WRONG: Too many arguments
-fn process(
-    &mut self,
-    depositor: AccountId,    // ~1 Word
-    asset: Asset,            // 1 Word
-    serial_num: Word,        // 1 Word
-    tag: Felt,               // 1 Felt
-    note_type: Felt,         // 1 Felt
-    extra_data: Word,        // 1 Word - EXCEEDS LIMIT!
-) {
-    // ...
+#[component]
+trait Processor {
+    #[account_procedure]
+    fn process(
+        &mut self,
+        depositor: AccountId,    // 2 Felts
+        asset: Asset,            // 2 Words (key + value)
+        serial_num: Word,        // 1 Word
+        tag: Felt,               // 1 Felt
+        note_type: Felt,         // 1 Felt
+        extra_data: Word,        // 1 Word - EXCEEDS LIMIT!
+    );
 }
 ```
 
 ### Solution
 
-**1. Make sure to only pass 4 Words to functions:**
+**1. Keep exported procedure inputs within 4 Words:**
 
 ```rust
-// CORRECT: Only pass 4 Words
-fn process(
-    &mut self,
-    depositor: AccountId,    // ~1 Word
-    asset: Asset,            // 1 Word
-    serial_num: Word,        // 1 Word
-    params: Word,            // [tag, note_type, 0, 0] - 1 Word
-) {
-    let tag = params[0];
-    let note_type = params[1];
-    // ...
+#[component]
+trait Processor {
+    #[account_procedure]
+    fn process(
+        &mut self,
+        asset: Asset,            // 2 Words (key + value)
+        serial_num: Word,        // 1 Word
+        params: Word,            // [tag, note_type, 0, 0] - 1 Word
+    );
 }
 ```
 
@@ -207,7 +201,7 @@ fn store_config(&mut self, key: Word, config_data: Word) {
 
 // Reference by key in other operations
 fn process_with_config(&mut self, key: Word) {
-    let config = self.configs.get(&key);
+    let config = self.configs.get(key);
     // Use config...
 }
 ```
@@ -218,7 +212,7 @@ fn process_with_config(&mut self, key: Word) {
 
 ### Problem
 
-Arrays passed from Rust to the Miden VM are received in **reversed order**.
+At a Rust/MASM stack boundary, arrays appear on the operand stack in **reversed order**.
 
 ```rust
 // In Rust, you define:
@@ -231,36 +225,22 @@ let word = Word::from([a, b, c, d]);
 
 Be aware of this when:
 - Constructing storage keys
-- Parsing note inputs
+- Parsing note storage
 - Working with asset data
 
 **Example: Storage Key Construction**
 
 ```rust
-// Balance key format in Rust
+// Balance-key input in Rust contract code
 let key = Word::from([
-    depositor.prefix().as_felt(),  // Position 0 in Rust
-    depositor.suffix(),             // Position 1
-    faucet.prefix().as_felt(),      // Position 2
-    faucet.suffix(),                // Position 3
+    depositor.prefix,  // Position 0 in Rust
+    depositor.suffix,  // Position 1
+    faucet.prefix,     // Position 2
+    faucet.suffix,     // Position 3
 ]);
 
 // When the VM processes this, it sees:
 // [faucet.suffix, faucet.prefix, depositor.suffix, depositor.prefix]
-```
-
-**Example: Asset Structure**
-
-```rust
-// Asset Word layout (Rust perspective)
-// [amount, 0, faucet_suffix, faucet_prefix]
-
-let asset_word = Word::from([
-    Felt::new(amount),           // [0] amount
-    Felt::new(0),                // [1] padding
-    faucet.id().suffix(),        // [2] faucet suffix
-    faucet.id().prefix().as_felt(), // [3] faucet prefix
-]);
 ```
 
 :::tip Consistency is Key
@@ -277,8 +257,8 @@ Miden uses field element (Felt) arithmetic, which operates in a prime field with
 
 ```rust
 // DANGEROUS: This does NOT error on underflow!
-let balance = Felt::new(100);
-let withdrawal = Felt::new(500);
+let balance = felt!(100);
+let withdrawal = felt!(500);
 let new_balance = balance - withdrawal;  // Silently wraps to a huge positive number!
 ```
 
@@ -286,54 +266,39 @@ When you subtract a larger value from a smaller one, the result wraps around to 
 
 ### Why This Happens
 
-The Miden VM performs all Felt arithmetic as modular operations within the prime field. There is no automatic overflow or underflow detection at the VM level. The Rust compiler's default overflow mode is `Unchecked`, meaning it compiles directly to raw VM arithmetic operations.
+The Miden VM performs all Felt arithmetic as modular operations within the prime field. There is no automatic overflow or underflow detection at the VM level.
 
 ### Solution
 
-**Always validate before subtraction:**
+**Use `AssetAmount` for asset balances:**
 
 ```rust
-// CORRECT: Check balance before subtracting
-let current_balance: Felt = self.balances.get(&key);
-let withdraw_amount = withdraw_asset.inner[0];
+// CORRECT: Keep balances in a StorageMap<Word, AssetAmount>.
+let current_balance: AssetAmount = self.balances.get(key);
+let withdraw_amount = withdraw_asset.amount();
 
-// Validate that balance is sufficient
-assert!(
-    current_balance.as_u64() >= withdraw_amount.as_u64(),
-    "Withdrawal amount exceeds available balance"
-);
-
-// Only subtract after validation
+// AssetAmount subtraction checks for underflow.
 let new_balance = current_balance - withdraw_amount;
+self.balances.set(key, new_balance);
 ```
 
 ### Example from Bank Contract
 
 ```rust title="contracts/bank-account/src/lib.rs"
-pub fn withdraw(&mut self, depositor: AccountId, withdraw_asset: Asset, /* ... */) {
-    let withdraw_amount = withdraw_asset.inner[0];
-
-    // Get current balance and validate sufficient funds exist.
-    // This check is critical: Felt arithmetic is modular, so subtracting
-    // more than the balance would silently wrap to a large positive number.
-    let current_balance: Felt = self.balances.get(&key);
-    assert!(
-        current_balance.as_u64() >= withdraw_amount.as_u64(),
-        "Withdrawal amount exceeds available balance"
-    );
-
-    let new_balance = current_balance - withdraw_amount;
+pub fn withdraw(&mut self, key: Word, withdraw_asset: Asset) {
+    let current_balance: AssetAmount = self.balances.get(key);
+    let new_balance = current_balance - withdraw_asset.amount();
     self.balances.set(key, new_balance);
 }
 ```
 
 :::danger Critical Security Issue
-Failure to validate before subtraction can lead to:
+Using unchecked raw `Felt` subtraction for balances can lead to:
 - Users withdrawing more than their balance
 - Balance values becoming astronomically large
 - Complete loss of funds in the contract
 
-**Always check bounds before Felt subtraction operations.**
+Use `AssetAmount` or explicitly validate bounds before subtracting raw `Felt` values.
 :::
 
 ---
@@ -342,15 +307,12 @@ Failure to validate before subtraction can lead to:
 
 ### Problem
 
-The `active_note::add_assets_to_account()` function fails if the consuming account doesn't have the basic wallet component.
-
-```
-Error: Account does not support asset operations
-```
+The `basic_wallet::move_note_assets_to_account` procedure is available only when the consuming
+account includes the basic wallet component.
 
 ### Solution
 
-Ensure accounts that receive assets via this function have wallet capability:
+Ensure note scripts that call this procedure target accounts with wallet capability:
 
 ```rust
 use miden_client::account::component::BasicWallet;
@@ -360,23 +322,6 @@ let account = AccountBuilder::new(seed)
     .with_component(BasicWallet)  // Add wallet capability
     .with_component(YourCustomComponent)
     .build()?;
-```
-
-**Alternative: Use `native_account::add_asset()`**
-
-For account components, use the native account API instead:
-
-```rust
-#[component]
-impl Bank {
-    pub fn deposit(&mut self, depositor: AccountId, asset: Asset) {
-        // This works for any account - no wallet required
-        native_account::add_asset(asset);
-
-        // Track balance in storage
-        self.update_balance(depositor, asset);
-    }
-}
 ```
 
 ---
@@ -392,27 +337,37 @@ Storage map lookups return unexpected results or zeros when keys are constructed
 Define a single key construction pattern and use it everywhere:
 
 ```rust title="contracts/bank-account/src/lib.rs"
-#[component]
-impl Bank {
-    /// Construct a balance key for a depositor and asset.
-    /// Key format: [depositor_prefix, depositor_suffix, faucet_prefix, faucet_suffix]
-    fn balance_key(&self, depositor: AccountId, faucet_id: AccountId) -> Word {
+use miden::{component_storage, AccountId, Asset, AssetAmount, StorageMap, Word};
+
+#[component_storage]
+struct BankStorage {
+    #[storage(description = "fungible balances by depositor and asset")]
+    balances: StorageMap<Word, AssetAmount>,
+}
+
+impl BankStorage {
+    /// Combine the depositor and fungible asset ID into one map key.
+    fn balance_key(depositor: AccountId, asset: &Asset) -> Word {
+        // Reject non-fungible assets before deriving the compact key.
+        let _ = asset.amount();
+
         Word::from([
-            depositor.prefix().as_felt(),
-            depositor.suffix(),
-            faucet_id.prefix().as_felt(),
-            faucet_id.suffix(),
+            depositor.prefix,
+            depositor.suffix,
+            asset.key[3],
+            asset.key[2],
         ])
     }
 
-    pub fn get_balance(&self, depositor: AccountId, faucet_id: AccountId) -> Felt {
-        let key = self.balance_key(depositor, faucet_id);
-        self.balances.get(&key)
+    fn get_depositor_balance(&self, depositor: AccountId, asset: &Asset) -> AssetAmount {
+        let key = BankStorage::balance_key(depositor, asset);
+        self.balances.get(key)
     }
 
-    fn update_balance(&mut self, depositor: AccountId, faucet_id: AccountId, amount: Felt) {
-        let key = self.balance_key(depositor, faucet_id);
-        self.balances.set(key, amount);
+    fn update_balance(&mut self, depositor: AccountId, asset: &Asset, amount: AssetAmount) {
+        let key = BankStorage::balance_key(depositor, asset);
+        let current = self.balances.get(key);
+        self.balances.set(key, current + amount);
     }
 }
 ```
@@ -432,13 +387,13 @@ Use the correct values for note types:
 | Value | Type | Description |
 |-------|------|-------------|
 | 1 | Public | Note data is visible onchain |
-| 2 | Private | Note data is hidden (only hash onchain) |
+| 0 | Private | Only a commitment to the note details is published |
 
 ```rust
-// In note inputs or when creating output notes
-let note_type = Felt::new(1);  // Public note
+// In note storage or when creating output notes
+let note_type = felt!(1);  // Public note
 // or
-let note_type = Felt::new(2);  // Private note
+let note_type = felt!(0);  // Private note
 ```
 
 ---
@@ -449,13 +404,13 @@ let note_type = Felt::new(2);  // Private note
 
 When creating P2ID (Pay-to-ID) output notes, you need the script's MAST root. The old v0.13 pattern of hardcoding the digest is fragile — it hashed under RPO, which v0.14 replaced with Poseidon2, and any future change to the P2ID script invalidates the constant silently.
 
-### Solution (v0.15)
+### Solution
 
-Carry the P2ID script root on the initiating note's storage and read it at runtime instead of hardcoding a value. This is the pattern used in the current `miden-bank` example:
+Carry the P2ID script root on the initiating note's storage and read it at runtime instead of hardcoding a value:
 
 ```rust title="contracts/bank-account/src/lib.rs"
-// The withdraw-request note encodes the P2ID script root at storage slots
-// 10..14 (4 felts = 1 Word). The Poseidon2-hashed digest of the P2ID note
+// The withdraw-request note encodes the P2ID script root in storage elements
+// 10 through 13 (4 felts = 1 Word). The Poseidon2-hashed digest of the P2ID note
 // script is injected by the caller when the note is created.
 let storage = active_note::get_storage();
 let script_root = Word::from([
@@ -472,12 +427,12 @@ On the client side, compute the script root dynamically from the standard P2ID n
 use miden_client::note::P2idNote;
 use miden_client::Word;
 
-// v0.15: script roots are typed NoteScriptRoot values; convert when a Word is needed.
-let p2id_script_root: Word = P2idNote::script().root().into();
+// Script roots are typed NoteScriptRoot values; convert when a Word is needed.
+let p2id_script_root: Word = P2idNote::script_root().into();
 ```
 
 :::info Why Not Hardcode
-The native hash function changed from RPO to Poseidon2 in v0.14, so every MAST root — including the P2ID script's — is different from v0.13. Any hardcoded digest from v0.13 will fail a script-root check on current releases. Reading the root from `P2idNote::script().root()` (or the active note's storage for onchain code) keeps the contract resilient to future script changes.
+The native hash function changed from RPO to Poseidon2 in v0.14, so every MAST root — including the P2ID script's — is different from v0.13. Any hardcoded digest from v0.13 will fail a script-root check on current releases. Reading the root from `P2idNote::script_root()` (or the active note's storage for onchain code) keeps the contract resilient to future script changes.
 :::
 
 ---
@@ -488,13 +443,7 @@ The native hash function changed from RPO to Poseidon2 in v0.14, so every MAST r
 
 Every Miden transaction must either change tracked account state (storage, vault, or nonce) **or** consume at least one input note. A transaction that does neither is rejected.
 
-The Rust client surfaces this as `TransactionRequestError::NoInputNotesNorAccountChange` before submission:
-
-```
-empty transaction: the request has no input notes and no account state changes
-```
-
-The VM kernel enforces the same invariant during execution, surfacing the message:
+The VM kernel enforces this invariant during execution, surfacing the message:
 
 ```
 executed transaction neither changed the account state, nor consumed any notes
@@ -533,7 +482,9 @@ fn run(arg: Word, account: &mut Account) {
 }
 ```
 
-Alternatively, if the flow naturally consumes a note (most do — note scripts mutate state when they run), make sure the transaction request includes at least one input note. Pass the `Note` (the client deduces authentication from the note record) along with optional `NoteArgs`:
+Alternatively, if the flow naturally consumes a note, make sure the transaction request includes
+it. Pass the `Note` with optional `NoteArgs`; the client uses the presence of an inclusion proof in
+its store to decide whether to consume it as an authenticated or unauthenticated note:
 
 ```rust
 let request = TransactionRequestBuilder::new()
@@ -541,38 +492,21 @@ let request = TransactionRequestBuilder::new()
     .build()?;
 ```
 
-:::tip Standard auth handles this for you
-Most account templates run an authentication procedure that calls `incr_nonce()` on every transaction. If your account uses `BasicWallet`, `IncrNonceAuthComponent`, or any auth component that increments the nonce, you only hit this pitfall in transaction-script-only flows that skip the auth path. See [Authentication](../../smart-contracts/accounts/authentication) for details.
-:::
-
-### Why this exists
-
-A Miden transaction commits to a state delta plus a set of consumed notes. A transaction with neither is indistinguishable from "no transaction at all" — admitting it would waste a block slot and a proof verification. The invariant lets the network reject empty proofs cheaply.
-
-:::info See also
-- Client-side error catalog: [`TransactionRequestError::NoInputNotesNorAccountChange`](../../tools/clients/common-errors)
-- Failure modes table: [Account Operations](../../smart-contracts/accounts/account-operations#when-proof-generation-fails)
-:::
-
 ---
 
 ## Quick Reference Table
 
 | Pitfall | Symptom | Solution |
 |---------|---------|----------|
-| Felt comparison | Wrong comparison results | Use `.as_u64()` |
+| Asset amount stored as `Felt` | Modular wraparound or an invalid amount | Use `AssetAmount` |
 | Stack overflow | "16 elements" error | Reduce locals, split functions |
-| Too many args | "4 words" error | Group into Words, use inputs |
+| Too many exported procedure inputs | Export-lifting error | Group into Words, use note storage |
 | Array reversal | Wrong data order | Be consistent with construction |
-| Felt underflow | Balance wraps to huge number | Validate before subtraction |
+| Felt underflow | Balance wraps to huge number | Use `AssetAmount` or validate raw values |
 | Missing wallet | Asset operation fails | Add `BasicWallet` component |
 | Key mismatch | Zero balances | Use helper function for keys |
-| Note type | Wrong note visibility | Use 1 (Public) or 2 (Private) |
+| Note type | Wrong note visibility | Use 1 (Public) or 0 (Private) |
 | Empty transaction | "Neither changed account state nor consumed notes" | Mutate state in every path, or consume a note |
-
-:::tip View Complete Source
-See these patterns in context in the [miden-bank repository](https://github.com/keinberger/miden-bank).
-:::
 
 ## Next Steps
 
