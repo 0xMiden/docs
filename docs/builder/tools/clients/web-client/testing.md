@@ -44,7 +44,7 @@ const faucet = await client.accounts.create({
   maxSupply: 10_000_000n,
 });
 
-client.proveBlock();
+await client.proveBlock();
 await client.sync();
 
 await client.transactions.mint({
@@ -53,17 +53,17 @@ await client.transactions.mint({
   amount: 1000n,
 });
 
-client.proveBlock();
+await client.proveBlock();
 await client.sync();
 
 const result = await client.transactions.consumeAll({ account: wallet });
 console.log(`Consumed ${result.consumed} notes`);
 
-client.proveBlock();
+await client.proveBlock();
 await client.sync();
 
 const balance = await client.accounts.getBalance(wallet, faucet);
-console.log(`Balance: ${balance}`); // 1000n
+console.log(`Balance: ${balance}`); // Balance: 1000
 ```
 
 ## Dummy proving
@@ -80,7 +80,7 @@ The `MidenClient` class exposes a few methods that only make sense on mock clien
 
 ```typescript
 if (client.usesMockChain()) {
-  client.proveBlock();
+  await client.proveBlock();
 }
 
 const chainBytes     = await client.serializeMockChain();
@@ -118,17 +118,38 @@ const client = await MidenClient.createMock({
 The mock client ships its own in-memory note transport. The same `sendPrivate` / `fetchPrivate` flow works:
 
 ```typescript
-import { MidenClient } from "@miden-sdk/miden-sdk";
+import {
+  createP2IDNote,
+  MidenClient,
+  type AccountTypeValue,
+} from "@miden-sdk/miden-sdk";
+
+const FUNGIBLE_FAUCET: AccountTypeValue = 0;
 
 const client = await MidenClient.createMock();
+const recipient = await client.accounts.create();
+const faucet = await client.accounts.create({
+  type: FUNGIBLE_FAUCET,
+  symbol: "TEST",
+  decimals: 8,
+  maxSupply: 10_000_000n,
+});
+
+const note = createP2IDNote({
+  from: faucet,
+  to: recipient,
+  assets: { token: faucet, amount: 1n },
+  type: "private",
+});
 
 await client.notes.sendPrivate({
-  note: "0xnote...",
-  to: "mtst1recipient...",
+  note,
+  to: recipient,
+  scanAfterBlockNum: 0,
 });
 
 await client.notes.fetchPrivate();
 
 const notes = await client.notes.list();
-console.log(`Received ${notes.length} notes`);
+console.log(`Received ${notes.length} notes`); // Received 1 notes
 ```

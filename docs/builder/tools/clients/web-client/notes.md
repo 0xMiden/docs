@@ -80,8 +80,8 @@ import { MidenClient, NoteExportFormat } from "@miden-sdk/miden-sdk";
 const client = await MidenClient.createTestnet();
 
 // Import from a previously exported NoteFile
-const noteId = await client.notes.import(noteFile);
-console.log("Imported:", noteId);
+const importedRef = await client.notes.import(noteFile);
+console.log("Imported:", importedRef);
 
 // Export — formats differ in completeness
 const idOnly  = await client.notes.export("0xnote...", { format: NoteExportFormat.Id });
@@ -89,33 +89,44 @@ const full    = await client.notes.export("0xnote...", { format: NoteExportForma
 const details = await client.notes.export("0xnote...", { format: NoteExportFormat.Details });
 ```
 
+`import()` returns a note ID as a hex string when the file includes one, or the details commitment for a `Details` file.
+
 `NoteExportFormat`:
 
-- **`Id`** — just the note ID. Only works for public notes.
+- **`Id`** — just the note ID. A recipient can import it only for a public note.
 - **`Full`** — complete note data plus inclusion proof. Requires the note to have an onchain inclusion proof.
-- **`Details`** — note ID, metadata, and creation block.
+- **`Details`** — assets and recipient plus a sync hint containing the tag and after-block number. Metadata and attachments are recovered from the chain.
 
 ## Note transport (private notes)
 
 Private notes are delivered through the Miden note transport service. The sender emits a note with `type: "private"`; the recipient fetches it from the transport network.
 
 ```typescript
-// Send a private note
+// Relay an arbitrary private note. You can also pass an input note ID or
+// record tracked by this client.
 await client.notes.sendPrivate({
-  note: "0xnote...",           // NoteInput
-  to: "mtst1recipient...",     // recipient AccountRef
+  note: privateNote,
+  to: "mtst1recipient...",
+  scanAfterBlockNum, // chain tip recorded when the transaction was submitted
 });
 
-// Fetch — default is incremental (paginated)
-await client.notes.fetchPrivate();
+// For an applied output note created by this client, let the SDK derive the
+// scan-start block from its stored expected height.
+await client.notes.sendPrivateOutput({
+  noteId: "0xnote...",
+  to: "mtst1recipient...",
+});
 
-// Or fetch everything at once (initial-setup scenarios)
-await client.notes.fetchPrivate({ mode: "all" });
+// On the client that tracks the recipient, fetch incrementally from the
+// stored transport cursor.
+await recipientClient.notes.fetchPrivate();
 
 // Now inspect the inbox
-const notes = await client.notes.list();
-console.log(`Fetched ${notes.length} notes`);
+const notes = await recipientClient.notes.list();
+console.log(`Tracked ${notes.length} notes`);
 ```
+
+`scanAfterBlockNum` must be at or below the note's commitment block. A value above it is never scanned backward and can silently prevent delivery. `sendPrivateOutput()` avoids that footgun for applied output notes created by the same client. Newly tracked tags are backfilled by `client.sync()`; `fetchPrivate({ mode: "all" })` is no longer available.
 
 You need a note transport endpoint configured on the client — set `noteTransportUrl` in `ClientOptions`, or use a network factory (`createTestnet`, `createDevnet`) that preconfigures it.
 

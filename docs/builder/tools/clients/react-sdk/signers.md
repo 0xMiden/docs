@@ -12,7 +12,7 @@ The React SDK treats signing as a pluggable contract: `MidenProvider` accepts an
 ### Para (EVM wallets)
 
 ```tsx
-import { ParaSignerProvider } from "@miden-sdk/para";
+import { ParaSignerProvider } from "@miden-sdk/use-miden-para-react";
 import { MidenProvider } from "@miden-sdk/react";
 
 function App() {
@@ -29,7 +29,7 @@ function App() {
 Expose Para-specific data inside your app:
 
 ```tsx
-import { useParaSigner } from "@miden-sdk/para";
+import { useParaSigner } from "@miden-sdk/use-miden-para-react";
 
 const { para, wallet, isConnected } = useParaSigner();
 ```
@@ -38,23 +38,26 @@ const { para, wallet, isConnected } = useParaSigner();
 
 ```tsx
 import { TurnkeySignerProvider } from "@miden-sdk/miden-turnkey-react";
+import { MidenProvider } from "@miden-sdk/react";
 
-// Config is optional — defaults to https://api.turnkey.com and reads
-// VITE_TURNKEY_ORG_ID from the environment.
-<TurnkeySignerProvider>
+// defaultOrganizationId is required. The API URL defaults to
+// https://api.turnkey.com.
+<TurnkeySignerProvider config={{ defaultOrganizationId: "your-org-id" }}>
   <MidenProvider config={{ rpcUrl: "testnet" }}>
     <YourApp />
   </MidenProvider>
 </TurnkeySignerProvider>
 
-// Or with explicit config:
+// Or with an explicit API URL:
 <TurnkeySignerProvider
   config={{
     apiBaseUrl: "https://api.turnkey.com",
     defaultOrganizationId: "your-org-id",
   }}
 >
-  ...
+  <MidenProvider config={{ rpcUrl: "testnet" }}>
+    <YourApp />
+  </MidenProvider>
 </TurnkeySignerProvider>
 ```
 
@@ -84,9 +87,10 @@ function ConnectButton() {
 ### MidenFi wallet adapter
 
 ```tsx
-import { MidenFiSignerProvider } from "@miden-sdk/wallet-adapter-react";
+import { MidenFiSignerProvider } from "@miden-sdk/miden-wallet-adapter-react";
+import { MidenProvider } from "@miden-sdk/react";
 
-<MidenFiSignerProvider network="testnet">
+<MidenFiSignerProvider>
   <MidenProvider config={{ rpcUrl: "testnet" }}>
     <YourApp />
   </MidenProvider>
@@ -116,7 +120,11 @@ function Header() {
 For a signing service that doesn't have a prebuilt provider — internal HSM, hardware wallet, or experimental integration — wire `SignerContext` directly:
 
 ```tsx
-import { SignerContext, type SignerContextValue } from "@miden-sdk/react";
+import {
+  MidenProvider,
+  SignerContext,
+  type SignerContextValue,
+} from "@miden-sdk/react";
 import { AccountStorageMode } from "@miden-sdk/miden-sdk";
 
 const signer: SignerContextValue = {
@@ -180,14 +188,18 @@ For apps that need to swap between multiple signer providers at runtime (e.g. "c
 
 ```tsx
 import { MultiSignerProvider, SignerSlot, MidenProvider } from "@miden-sdk/react";
+import { ParaSignerProvider } from "@miden-sdk/use-miden-para-react";
+import { TurnkeySignerProvider } from "@miden-sdk/miden-turnkey-react";
 
 function App() {
   return (
     <MultiSignerProvider>
-      <ParaSignerProvider apiKey="...">
+      <ParaSignerProvider apiKey="your-api-key" environment="PRODUCTION">
         <SignerSlot />
       </ParaSignerProvider>
-      <TurnkeySignerProvider>
+      <TurnkeySignerProvider
+        config={{ defaultOrganizationId: "your-org-id" }}
+      >
         <SignerSlot />
       </TurnkeySignerProvider>
 

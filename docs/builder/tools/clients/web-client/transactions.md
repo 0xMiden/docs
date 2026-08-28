@@ -5,7 +5,7 @@ sidebar_position: 4
 
 # Transactions
 
-`client.transactions` is the resource namespace for everything that mutates onchain state: sending, minting, consuming, swapping, running custom scripts, and inspecting history. Every mutation method handles the full lifecycle — execute, prove, submit — in one call.
+`client.transactions` is the resource namespace for sending, minting, consuming, swapping, running custom scripts, and inspecting transaction history. The simplified operations below handle the full lifecycle — execute, prove, submit — in one call.
 
 ## Simplified operations
 
@@ -134,21 +134,67 @@ await client.transactions.waitFor(txId.toHex(), {
 
 `waitFor` throws on rejection or timeout.
 
-## Preview (dry run)
+## Preview transactions awaiting authorization
 
-Run any of the simplified operations as a dry-run to inspect its effects without submitting to the network. The return type is a `TransactionSummary`.
+`preview()` derives the `TransactionSummary` that an account is being asked to authorize without proving or submitting the transaction. It only returns a summary when authorization is still pending, such as a multisig request that has not reached its threshold:
 
 ```typescript
 const summary = await client.transactions.preview({
   operation: "send",
-  account: wallet,
+  account: multisigAccount,
   to: recipient,
   token: faucet,
   amount: 100n,
 });
 ```
 
-`operation` accepts `"send"`, `"mint"`, `"consume"`, and `"swap"`.
+If the account already authorizes the request, execution succeeds without producing a pending summary and `preview()` rejects with `TRANSACTION_ALREADY_AUTHORIZED`. Submit that transaction normally instead. The built-in preview operations follow the same rule. Use `operation: "custom"` when previewing a pre-built `TransactionRequest`, as in the cross-client flow below.
+
+### Keep a cross-client summary reproducible
+
+A transaction summary commits to its reference block. When one client proposes a transaction and another verifies or executes it later, capture a `ChainAnchor` and send it alongside the summary so every participant derives the transaction at the same block:
+
+```typescript
+import { ChainAnchor, TransactionSummary } from "@miden-sdk/miden-sdk";
+
+// Proposer: capture the request's reference block and derive the summary there.
+const anchor = await client.transactions.captureAnchor(request);
+const summary = await client.transactions.preview({
+  operation: "custom",
+  account: multisigAccount,
+  request,
+  anchor,
+});
+
+const anchorBytes = anchor.serialize();
+const summaryBytes = summary.serialize();
+await sendProposal(anchorBytes, summaryBytes);
+
+// Co-signer or executor: restore the proposal and re-derive it at the same block.
+const receivedAnchor = ChainAnchor.deserialize(anchorBytes);
+const proposedSummary = TransactionSummary.deserialize(summaryBytes);
+const derivedSummary = await client.transactions.preview({
+  operation: "custom",
+  account: multisigAccount,
+  request,
+  anchor: receivedAnchor,
+});
+
+if (derivedSummary.toCommitment().toHex() !== proposedSummary.toCommitment().toHex()) {
+  throw new Error("The request does not match the proposed summary");
+}
+
+if (receivedAnchor.commitment().toHex() !== proposedSummary.blockCommitment().toHex()) {
+  throw new Error("The anchor does not match the proposed summary");
+}
+
+// After collecting the required authorization, replay at the anchored block.
+await client.transactions.submit(multisigAccount, request, { anchor: receivedAnchor });
+receivedAnchor.free();
+anchor.free();
+```
+
+An anchor makes the request reproducible; it does not prove that the transaction matches the signer's intent. Inspect the summary's account delta and input/output notes before signing. Also verify a received anchor's block against a trusted node when the proposer is not trusted. If `summary.expirationDelta()` is non-zero, the transaction expires at `anchor.blockNum() + summary.expirationDelta()`; if that deadline passes, capture a new anchor and collect authorization again.
 
 ## Custom transaction scripts (`execute`)
 
@@ -162,16 +208,14 @@ const client = await MidenClient.createTestnet();
 const script = await client.compile.txScript({
   code: `
     use external_contract::counter_contract
-    begin
+
+    @transaction_script
+    pub proc main
       call.counter_contract::increment_count
     end
   `,
-  libraries: [
-    {
-      namespace: "external_contract::counter_contract",
-      code: counterContractCode,
-    },
-  ],
+  // Reuse the component installed on contractAccount.
+  libraries: [{ component: counterComponent }],
 });
 
 const { txId } = await client.transactions.execute({
@@ -194,6 +238,7 @@ const client = await MidenClient.createTestnet();
 // Compile the foreign contract to get a procedure hash
 const counterComponent = await client.compile.component({
   code: counterContractCode,
+  namespace: "external_contract::counter_contract",
   slots: [StorageSlot.emptyValue("miden::tutorials::counter")],
 });
 const getCountHash = counterComponent.getProcedureHash("get_count");
@@ -202,26 +247,28 @@ const script = await client.compile.txScript({
   code: `
     use external_contract::count_reader_contract
     use miden::core::sys
-    begin
+
+    @transaction_script
+    pub proc main
+      padw padw padw padw
       push.${getCountHash}
-      push.${counterAccount.id().suffix()}
       push.${counterAccount.id().prefix()}
+      push.${counterAccount.id().suffix()}
       call.count_reader_contract::copy_count
       exec.sys::truncate_stack
     end
   `,
-  libraries: [
-    { namespace: "external_contract::count_reader_contract", code: countReaderCode },
-  ],
+  // Reuse the component installed on countReaderAccount.
+  libraries: [{ component: countReaderComponent }],
 });
 
 const { txId } = await client.transactions.execute({
   account: countReaderAccount.id(),
   script,
   foreignAccounts: [
-    // Bare reference — client fetches storage requirements automatically
+    // A bare reference is sufficient here because get_count reads a value slot.
     counterAccount.id(),
-    // Or with explicit storage requirements:
+    // Storage-map entries require explicit storage requirements:
     // { id: counterAccount.id(), storage: requirements },
   ],
 });
@@ -235,23 +282,23 @@ const { txId } = await client.transactions.execute({
 const script = await client.compile.txScript({
   code: `
     use external_contract::counter_contract
-    begin
+
+    @transaction_script
+    pub proc main
       call.counter_contract::get_count
     end
   `,
-  libraries: [
-    { namespace: "external_contract::counter_contract", code: counterContractCode },
-  ],
+  libraries: [{ component: counterComponent }],
 });
 
 const stack = await client.transactions.executeProgram({
   account: contractAccount.id(),
   script,
-  foreignAccounts: [counterAccount.id()],
 });
 
-// stack is a FeltArray — 16 elements representing the final stack
-const count = stack.get(0).asInt();
+// Node.js returns Felt[]; browser WASM returns the FeltArray wrapper.
+const first = Array.isArray(stack) ? stack[0] : stack.get(0);
+const count = first.asInt();
 console.log("Count:", count);
 ```
 
@@ -266,9 +313,9 @@ Options:
 
 ## Manual `TransactionRequest`
 
-For full control over note inputs and outputs — e.g. emitting multiple custom output notes from one transaction — build a `TransactionRequest` yourself and pass it to `submit`.
+For full control over note inputs and outputs — e.g. emitting multiple output notes from one transaction — build a `TransactionRequest` yourself and pass it to `submit`.
 
-The builder accepts WASM array classes (`NoteArray`, `NoteDetailsAndTagArray`, `NoteRecipientArray`) rather than plain TS arrays. This is unusual but required by the underlying wasm-bindgen interface: the array types take ownership of their elements and are explicitly disposable.
+The builder accepts WASM array classes (`NoteArray`, `NoteDetailsAndTagArray`, `NoteRecipientArray`) rather than plain TypeScript arrays.
 
 ```typescript
 import {
@@ -286,7 +333,6 @@ for (const note of outputNotes) {
 }
 
 const request = new TransactionRequestBuilder()
-  .withCustomScript(transactionScript)
   .withOwnOutputNotes(ownOutputs)
   .build();
 
@@ -304,13 +350,13 @@ Expected-note hints are also available:
 ```typescript
 const request = new TransactionRequestBuilder()
   .withOwnOutputNotes(ownOutputs)
-  .withExpirationDelta(10) // expires 10 blocks after submission
+  .withExpirationDelta(10) // expires 10 blocks after the reference block
   .build();
 
 await client.transactions.submit(wallet, request);
 ```
 
-`withExpirationDelta()` composes with `withCustomScript()` — the builder applies the expiration at the request level regardless of how the script was provided. You can still set expiration inside the script itself when you need a different rule; the two paths don't interact.
+`withExpirationDelta()` cannot be combined with `withCustomScript()`; `build()` rejects that combination. A custom script must set its expiration through the transaction context instead.
 
 ## Remote proving
 
@@ -368,7 +414,7 @@ for (const tx of all) {
   tx.finalAccountState().toHex();
 
   tx.inputNoteNullifiers().map((n) => n.toHex());
-  tx.outputNotes().toString();
+  tx.outputNotes().notes().map((note) => note.id().toString());
 }
 ```
 

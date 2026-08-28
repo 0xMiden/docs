@@ -45,7 +45,7 @@ Every hook in the rest of this section assumes a `MidenProvider` is mounted some
     rpcUrl: "testnet",           // "devnet" | "testnet" | "localhost" | custom URL
     prover: "testnet",           // "local" | "devnet" | "testnet" | custom URL
     autoSyncInterval: 15_000,    // ms; set to 0 to disable auto-sync
-    noteTransportUrl: "testnet", // optional; required for private notes
+    noteTransportUrl: "https://transport.miden.io", // optional; required for private notes
   }}
   loadingComponent={<Loading />} // rendered while WASM boots
   errorComponent={<Error />}     // rendered if init fails
@@ -61,7 +61,7 @@ Every hook in the rest of this section assumes a `MidenProvider` is mounted some
 | `rpcUrl` | `"devnet" \| "testnet" \| "localhost" \| string` | Node RPC endpoint. Shorthands expand to hosted Miden endpoints; any other string is treated as a raw URL. |
 | `prover` | `"local" \| "devnet" \| "testnet" \| string \| ProverConfig` | Default prover. `"local"` runs in-browser. `ProverConfig` supports a `primary` + `fallback` pair if you want automatic fallback. |
 | `autoSyncInterval` | `number` | Milliseconds between automatic sync pulls. `0` disables the loop (you can still call `sync()` manually). Default: 15000. |
-| `noteTransportUrl` | `"devnet" \| "testnet" \| string` | Note transport service. Required for `sendPrivate` / `fetchPrivate`. |
+| `noteTransportUrl` | `string` | Full note transport service URL. Required for `sendPrivate` / `fetchPrivate`. |
 | `proverTimeoutMs` | `number` | Per-transaction prover timeout. |
 | `seed` | `Uint8Array` | 32-byte RNG seed for deterministic account-ID derivation in tests. |
 
@@ -72,6 +72,8 @@ Every hook in the rest of this section assumes a `MidenProvider` is mounted some
 | `devnet` | Development / pre-production testing, fake tokens |
 | `testnet` | Pre-production testing against the hosted Miden testnet |
 | `localhost` | Local node at `http://localhost:57291` |
+
+`MidenProvider` expands the `rpcUrl` network shorthands but not `noteTransportUrl`. Pass the full transport URL (`https://transport.miden.io` for testnet or `https://transport.devnet.miden.io` for devnet).
 
 ### `loadingComponent` and `errorComponent`
 
@@ -101,17 +103,22 @@ function Status() {
 - `isInitializing` — `true` during the first load.
 - `error` — non-null if init failed.
 - `sync()` — trigger a manual sync pass outside the auto-sync loop.
-- `runExclusive<T>(fn: () => Promise<T>): Promise<T>` — serialize a block of async work under the internal lock. `fn` takes no arguments; reach for the client via `useMidenClient()` if you need one inside. See [race conditions](./recipes.md#prevent-race-conditions).
+- `runExclusive<T>(fn: () => Promise<T>): Promise<T>` — serialize a block of async work under the internal lock. `fn` takes no arguments; reach for the client via `useMidenClient()` if you need one inside. See [serialized raw-client flows](./recipes.md#serialize-a-custom-raw-client-flow).
 
 `useMidenClient()` is a shortcut that returns the ready `WebClient` directly, throwing if the provider isn't ready yet:
 
 ```tsx
 import { useMidenClient } from "@miden-sdk/react";
 
-function AdvancedCall() {
+function LoadBlockHeaderButton() {
   const client = useMidenClient();
-  const header = await client.getBlockHeaderByNumber(100);
-  // ...
+
+  const loadHeader = async () => {
+    const header = await client.getBlockHeaderByNumber(100);
+    console.log("Block:", header.blockNum());
+  };
+
+  return <button onClick={loadHeader}>Load block 100</button>;
 }
 ```
 
@@ -119,7 +126,7 @@ Use it for APIs the React SDK hooks don't expose.
 
 ## Hook result conventions
 
-Each hook exports its own result interface — `UseSendResult`, `AccountsResult`, `NotesResult`, and so on — rather than a generic `QueryResult<T>` wrapper. Data lives in named fields (e.g. `accounts`, `wallets`, `faucets`) not inside a common `data` key. The shared machinery is narrower than that:
+Each hook exports its own result interface — `UseSendResult`, `AccountsResult`, `NotesResult`, and so on — rather than a generic `QueryResult<T>` wrapper. Data lives in named fields (e.g. `accounts` and `records`) not inside a common `data` key. The shared machinery is narrower than that:
 
 ### Query hooks
 
@@ -136,11 +143,11 @@ Every query hook exposes at least:
 Plus the hook-specific data fields. For example:
 
 ```tsx
-const { wallets, faucets, isLoading, error, refetch } = useAccounts();
+const { accounts, isLoading, error, refetch } = useAccounts();
 
 if (isLoading) return <Spinner />;
 if (error) return <p>{error.message}</p>;
-return <AccountList wallets={wallets} faucets={faucets} />;
+return <AccountList accounts={accounts} />;
 ```
 
 ### Mutation hooks

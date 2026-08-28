@@ -5,7 +5,7 @@ sidebar_position: 5
 
 # Advanced hooks
 
-Hooks beyond the core send / mint / consume trio: custom scripts, MASM compilation, session wallets, store backup, note serialization, and sync control.
+Hooks beyond the core send / mint / consume trio: custom scripts, anchored transaction previews, MASM compilation, session wallets, store backup, note serialization, and sync control.
 
 ## `useTransaction`
 
@@ -43,8 +43,78 @@ await execute({
 | `request` | `TransactionRequest` or `(client: WebClient) => TransactionRequest \| Promise<TransactionRequest>` |
 | `skipSync` | Skip pre-send auto-sync (default `false`) |
 | `privateNoteTarget` | Deliver private output notes to this account after commit (any `AccountRef` form) |
+| `anchor` | Execute against a reference block captured with `useChainAnchor` |
 
 The `privateNoteTarget` field is the 4-step pipeline shortcut: execute the tx, commit onchain, then auto-deliver the private note through the note transport to the target. Useful for "send private note" UIs where the recipient already has the React SDK running.
+
+## `useChainAnchor` and `usePreview`
+
+Use these hooks when a transaction summary is proposed on one client and authorized or executed on another, such as multisig and offline co-signing flows. `useChainAnchor` pins the request to one reference block; `usePreview` derives the summary awaiting authorization at that block.
+
+Capture and preview in separate UI steps. `anchoredRequest` is React state, so it becomes available on the render after `captureAnchor()` completes:
+
+```tsx
+import { useChainAnchor, usePreview, useTransaction } from "@miden-sdk/react";
+import type { TransactionRequest } from "@miden-sdk/miden-sdk";
+
+type MultisigProposalProps = {
+  accountId: string;
+  buildRequest: () => TransactionRequest | Promise<TransactionRequest>;
+  sendProposal: (anchor: Uint8Array, summary: Uint8Array) => Promise<void>;
+};
+
+function MultisigProposal({
+  accountId,
+  buildRequest,
+  sendProposal,
+}: MultisigProposalProps) {
+  const { captureAnchor, anchor, anchoredRequest, isCapturing } = useChainAnchor();
+  const { preview, isPreviewing } = usePreview();
+  const { execute, isLoading } = useTransaction();
+
+  const capture = async () => {
+    await captureAnchor({ request: buildRequest });
+  };
+
+  const previewAndShare = async () => {
+    if (!anchor || !anchoredRequest) return;
+
+    const summary = await preview({
+      accountId,
+      request: anchoredRequest,
+      anchor,
+    });
+    await sendProposal(anchor.serialize(), summary.serialize());
+  };
+
+  const executeAnchored = async () => {
+    if (!anchor || !anchoredRequest) return;
+    await execute({ accountId, request: anchoredRequest, anchor });
+  };
+
+  return (
+    <>
+      <button onClick={capture} disabled={isCapturing}>
+        Capture reference block
+      </button>
+      <button
+        onClick={previewAndShare}
+        disabled={!anchor || !anchoredRequest || isPreviewing}
+      >
+        Preview and share
+      </button>
+      <button
+        onClick={executeAnchored}
+        disabled={!anchor || !anchoredRequest || isLoading}
+      >
+        Execute authorized request
+      </button>
+    </>
+  );
+}
+```
+
+`preview()` rejects with `TRANSACTION_ALREADY_AUTHORIZED` when the request needs no additional authorization; execute it directly in that case. A `ChainAnchor` owns a WASM allocation, so call `anchor.free()` when the proposal workflow no longer needs it.
 
 ## `useExecuteProgram`
 
@@ -83,6 +153,7 @@ const { component, txScript, noteScript, isReady } = useCompile();
 // Account component
 const counterComponent = await component({
   code: counterContractCode,
+  namespace: "external_contract::counter_contract",
   slots: [StorageSlot.emptyValue("miden::tutorials::counter")],
 });
 
@@ -90,13 +161,13 @@ const counterComponent = await component({
 const script = await txScript({
   code: `
     use external_contract::counter_contract
-    begin
+
+    @transaction_script
+    pub proc main
       call.counter_contract::increment_count
     end
   `,
-  libraries: [
-    { namespace: "external_contract::counter_contract", code: counterContractCode },
-  ],
+  libraries: [{ component: counterComponent }],
 });
 
 // Note script — use the @note_script attribute on a library proc

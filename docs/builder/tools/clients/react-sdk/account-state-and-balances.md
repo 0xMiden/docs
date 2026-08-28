@@ -22,7 +22,7 @@ The important boundary is:
 - **`useExecuteProgram()`** runs locally and does not prove, submit, or change state.
 
 For the full package README and source-level examples, see
-[`miden-client/packages/react-sdk/README.md`](https://github.com/0xMiden/miden-client/blob/v0.15.0/packages/react-sdk/README.md).
+[`web-sdk/packages/react-sdk/README.md`](https://github.com/0xMiden/web-sdk/blob/v0.16.0/packages/react-sdk/README.md).
 
 ## Provider setup
 
@@ -37,7 +37,7 @@ export function App() {
       config={{
         rpcUrl: "testnet",
         prover: "testnet",
-        noteTransportUrl: "testnet",
+        noteTransportUrl: "https://transport.miden.io",
         autoSyncInterval: 15_000,
       }}
       loadingComponent={<p>Loading Miden...</p>}
@@ -55,7 +55,7 @@ function WalletHome() {
 
 ## Resolve the active account
 
-When an external signer is connected, `useMiden()` exposes `signerAccountId`. In local-keystore flows, pick the account from `useAccounts()` instead, usually from a user selection or the first wallet in the local store.
+When an external signer is connected, `useMiden()` exposes `signerAccountId`. In local-keystore flows, pick the account from `useAccounts()` instead, usually from a user selection or the first account in the local store.
 
 ```tsx
 import { useMemo } from "react";
@@ -63,16 +63,16 @@ import { useAccounts, useMiden } from "@miden-sdk/react";
 
 export function useActiveAccountId(selectedAccountId?: string): string | undefined {
   const { signerAccountId } = useMiden();
-  const { wallets } = useAccounts();
+  const { accounts } = useAccounts();
 
   return useMemo(
-    () => selectedAccountId ?? signerAccountId ?? wallets[0]?.id().toString(),
-    [selectedAccountId, signerAccountId, wallets]
+    () => selectedAccountId ?? signerAccountId ?? accounts[0]?.id().toString(),
+    [selectedAccountId, signerAccountId, accounts]
   );
 }
 ```
 
-If this returns `undefined`, the app has no connected signer and no local wallet yet. Render a connect/create-account state before calling transaction hooks.
+If this returns `undefined`, the app has no connected signer and no local account yet. Render a connect/create-account state before calling transaction hooks.
 
 ## Render all fungible balances
 
@@ -102,7 +102,7 @@ export function BalancePanel({
     await refetch();
   };
 
-  if (!accountId) return <p>Connect or create a wallet to see balances.</p>;
+  if (!accountId) return <p>Connect or create an account to see balances.</p>;
   if (isLoading) return <p>Loading balances...</p>;
   if (error) return <p role="alert">{error.message}</p>;
   if (!account) return <p>Account not found in the local store.</p>;
@@ -328,7 +328,7 @@ export function CounterRead({
 ## Checklist
 
 - Wrap app code in `MidenProvider` before calling hooks.
-- Use `signerAccountId` for external signer apps and `useAccounts()` for local wallet selection.
+- Use `signerAccountId` for external signer apps and `useAccounts()` for local account selection.
 - Call `sync()` before user-visible reads that need fresh network state.
 - Read balances from `useAccount(accountId).assets` or `getBalance(faucetId)`.
 - After submitted transactions, wait for commit and sync again.
