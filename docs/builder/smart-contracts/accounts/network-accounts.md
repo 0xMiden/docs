@@ -1,7 +1,7 @@
 ---
 title: "Network Accounts"
 sidebar_position: 7
-description: "What a network account is in Miden v0.15, how to build and deploy one, and how to send network notes to it from Rust and TypeScript."
+description: "What a network account is in Miden, including fee policies, deployment, and network notes from Rust and TypeScript."
 ---
 
 # Network Accounts
@@ -13,37 +13,41 @@ Two sides have to line up for network execution to happen:
 - **The account** opts in by carrying the standardized note-allowlist storage slot, added through the [`AuthNetworkAccount`](https://docs.rs/miden-standards/latest/miden_standards/account/auth/struct.AuthNetworkAccount.html) auth component.
 - **The note** targets the account by carrying a `NetworkAccountTarget` attachment.
 
-If a note's script root is in the account's allowlist, the network consumes it automatically.
-
-:::info v0.15 change
-Before v0.15, network accounts were a storage mode (`AccountStorageMode::Network`). That storage mode was **removed**. An account is now classified only as `AccountType::Public` or `AccountType::Private`, and "network account" is a *property of a public account's storage* — the presence of the allowlist slot — rather than a separate mode. See [Account changes](../../migration/03-account-changes.md).
-:::
+If a note's script root is allowlisted and its fee can be estimated by the account's active fee policy, the network can consume it automatically.
 
 ## What makes an account a network account
 
 `AuthNetworkAccount` writes a standardized [`StorageMap`](./storage) slot named `miden::standards::auth::network_account::allowed_note_scripts`. Off-chain services and the node's NTX builder treat the presence of that slot as the signal that an account is a network account. The slot holds a **note allowlist**: the set of note script roots the account is willing to consume. A note whose script root is not in the allowlist is rejected during authentication.
 
-Since **v0.15.2**, the component also holds a second allowlist of permitted **transaction script roots** (`miden::standards::auth::network_account::allowed_tx_scripts`). It is empty by default, and the network auth procedure **rejects any transaction that runs a transaction script whose root is not in this allowlist** — a scriptless transaction has no script and is always accepted. Consuming a note does not need a transaction script, so a note-only network account leaves it empty. But if the account is reached by a *custom transaction script* — for example a scripted deploy, or a scripted interaction — that script's root must be allowlisted too, or the transaction is rejected. (Before v0.15.2 the component banned transaction scripts outright, and its note-allowlist constructor was named `with_allowlist` rather than `with_allowed_notes`.)
+The component also holds a second allowlist of permitted **transaction script roots** (`miden::standards::auth::network_account::allowed_tx_scripts`). `AuthNetworkAccount::new` includes the canonical expiration script required by the network transaction builder. Any additional custom transaction script — for example a scripted deploy or interaction — must be allowlisted explicitly.
 
-Both allowlists are **fixed at account creation**. The component deliberately exports no procedure to mutate them, so decide the allowed note scripts before you build the account.
+Both allowlists can be updated after deployment through the network-account
+configuration note. Those mutations must be protected by an owner- or
+RBAC-controlled `Authority`; auth-controlled authority is unsafe because
+network authentication is intentionally permissionless for allowlisted inputs.
+The account example below installs owner-controlled access for this purpose.
 
 ## Prerequisites
 
 - The account must be `AccountType::Public`. A private account cannot be a network account.
-- The note allowlist must be **non-empty** — `AuthNetworkAccount::with_allowed_notes` returns an error for an empty set, because an account that can consume no notes is useless as a network account.
-- You need the **script root of every note type** the account should accept, computed from the compiled note script.
+- You need the **script root of every application note type** the account should accept, computed from the compiled note script. Rust's `AuthNetworkAccount::new` accepts an empty application set because it adds the standard configuration and fee-sponsorship scripts. The Web SDK helper requires at least one application `NoteScriptFee`.
+- You need a `FeePolicyManager`, the ID of the fungible faucet used for fees, and an active policy that can price every allowed note script. A zero fee is valid but must still be scheduled explicitly by `BasicConstantFeePolicy`.
 
 ## Building a network account
 
-Because the allowlists are fixed at creation, compile the note script and read its MAST root **before** building the account. The note-script allowlist is required — its presence is what marks the account as a network account. Compile with the client's code builder:
+Compile each application note script and read its MAST root **before** building the account. The standardized allowlist storage installed by `AuthNetworkAccount` is what marks the account as a network account. Compile with the client's code builder:
 
 ```rust
 use std::collections::BTreeSet;
 
 use miden_client::account::{
     AccountBuilder, AccountType,
-    component::AuthNetworkAccount,
+    component::{
+        AccessControl, AuthNetworkAccount, BasicConstantFeePolicy, FeePolicyManager,
+    },
 };
+use miden_client::asset::AssetAmount;
+use miden_client::note::{FeeSponsorshipNote, NetworkAccountConfigNote};
 
 let note_script = client.code_builder().compile_note_script(note_code)?;
 let note_script_root = note_script.root();
@@ -51,24 +55,44 @@ let note_script_root = note_script.root();
 
 If the note script calls into the account's own procedures (as the counter example does), link the contract module first so the script compiles — for example `client.code_builder().with_linked_module("external_contract::counter_contract", counter_code)?.compile_note_script(note_code)?`.
 
-Attach `AuthNetworkAccount` as the account's auth component — `miden-client` re-exports it from `miden_client::account::component` — and build a public account:
+Build an active fee policy, pass it to `AuthNetworkAccount`, then install every component the auth bundle yields:
 
 ```rust
-let auth = AuthNetworkAccount::with_allowed_notes(BTreeSet::from([note_script_root]))?;
+let fee_policy = BasicConstantFeePolicy::new()
+    .with_fee(note_script_root, AssetAmount::ZERO)
+    .with_fee(
+        NetworkAccountConfigNote::script_root(),
+        AssetAmount::ZERO,
+    )
+    .with_fee(FeeSponsorshipNote::script_root(), AssetAmount::ZERO);
+let fee_policy_manager = FeePolicyManager::builder()
+    .fee_faucet_id(fee_faucet_id)
+    .active_fee_policy(fee_policy.into())
+    .build();
+let auth = AuthNetworkAccount::new(
+    BTreeSet::from([note_script_root]),
+    fee_policy_manager,
+)?;
 
 let account = AccountBuilder::new(init_seed)
-    .account_type(AccountType::Public)      // network accounts must be public
-    .with_component(counter_component)      // your application logic
-    .with_auth_component(auth)              // AuthNetworkAccount as the auth component
+    .account_type(AccountType::Public)
+    .with_component(counter_component)
+    .with_components(auth)
+    .with_components(AccessControl::Ownable2Step { owner: owner_id })
     .build()?;
 ```
 
 If the account will be reached by a **custom transaction script** — for example a scripted deploy, or a scripted interaction — you must also allowlist that script's root, or the network auth procedure rejects the transaction:
 
+In that case, replace the earlier `let auth = ...` construction with this one:
+
 ```rust
 let tx_script = client.code_builder().compile_tx_script(deploy_script_code)?;
 
-let auth = AuthNetworkAccount::with_allowed_notes(BTreeSet::from([note_script_root]))?
+let auth = AuthNetworkAccount::new(
+    BTreeSet::from([note_script_root]),
+    fee_policy_manager,
+)?
     .with_allowed_tx_scripts(BTreeSet::from([tx_script.root()]));
 ```
 
@@ -76,40 +100,35 @@ let auth = AuthNetworkAccount::with_allowed_notes(BTreeSet::from([note_script_ro
 
 Building the account and adding it to the client store is **not** enough to register it onchain — an account only exists to the network once a committed transaction has advanced its state (nonce `0` → `1`). Submit a transaction against it to deploy it.
 
-Because `AuthNetworkAccount` bumps the nonce itself, an **empty, scriptless transaction is the simplest way** to register the account — a scriptless transaction needs nothing in the tx-script allowlist. (Deploying with a custom transaction script also works, but then that script's root must be in the tx-script allowlist, as above.)
+Because `AuthNetworkAccount` bumps the nonce itself, an **empty, scriptless transaction is the simplest way** to register the account on a zero-fee development chain — a scriptless transaction needs no additional tx-script allowlist entry. Deploying with a custom transaction script also works, but then that script's root must be allowlisted as above. On a fee-charging chain, make sure the account can fund the transaction fee.
 
 ```rust
 use miden_client::transaction::TransactionRequestBuilder;
 
 client.add_account(&account, false).await?;
 
-// Scriptless deploy: AuthNetworkAccount bumps the nonce on its own,
-// so an empty transaction is enough to register the account onchain.
 let tx_id = client
     .submit_new_transaction(account.id(), TransactionRequestBuilder::new().build()?)
     .await?;
 
-// Sync until the deploy transaction is committed by the node. In tests the
-// `wait_for_tx` helper wraps this loop; in application code, sync and check the
-// transaction status with `client.get_transactions(...)`.
-client.sync_state().await?;
+client.sync_state().await?; // repeat until `tx_id` is committed
 ```
 
 Once the deploy transaction is committed, the network watches the account and will consume any allowlisted note addressed to it.
 
 :::note Scriptless vs. scripted deploy
-The scriptless deploy above is the minimal path. The [network transactions tutorial](../../tutorials/recipes/rust/network_transactions_tutorial.md) instead deploys with a **custom transaction script** (and therefore allowlists that script's root, as shown above) — that scripted flow is the one verified end-to-end on public testnet. Either works; use the scripted deploy if your contract needs initialization logic to run at deploy time.
+The scriptless deploy above is the minimal path. The [network transactions tutorial](../../tutorials/recipes/rust/network_transactions_tutorial.md) instead deploys with a **custom transaction script** and therefore allowlists that script's root, as shown above. Either works; use the scripted deploy if your contract needs initialization logic to run at deploy time.
 :::
 
 ## Inspecting a network account
 
-`NetworkAccount` is a validation wrapper that confirms an `Account` is public and carries a valid, non-empty allowlist slot. Use it to check an account you fetched or built:
+`NetworkAccount` is a validation wrapper that confirms an `Account` is public, carries a valid non-empty note allowlist, and allows the canonical expiration transaction script. Use it to check an account you fetched or built:
 
 ```rust
 use miden_client::account::component::NetworkAccount;
 
-let network_account = NetworkAccount::try_from(account)?; // errors if not public / no allowlist
-let allowed = network_account.allowed_notes();            // the note allowlist
+let network_account = NetworkAccount::try_from(account)?;
+let allowed = network_account.allowed_notes();
 ```
 
 ## Sending a note to a network account
@@ -134,17 +153,47 @@ const { txId, note } = await client.transactions.createNetworkNote({
 
 Use `buildNetworkNote(...)` if you want the built note without submitting it.
 
-:::note TypeScript cannot create the account
-The Web SDK can **send** network notes, but it cannot **create or deploy** a network account — `AuthNetworkAccount`, the allowlist API, and the removed `AccountStorageMode.network()` are not exposed in the Web SDK. Build and deploy the account in Rust; interact with it from either surface.
-:::
+The Web SDK can also build and deploy the account. Pair every application script with its fee, pass the fee-faucet ID, and install **all** returned components:
+
+```typescript
+import {
+  AccountBuilder,
+  AccountComponent,
+  AccountStorageMode,
+  NoteScriptFee,
+  TransactionRequestBuilder,
+} from "@miden-sdk/miden-sdk";
+
+const networkAuth = AccountComponent.createNetworkAuthComponents(
+  [new NoteScriptFee(counterNoteScript.root(), 0n)],
+  feeFaucet.id(),
+);
+
+const builder = new AccountBuilder(seed)
+  .storageMode(AccountStorageMode.public())
+  .withComponent(counterComponent);
+
+for (const component of networkAuth) {
+  builder.withComponent(component);
+}
+
+const { account } = builder.build();
+await client.accounts.insert({ account });
+await client.transactions.submit(
+  account.id(),
+  new TransactionRequestBuilder().build(),
+);
+```
+
+`createNetworkAuthComponents` returns the auth component plus the components backing its fee policy. Omitting any of them creates an incomplete account.
 
 ## Surface support
 
 | Flow | Rust | TypeScript |
 |---|---|---|
-| Create + deploy a network account | ✅ `AuthNetworkAccount` + note allowlist | ❌ not exposed |
+| Create + deploy a network account | ✅ `AuthNetworkAccount` + fee policy | ✅ `createNetworkAuthComponents` + deployment transaction |
 | Send a network note to one | ✅ | ✅ `createNetworkNote` / `buildNetworkNote` |
-| Inspect (`NetworkAccount`) | ✅ | ❌ |
+| Inspect (`NetworkAccount`) | ✅ | ✅ `isNetworkAccount()` / `networkNoteAllowlist()` |
 
 :::info API Reference
 Rust: [`AuthNetworkAccount`](https://docs.rs/miden-standards/latest/miden_standards/account/auth/struct.AuthNetworkAccount.html), [`NetworkAccount`](https://docs.rs/miden-standards/latest/miden_standards/account/auth/struct.NetworkAccount.html), [`NetworkAccountNoteAllowlist`](https://docs.rs/miden-standards/latest/miden_standards/account/auth/struct.NetworkAccountNoteAllowlist.html)
@@ -155,5 +204,4 @@ Rust: [`AuthNetworkAccount`](https://docs.rs/miden-standards/latest/miden_standa
 - [Network transactions tutorial](../../tutorials/recipes/rust/network_transactions_tutorial.md) — end-to-end Rust walkthrough: build, deploy, and drive a network counter contract
 - [Authentication](./authentication) — the auth component pattern `AuthNetworkAccount` builds on
 - [Storage](./storage) — how the allowlist `StorageMap` slot is laid out
-- [Account changes](../../migration/03-account-changes.md) — the v0.14 → v0.15 removal of `AccountStorageMode::Network`
 - [Account components](../standards/account-components) — composing wallet, faucet, and access-control components

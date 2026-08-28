@@ -13,11 +13,12 @@ The Miden SDK exposes cryptographic primitives for signature verification and ha
 The core function for signature verification:
 
 ```rust
-use miden::rpo_falcon512_verify;
+use miden::{emit_falcon_sig_to_stack, rpo_falcon512_verify};
 
 // Verify a Falcon512 signature
 // pk: Poseidon2 hash of the public key
 // msg: Poseidon2 hash of the message
+emit_falcon_sig_to_stack(msg, pk);
 rpo_falcon512_verify(pk, msg);
 ```
 
@@ -29,7 +30,7 @@ rpo_falcon512_verify(pk, msg);
 The function panics (proof generation fails) if the signature is invalid.
 
 :::info Where's the signature?
-The actual signature data is loaded onto the advice stack by the host. The Rust helper is still named `rpo_falcon512_verify` for compatibility, but the v0.15 verifier uses Falcon-512 over Poseidon2. You don't pass the signature as an argument.
+`emit_falcon_sig_to_stack` requests the signature from the host, which loads it onto the advice stack. The Rust verifier is still named `rpo_falcon512_verify` for compatibility, but it uses Falcon-512 over Poseidon2. You don't pass the signature directly to the verifier.
 :::
 
 ## Hashing

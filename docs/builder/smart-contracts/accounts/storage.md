@@ -6,7 +6,7 @@ description: "Persistent state management with StorageValue slots and StorageMap
 
 # Storage
 
-Miden accounts have persistent storage organized into up to 255 name-addressable slots. Each slot holds either a single typed value (via `StorageValue<T>`) or a key-value map (via `StorageMap<K, V>`). Slots are identified by `StorageSlotId` values derived from slot names, which in turn are derived from the component package name and the field name. Renaming a field changes the slot ID and is a breaking change for stored data.
+Miden accounts have persistent storage organized into up to 255 name-addressable slots. Each slot holds either a single typed value (via `StorageValue<T>`) or a key-value map (via `StorageMap<K, V>`). Slots are identified by `StorageSlotId` values derived from the component package name, component interface, and field name. Renaming any of these changes the slot ID and is a breaking change for stored data.
 
 ## Storage slots
 
@@ -24,7 +24,7 @@ struct MyContractStorage {
     balances: StorageMap<Word, Word>,
 }
 ```
-Slot IDs are derived from the component package name and the field name. Ordering does not matter, and `slot(N)` is not supported.
+Field ordering does not matter, and `slot(N)` is not supported.
 
 ## StorageValue — Single-slot storage
 
@@ -91,7 +91,7 @@ pub fn get_balance(&self, account_id: AccountId) -> Felt {
 }
 ```
 
-Scalar `Felt` map values are encoded in the low word limb (`[value, 0, 0, 0]`) in v0.15. This is handled by the typed `StorageMap<K, Felt>` conversion. For a full `Word` value, declare the map value type as `Word`:
+Scalar `Felt` map values are encoded in the low word limb (`[value, 0, 0, 0]`). This is handled by the typed `StorageMap<K, Felt>` conversion. For a full `Word` value, declare the map value type as `Word`:
 
 ```rust
 // Get the full Word value
@@ -174,7 +174,7 @@ let initial: Word = storage::get_initial_item(slot_id);
 let initial: Word = storage::get_initial_map_item(slot_id, &key);
 ```
 
-These functions return values from before any modifications in the current transaction.
+`get_item` and `get_map_item` read the current values. `get_initial_item` and `get_initial_map_item` read the values from the start of the transaction, while `set_item` and `set_map_item` return the values immediately before the write.
 
 For Felt and Word conversion details, see [Types](../types). To export your own types for public APIs, see [Custom Types](./custom-types). For common storage patterns like access control and rate limiting, see [Patterns](../patterns).
 

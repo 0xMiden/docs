@@ -8,7 +8,7 @@ description: "Authentication component pattern and nonce management for Miden ac
 
 Miden uses digital signatures for transaction authentication. Because transactions execute on the client rather than onchain validators, the system needs a way to prove that a transaction was authorized by the account owner. Without authentication, anyone could construct a valid proof that transfers assets out of an account. The nonce prevents replay attacks — without it, a valid proof could be resubmitted to execute the same state change twice. For details on the cryptographic primitives, see [Cryptography](./cryptography).
 
-v0.15 uses a single scheme-agnostic [`AuthSingleSig`](https://docs.rs/miden-standards/latest/miden_standards/account/auth/struct.AuthSingleSig.html) component for single-signature accounts. It takes an auth scheme identifier such as `Falcon512Poseidon2` or `EcdsaK256Keccak`. The native hash function is Poseidon2, and the Falcon-512 verifier MASM module is `miden::core::crypto::dsa::falcon512_poseidon2`.
+The scheme-agnostic [`AuthSingleSig`](https://docs.rs/miden-standards/latest/miden_standards/account/auth/struct.AuthSingleSig.html) component handles single-signature accounts. It takes an `Approver`, which pairs a public-key commitment with an authentication scheme such as `Falcon512Poseidon2` or `EcdsaK256Keccak`. The native hash function is Poseidon2, and the Falcon-512 verifier MASM module is `miden::core::crypto::dsa::falcon512_poseidon2`.
 
 ## How authentication works
 
@@ -19,22 +19,23 @@ The standards `AuthSingleSig` component stores two items under well-known names:
 | Public key | `miden::standards::auth::singlesig::pub_key` | Commitment to the account owner's public key |
 | Scheme ID | `miden::standards::auth::singlesig::scheme` | Which signature scheme to use (1 = ECDSA K256 Keccak, 2 = Falcon-512 Poseidon2) |
 
-During transaction execution the kernel invokes the `@auth_script`-annotated procedure on the account. For `AuthSingleSig`, that procedure loads both slots and delegates to `miden::standards::auth::signature::authenticate_transaction`, which:
+During transaction execution the kernel invokes the `@auth_script`-annotated procedure on the account. For `AuthSingleSig`, that procedure loads both slots and:
 
 1. Increments the account nonce (even if the account state did not change — this is required for replay protection).
-2. Computes the transaction summary message: `hash([ACCOUNT_DELTA_COMMITMENT, INPUT_NOTES_COMMITMENT, OUTPUT_NOTES_COMMITMENT, [0, 0, ref_block_num, final_nonce]])`.
-3. Requests the signature from the advice provider and verifies it with the scheme indicated by the stored scheme ID.
+2. Pays the transaction fee by creating a public `TX_FEE` note when the chain charges a fee.
+3. Computes a transaction summary that binds the account change, input and output notes, reference block commitment, expiration, and user parameters. Because the fee is paid first, the fee note and its vault withdrawal are also covered by the signature.
+4. Requests the signature from the advice provider and verifies it with the scheme indicated by the stored scheme ID.
 
 If verification fails, proof generation fails and the transaction is rejected before reaching the network. The signature itself isn't passed as a function argument — it's provided through the **advice provider**, a mechanism that supplies auxiliary data to the VM during proof generation. See [Advice Provider](../transactions/advice-provider) for the full API.
 
 ## Attaching `AuthSingleSig` to an account
 
-On the client side, attach `AuthSingleSig` via `AccountBuilder::with_auth_component`. `miden-client` re-exports `AuthScheme` as `AuthSchemeId`:
+Authentication is an ordinary account component. Attach `AuthSingleSig` with `AccountBuilder::with_component`; the builder recognizes it through its `@auth_script` procedure. `miden-client` re-exports `AuthScheme` as `AuthSchemeId`:
 
 ```rust
 use miden_client::{
     account::{AccountBuilder, AccountType, component::BasicWallet},
-    auth::{AuthSchemeId, AuthSingleSig},
+    auth::{Approver, AuthSchemeId, AuthSingleSig},
 };
 use miden_protocol::{account::auth::PublicKeyCommitment, Word};
 
@@ -42,10 +43,10 @@ let public_key = PublicKeyCommitment::from(Word::default());
 
 let account = AccountBuilder::new(seed)
     .account_type(AccountType::Public)
-    .with_auth_component(AuthSingleSig::new(
+    .with_component(AuthSingleSig::new(Approver::new(
         public_key,
         AuthSchemeId::Falcon512Poseidon2,
-    ))
+    )))
     .with_component(BasicWallet)
     .build()?;
 ```
@@ -54,13 +55,13 @@ If you import directly from `miden-protocol`, the same enum is called `AuthSchem
 
 ## Writing a custom auth component
 
-If you need authentication logic beyond `AuthSingleSig` / `AuthMultisig`, you can write a custom auth component in Rust. Mark exactly one procedure per auth component with `#[auth_script]`. If the procedure returns without panicking, the transaction kernel treats authentication as successful. If it panics (for example via `assert!`), authentication fails.
+If you need authentication logic beyond `AuthSingleSig` / `AuthMultisig`, you can write a custom auth component in Rust. Mark exactly one procedure per auth component with `#[auth_script]`. Do not combine `#[auth_script]` with `#[account_procedure]`. If the procedure returns without panicking, the transaction kernel treats authentication as successful. If it panics (for example via `assert!`), authentication fails. On a fee-charging chain, custom authentication must also pay the transaction fee; the standard authentication components handle this automatically.
 
 ```rust
 #![no_std]
 #![feature(alloc_error_handler)]
 
-use miden::{auth_script, component, component_storage, Word};
+use miden::{component, component_storage, Word};
 
 #[component_storage]
 struct AuthComponentStorage;

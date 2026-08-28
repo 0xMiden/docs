@@ -8,7 +8,7 @@ description: "Transactions are Miden's execution unit — they consume input not
 
 Transactions are the execution unit in Miden. Every state change — transferring assets, updating storage, minting tokens — happens inside a transaction. Each transaction runs against a single account, consumes zero or more input notes, and produces zero or more output notes.
 
-The critical difference from other blockchains: transactions execute locally on the user's machine, not on a shared VM. After execution, the Miden VM generates a zero-knowledge proof that the transaction was valid (see [transaction design](/reference/protocol/transaction)). Only this proof and the resulting state commitments are submitted to the network. The network never sees the transaction inputs, the account's private state, or the logic that ran.
+The critical difference from other blockchains: transactions execute locally on the user's machine, not on a shared VM. After execution, the Miden VM generates a zero-knowledge proof that the transaction was valid and the client seals the transaction inputs (see [transaction design](/reference/protocol/transaction)). The proof, resulting state commitments, and sealed inputs are submitted to the network. The network does not receive private inputs in plaintext or see the account's private state and execution trace.
 
 ## Anatomy of a transaction
 
@@ -17,7 +17,7 @@ Every transaction has these elements:
 | Element | Description |
 |---------|-------------|
 | **Account** | The single account this transaction mutates — its storage, vault, and nonce |
-| **Input notes** | Zero or more notes being consumed — their scripts run and assets transfer to the account |
+| **Input notes** | Zero or more notes being consumed — their scripts run and explicitly remove any assets they move |
 | **Output notes** | Zero or more notes being created — carrying assets and scripts for future consumption |
 | **Transaction script** | Optional entry-point logic that runs in addition to note scripts and component code |
 | **Block reference** | The chain state the transaction executes against — provides block number, timestamp, and commitments |
@@ -28,18 +28,18 @@ A transaction can only modify one account. Cross-account interactions happen thr
 
 ```
 ┌──────────┐     ┌──────────┐     ┌──────────┐     ┌──────────┐     ┌──────────┐
-│  Build    │────▶│ Execute  │────▶│  Prove   │────▶│  Submit  │────▶│  Verify  │
+│  Build   │────▶│ Execute  │────▶│  Prove   │────▶│  Submit  │────▶│  Verify  │
 │          │     │          │     │          │     │          │     │          │
 │ Assemble │     │ VM runs  │     │ ZK proof │     │ Proof +  │     │ Network  │
-│ tx inputs│     │ locally  │     │ generated│     │ state    │     │ updates  │
-│          │     │          │     │          │     │ sent     │     │ state    │
+│ tx inputs│     │ locally  │     │ generated│     │ sealed   │     │ updates  │
+│          │     │          │     │          │     │ inputs   │     │ state    │
 └──────────┘     └──────────┘     └──────────┘     └──────────┘     └──────────┘
 ```
 
 1. **Build**: The client assembles the transaction — which account, which notes to consume, what methods to call.
 2. **Execute**: The Miden VM runs the transaction locally. Note scripts execute, component code runs, storage is mutated, output notes are created.
 3. **Prove**: The VM produces a zero-knowledge proof of correct execution. If any assertion fails (e.g., insufficient balance, unauthorized caller), the proof cannot be generated — the transaction is rejected before it ever reaches the network.
-4. **Submit**: The proof and public state updates (new note commitments, updated account commitment, nullifiers for consumed notes) are submitted to the network.
+4. **Submit**: The proof, sealed transaction inputs, and public state updates (new note commitments, updated account commitment, and nullifiers for consumed notes) are submitted to the network.
 5. **Verify**: The network verifies the proof, records the state changes, and includes the transaction in a batch and eventually a block.
 
 ## The transaction context
@@ -47,11 +47,11 @@ A transaction can only modify one account. Cross-account interactions happen thr
 During execution, your code runs inside a **transaction context** that provides access to:
 
 - **Block data** — current block number, timestamp, and commitments via the `tx` module
-- **Input notes** — the notes being consumed, their assets, inputs, and metadata
+- **Input notes** — the notes being consumed, their assets, recipient storage, and metadata
 - **Account state** — the executing account's storage, vault, and nonce
 - **Output notes** — the ability to create new notes and attach assets
 
-The transaction context is what connects your component code to the chain state. For example, you can implement time-based logic by comparing `tx::get_block_number()` against a stored value, or read note inputs to determine what action to take.
+The transaction context is what connects your component code to the chain state. For example, you can implement time-based logic by comparing `tx::get_block_number()` against a stored value, or read note storage to determine what action to take.
 
 ## What happens when execution fails
 
@@ -70,15 +70,15 @@ The ZK circuit **cannot produce a valid proof**. This means:
 
 This is fundamentally different from Ethereum's `revert`, where the failed transaction still lands onchain, consumes gas, and is visible to everyone.
 
-A separate failure mode is the **empty transaction**: a transaction that runs to completion but mutates no account state (storage, vault, or nonce) and consumes no input notes. Both the Rust client (which raises `TransactionRequestError::NoInputNotesNorAccountChange` before submission) and the VM kernel reject it. This typically catches transaction scripts whose conditional logic takes a no-op branch — see [Empty Transaction](../../tutorials/helpers/pitfalls#empty-transaction-no-state-change-no-notes) in the pitfalls guide for the recommended pattern.
+A separate failure mode is the **empty transaction**: a transaction that runs to completion but mutates no account state (storage, vault, or nonce) and consumes no input notes. The VM kernel rejects it during execution. This typically catches transaction scripts whose conditional logic takes a no-op branch — see [Empty Transaction](../../tutorials/helpers/pitfalls#empty-transaction-no-state-change-no-notes) in the pitfalls guide for the recommended pattern.
 
 ## How transactions differ from EVM transactions
 
 | | EVM | Miden |
 |---|---|---|
-| **Execution** | Every validator re-executes the transaction | Client executes locally, submits only the proof |
+| **Execution** | Every validator re-executes the transaction | Client executes locally, then submits the proof and sealed inputs |
 | **Scope** | Can call multiple contracts in one tx | One transaction mutates one account; cross-account via notes |
-| **Privacy** | All inputs, state reads, and call traces are public | Network sees only the proof and state commitments |
+| **Privacy** | All inputs, state reads, and call traces are public | Private inputs are sealed before submission; the network verifies the proof and state commitments |
 | **Failure** | Onchain revert, gas consumed, visible trace | Proof can't be generated — no onchain trace, no cost |
 | **Parallelism** | Transactions touching same state must serialize | Single-account scope enables parallel execution |
-| **Authentication** | `msg.sender` set by protocol | Falcon-512 Poseidon2 signatures verified inside the transaction |
+| **Authentication** | `msg.sender` set by protocol | The account authentication procedure verifies the configured scheme, such as Falcon-512 Poseidon2 or ECDSA K256 Keccak |

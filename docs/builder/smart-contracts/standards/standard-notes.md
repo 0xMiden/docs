@@ -17,17 +17,19 @@ Use the Rust APIs to construct standard notes in client or transaction-building 
 | P2IDE | You are sending to a specific account ID with a timelock and/or reclaim path. | `P2ideNote` | `miden::standards::notes::p2ide` |
 | SWAP | You are offering one asset and requiring a specific asset in return. | `SwapNote` | `miden::standards::notes::swap` |
 | PSWAP | You need a partially fillable swap note. | `PswapNote` | `miden::standards::notes::pswap` |
-| MINT | A faucet is minting fungible tokens into a note. | `MintNote` | `miden::standards::notes::mint` |
-| BURN | A faucet is burning fungible tokens returned through a note. | `BurnNote` | `miden::standards::notes::burn` |
+| MINT | A faucet is minting an asset into a note. | `MintNote` | `miden::standards::notes::mint` |
+| BURN | A faucet is burning an asset returned through a note. | `BurnNote` | `miden::standards::notes::burn` |
 
 For the note model itself, start with [What are Notes?](../notes/introduction). This page focuses on how the standards fit into builder workflows.
 
 ```rust title="Create a public P2ID note"
 use miden_protocol::Word;
-use miden_protocol::account::{AccountId, AccountIdVersion, AccountType};
+use miden_protocol::account::{
+    AccountId, AccountIdVersion, AccountType, AssetCallbackFlag,
+};
 use miden_protocol::asset::{Asset, FungibleAsset};
 use miden_protocol::crypto::rand::RandomCoin;
-use miden_protocol::note::{NoteAttachments, NoteType};
+use miden_protocol::note::{Note, NoteType};
 use miden_standards::note::P2idNote;
 
 fn dummy_account(byte: u8, account_type: AccountType) -> AccountId {
@@ -37,6 +39,7 @@ fn dummy_account(byte: u8, account_type: AccountType) -> AccountId {
         bytes,
         AccountIdVersion::Version1,
         account_type,
+        AssetCallbackFlag::Disabled,
     )
 }
 
@@ -47,19 +50,23 @@ fn create_p2id_note() -> Result<(), Box<dyn std::error::Error>> {
     let asset: Asset = FungibleAsset::new(faucet_id, 100)?.into();
     let mut rng = RandomCoin::new(Word::from([1, 2, 3, 4u32]));
 
-    let note = P2idNote::create(
-        sender,
-        target,
-        vec![asset],
-        NoteType::Public,
-        NoteAttachments::empty(),
-        &mut rng,
-    )?;
+    let note: Note = P2idNote::builder()
+        .sender(sender)
+        .target(target)
+        .asset(asset)
+        .note_type(NoteType::Public)
+        .generate_serial_number(&mut rng)
+        .build()?
+        .into();
 
     assert_eq!(note.metadata().sender(), sender);
     Ok(())
 }
 ```
+
+`AccountId::dummy` is available with the protocol crate's `testing` feature
+and keeps this example self-contained. Production code should use account IDs
+created or retrieved through the client.
 
 ## Account requirements
 
@@ -67,10 +74,10 @@ Standard notes assume the consuming account exposes the procedures the note scri
 
 | Note | Consuming account needs |
 |------|-------------------------|
-| P2ID / P2IDE | A wallet-compatible receive procedure, usually from `BasicWallet`. |
-| SWAP / PSWAP | Wallet-compatible receive and asset-to-note procedures. |
-| MINT | A compatible faucet/account flow for mint authorization and recipient delivery. |
-| BURN | A compatible faucet burn procedure. |
+| P2ID / P2IDE | `BasicWallet`, exposing `receive_asset`. |
+| SWAP / PSWAP | `BasicWallet` and `NoteCreator`, exposing `receive_asset`, `move_asset_to_note`, and `create_note`. |
+| MINT | A network faucet exposing `CodeInspection::has_procedure` and a fungible or non-fungible `mint_and_send` procedure. |
+| BURN | The issuing faucet exposing `CodeInspection::has_procedure` and a fungible or non-fungible `receive_and_burn` procedure. |
 
 If you write a custom wallet or faucet component, test it against the standard notes you expect it to consume.
 
@@ -80,7 +87,7 @@ Standard notes can use attachments and execution hints to help clients and index
 
 | Helper | Use it for |
 |--------|------------|
-| `StandardNoteAttachment` | Standard attachment schemes for note metadata. |
+| `StandardNoteAttachment` | Identifiers for standard attachment schemes. |
 | `NetworkAccountTarget` | Attaching network-account targeting data to notes. |
 | `AccountTargetNetworkNote` | Wrapping notes known to target network accounts. |
 | `NetworkNoteExt` | Convenience helpers for network-targeted notes. |

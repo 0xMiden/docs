@@ -16,7 +16,7 @@ The current standard fungible faucet component is `FungibleFaucet`.
 | Surface | Entry point |
 |---------|-------------|
 | Rust component | `miden_standards::account::faucets::FungibleFaucet` |
-| Rust builder/helper | `FungibleFaucetBuilder`, `create_fungible_faucet` |
+| Rust builder/helper | `FungibleFaucetBuilder`, `create_singlesig_user_fungible_faucet` |
 | MASM component | `miden::standards::faucets::fungible` |
 | Account role | Faucet account whose account ID identifies the issuer. |
 
@@ -27,26 +27,24 @@ use miden_client::{
     account::{
         AccountType,
         component::{
-            AccessControl,
-            BurnPolicyConfig,
+            AuthSingleSig,
+            BurnPolicy,
             FungibleFaucet,
-            MintPolicyConfig,
-            PolicyRegistration,
+            MintPolicy,
             TokenName,
             TokenPolicyManager,
             TransferPolicy,
-            create_fungible_faucet,
+            create_singlesig_user_fungible_faucet,
         },
     },
     asset::TokenSymbol,
+    auth::Approver,
 };
 use miden_protocol::{
     account::auth::{AuthScheme, PublicKeyCommitment},
     asset::AssetAmount,
     Word,
 };
-use miden_standards::AuthMethod;
-
 fn create_faucet_account() -> Result<(), Box<dyn std::error::Error>> {
     let public_key = PublicKeyCommitment::from(Word::from([1, 2, 3, 4u32]));
 
@@ -57,24 +55,27 @@ fn create_faucet_account() -> Result<(), Box<dyn std::error::Error>> {
         .max_supply(AssetAmount::from(1_000_000u32))
         .build()?;
 
-    let policies = TokenPolicyManager::new()
-        .with_mint_policy(MintPolicyConfig::AllowAll, PolicyRegistration::Active)?
-        .with_burn_policy(BurnPolicyConfig::AllowAll, PolicyRegistration::Active)?
-        .with_send_policy(TransferPolicy::AllowAll, PolicyRegistration::Active)?
-        .with_receive_policy(TransferPolicy::AllowAll, PolicyRegistration::Active)?;
+    let policies = TokenPolicyManager::builder()
+        .active_mint_policy(MintPolicy::allow_all())
+        .active_burn_policy(BurnPolicy::allow_all())
+        .active_send_policy(TransferPolicy::allow_all())
+        .active_receive_policy(TransferPolicy::allow_all())
+        .build();
 
-    let account = create_fungible_faucet(
+    let auth = AuthSingleSig::new(Approver::new(
+        public_key,
+        AuthScheme::Falcon512Poseidon2,
+    ));
+
+    let account = create_singlesig_user_fungible_faucet(
         [9; 32],
         faucet,
-        AccountType::Public,
-        AuthMethod::SingleSig {
-            approver: (public_key, AuthScheme::Falcon512Poseidon2),
-        },
-        AccessControl::AuthControlled,
+        auth,
         policies,
+        AccountType::Public,
     )?;
 
-    assert_eq!(account.account_type(), AccountType::Public);
+    assert!(account.is_public());
     Ok(())
 }
 ```
@@ -92,7 +93,7 @@ A fungible asset is tied to its faucet account ID. The faucet's metadata describ
 | Optional metadata | Optional display fields such as description, logo URI, and external link. |
 | Faucet account ID | The issuer ID used when constructing fungible assets and checking balances. |
 
-When an account checks its balance for a fungible token at the protocol/client layer, it queries by the asset's `AssetVaultKey`, which is derived from the faucet account ID and callback flag.
+When an account checks its balance for a fungible token at the protocol/client layer, it queries by the asset's `AssetId`, which is derived from the faucet account ID. Whether the asset invokes callbacks is encoded in the faucet account ID at construction time.
 
 ## Choose policy modules
 
@@ -100,10 +101,12 @@ Policy modules decide which operations are allowed for a token faucet.
 
 | Policy area | Current standard examples | Use it for |
 |-------------|---------------------------|------------|
-| Mint | `MintPolicyConfig::AllowAll`, `MintPolicyConfig::OwnerOnly` | Gate mint operations. |
-| Burn | `BurnPolicyConfig::AllowAll`, `BurnPolicyConfig::OwnerOnly` | Gate burn operations. |
-| Send | `TransferPolicy::AllowAll`, `BasicBlocklist`, `BlocklistOwnerControlled` | Gate assets leaving accounts through notes. |
-| Receive | `TransferPolicy::AllowAll`, `BasicBlocklist`, `BlocklistOwnerControlled` | Gate assets entering account vaults. |
+| Mint | `MintPolicy::allow_all()`, `MintPolicy::owner_only()` | Gate mint operations. |
+| Burn | `BurnPolicy::allow_all()`, `BurnPolicy::owner_only()` | Gate burn operations. |
+| Send | `TransferPolicy::allow_all()`, `TransferPolicy::empty_basic_blocklist()`, `TransferPolicy::with_basic_blocklist(...)` | Gate assets leaving accounts through notes. |
+| Receive | `TransferPolicy::allow_all()`, `TransferPolicy::empty_basic_blocklist()`, `TransferPolicy::with_basic_blocklist(...)` | Gate assets entering account vaults. |
+
+Use `BlocklistManager` alongside a basic blocklist when its entries must be updated at runtime.
 
 `TokenPolicyManager` owns the active policy roots and validates policy changes. Authority for changing policies comes from the account's access-control setup, such as owner-controlled or role-based authority.
 

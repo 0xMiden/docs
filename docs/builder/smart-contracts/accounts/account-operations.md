@@ -16,24 +16,24 @@ impl MyAccount for MyAccountStorage {
     fn check_state(&self) {
         // Account identity
         let id: AccountId = self.get_id();
-        let nonce: Felt = self.get_nonce();
+        let nonce: Nonce = self.get_nonce();
 
         // Vault queries
-        let balance: Felt = self.get_balance(asset_key);
-        let initial: Felt = self.get_initial_balance(asset_key);
-        let has_nft: bool = self.has_non_fungible_asset(asset);
+        let value: Word = self.get_asset(asset_id);
+        let initial_value: Word = native_account::get_initial_asset(asset_id);
+        let has_asset: bool = self.has_asset(asset_id);
         let root: Word = self.get_vault_root();
-        let initial_root: Word = self.get_initial_vault_root();
+        let initial_root: Word = native_account::get_initial_vault_root();
 
         // Commitment queries
         let commitment: Word = self.compute_commitment();
-        let initial_commit: Word = self.get_initial_commitment();
+        let initial_commit: Word = native_account::get_initial_commitment();
         let storage: Word = self.compute_storage_commitment();
-        let initial_storage: Word = self.get_initial_storage_commitment();
+        let initial_storage: Word = native_account::get_initial_storage_commitment();
         let code: Word = self.get_code_commitment();
 
         // Procedure queries
-        let count: Felt = self.get_num_procedures();
+        let count: u32 = self.get_num_procedures();
         let proc_root: Word = self.get_procedure_root(0);
         let exists: bool = self.has_procedure(proc_root);
     }
@@ -46,26 +46,15 @@ impl MyAccount for MyAccountStorage {
 #[component]
 impl MyAccount for MyAccountStorage {
     fn receive_asset(&mut self, asset: Asset) {
-        // Add an asset to the vault — returns the asset as stored
-        let stored: Asset = self.add_asset(asset);
+        // Add an asset to the vault — returns the resulting value word
+        let stored_value: Word = self.add_asset(asset);
     }
 
     fn send_asset(&mut self, asset: Asset, note_idx: NoteIdx) {
-        // Remove an asset from the vault — returns the removed asset
+        // Remove an asset from the vault — returns the resulting value word
         // Proof generation fails if the asset doesn't exist or insufficient balance
-        let removed: Asset = self.remove_asset(asset);
-        output_note::add_asset(removed, note_idx);
-    }
-
-    fn auth(&mut self) {
-        // Increment the account nonce (replay protection)
-        let new_nonce: Felt = self.incr_nonce();
-
-        // Compute commitment of all state changes in this transaction
-        let delta: Word = self.compute_delta_commitment();
-
-        // Check if a specific procedure was called during this transaction
-        let called: bool = self.was_procedure_called(proc_root);
+        self.remove_asset(asset);
+        output_note::add_asset(asset, note_idx);
     }
 }
 ```
@@ -81,7 +70,6 @@ Several operations cause proof generation to fail if preconditions aren't met:
 | Operation | Fails when |
 |-----------|-----------|
 | `remove_asset(asset)` | Asset not in vault or insufficient balance |
-| `get_balance(asset_key)` | Referenced asset key is non-fungible or invalid |
 | `get_procedure_root(index)` | Index out of bounds |
 | Any `assert!()` | Condition is false |
 | Transaction body (overall) | No state change occurred **and** no notes were consumed |
@@ -92,7 +80,7 @@ When proof generation fails:
 3. No state changes occur
 4. The client receives an error describing the failure
 
-The last row is enforced at end-of-execution by the VM kernel rather than mid-execution: a transaction that mutates no account state (storage, vault, or nonce) **and** consumes no notes is rejected. The Rust client also catches this case before submission as `TransactionRequestError::NoInputNotesNorAccountChange`. See [Empty Transaction](../../tutorials/helpers/pitfalls#empty-transaction-no-state-change-no-notes) for the recommended pattern.
+The last row is enforced at end-of-execution by the VM kernel rather than mid-execution: a transaction that mutates no account state (storage, vault, or nonce) **and** consumes no notes is rejected. See [Empty Transaction](../../tutorials/helpers/pitfalls#empty-transaction-no-state-change-no-notes) for the recommended pattern.
 
 ## Example: ManagedWallet
 
@@ -100,16 +88,19 @@ The last row is enforced at end-of-execution by the VM kernel rather than mid-ex
 #![no_std]
 #![feature(alloc_error_handler)]
 
-use miden::{component, component_storage, output_note, Asset, Felt, NoteIdx, Word};
+use miden::{component, component_storage, output_note, Asset, NoteIdx, Word};
 
 #[component_storage]
 struct ManagedWalletStorage;
 
 #[component]
 trait ManagedWallet {
+    #[account_procedure]
     fn receive_asset(&mut self, asset: Asset);
+    #[account_procedure]
     fn send_asset(&mut self, asset: Asset, note_idx: NoteIdx);
-    fn balance_of(&self, asset_key: Word) -> Felt;
+    #[account_procedure]
+    fn asset_value(&self, asset_id: Word) -> Word;
 }
 
 #[component]
@@ -121,13 +112,13 @@ impl ManagedWallet for ManagedWalletStorage {
 
     /// Send an asset to an output note, with balance check.
     fn send_asset(&mut self, asset: Asset, note_idx: NoteIdx) {
-        let removed = self.remove_asset(asset);
-        output_note::add_asset(removed, note_idx);
+        self.remove_asset(asset);
+        output_note::add_asset(asset, note_idx);
     }
 
-    /// Query the balance of a fungible asset.
-    fn balance_of(&self, asset_key: Word) -> Felt {
-        self.get_balance(asset_key)
+    /// Read the value word stored under an asset ID.
+    fn asset_value(&self, asset_id: Word) -> Word {
+        self.get_asset(asset_id)
     }
 }
 ```

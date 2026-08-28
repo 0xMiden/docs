@@ -38,7 +38,8 @@ version = "0.1.0"
 
 [lib]
 kind = "tx-script"
-namespace = "miden:basic-wallet-tx-script/basic-wallet-tx-script@0.1.0"
+namespace = "miden:base/transaction-script@1.0.0"
+path = "src/lib.rs"
 
 [dependencies]
 miden-core = "*"
@@ -51,7 +52,9 @@ basic-wallet = { wit = "../basic-wallet/target/generated-wit/" }
 
 ## Example: basic-wallet-tx-script
 
-This example reads note parameters from the advice map and creates an output note:
+This example decodes structured input from the advice map and asks the account's
+wallet component to create the output note. `output_note::create` is restricted
+to account-component context, so a transaction script cannot call it directly.
 
 ```rust
 // Do not link against libstd (i.e. anything defined in `std::`)
@@ -76,35 +79,48 @@ const NOTE_TYPE_INDEX: usize = 1;
 const RECIPIENT_START: usize = 2;
 const RECIPIENT_END: usize = 6;
 const ASSET_START: usize = 6;
-const ASSET_END: usize = 10;
+const ASSET_END: usize = 14;
 
 #[tx_script]
 fn run(arg: Word, account: &mut Wallet) {
     let num_felts = adv_push_mapvaln(arg.clone());
     let num_felts_u64 = num_felts.as_canonical_u64();
     assert_eq!(Felt::from_u32((num_felts_u64 % 4) as u32), felt!(0));
+
     let num_words = Felt::new(num_felts_u64 / 4).unwrap();
     let commitment = arg;
     let input = adv_load_preimage(num_words, commitment);
+
     let tag = input[TAG_INDEX];
     let note_type = input[NOTE_TYPE_INDEX];
-    let recipient: [Felt; 4] = input[RECIPIENT_START..RECIPIENT_END].try_into().unwrap();
-    let note_idx = output_note::create(tag.into(), note_type.into(), recipient.into());
-    let asset: [Felt; 4] = input[ASSET_START..ASSET_END].try_into().unwrap();
-    account.move_asset_to_note(asset.into(), note_idx);
+    let recipient: [Felt; 4] =
+        input[RECIPIENT_START..RECIPIENT_END].try_into().unwrap();
+
+    let note_idx =
+        account.create_note(tag.into(), note_type.into(), recipient.into());
+
+    // Contract-side assets contain an ID word followed by a value word.
+    let asset: [Felt; 8] = input[ASSET_START..ASSET_END].try_into().unwrap();
+    let asset_key: [Felt; 4] = asset[..4].try_into().unwrap();
+    let asset_value: [Felt; 4] = asset[4..].try_into().unwrap();
+    let asset = Asset::new(asset_key, asset_value);
+
+    account.move_asset_to_note(asset, note_idx);
 }
 ```
 
 ### Walkthrough
 
-1. **`arg: Word`** is a map key used to look up the transaction data in the advice map
-2. **`adv_push_mapvaln(arg)`** reads the number of felts stored at that key
-3. **`adv_load_preimage(num_words, commitment)`** retrieves the actual data (tag, note_type, recipient, asset) from the advice map
-4. **`output_note::create(tag, note_type, recipient)`** creates the output note
-5. **`account.move_asset_to_note(asset, note_idx)`** moves the asset from the account vault into the newly created note
+1. **`arg: Word`** is the commitment used to look up the structured input in the advice map.
+2. **`adv_push_mapvaln(arg)`** loads the preimage length, and `adv_load_preimage(...)` retrieves the tag, note type, recipient, and two-word asset.
+3. **`account.create_note(...)`** crosses into the installed wallet component, where note creation is permitted.
+4. **`account.move_asset_to_note(...)`** removes the asset from the account vault and attaches it to the new note.
 
 :::note
-This script uses the advice map to pass structured input data. The caller encodes the note parameters (tag, note_type, recipient, asset) as a preimage and passes the commitment hash as the `arg` Word.
+Host code must insert a 16-felt, word-aligned preimage into the advice map:
+tag (1), note type (1), recipient (4), asset (8), and two zero padding felts.
+Hash all 16 felts and pass that commitment as the transaction-script argument.
+Keep the host and guest field order in sync.
 :::
 
 :::tip
