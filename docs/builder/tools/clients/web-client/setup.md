@@ -118,6 +118,11 @@ See [Accounts](./accounts.md) for full examples covering wallets, contracts, and
 
 Local proving in the browser is CPU-intensive for larger transactions. Override globally via `ClientOptions.proverUrl`, or per transaction via the `prover` field:
 
+:::caution Privacy boundary
+A remote / delegated prover receives the transaction **witness** (the serialized transaction inputs), not only a digest. That payload can include account state, input notes, advice data, and other private execution context needed to build the proof. Prefer local proving (`proverUrl: "local"`) when those inputs must stay on-device; use a remote prover only when you trust that operator with the witness.
+:::
+
+
 ```typescript
 // Globally: every transaction uses the remote prover by default
 const client = await MidenClient.create({

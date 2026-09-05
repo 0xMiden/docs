@@ -38,6 +38,10 @@ The same services exist on devnet under the `devnet` subdomain — e.g., `status
   </Card>
 </CardGrid>
 
+<Callout variant="caution" title="Privacy boundary">
+Delegated proving is a trust trade-off: the remote prover learns the transaction witness (account / note / advice inputs used to generate the proof). Use it for convenience on low-power clients; keep proving local when witness privacy matters.
+</Callout>
+
 <Callout variant="tip" title="Canonical URLs live on the status page">
 Hard-coding testnet URLs in client configs is fine for demos, but the Miden ops team moves endpoints as new nodes come online. For anything production-ish, keep your configuration loading the current URLs from [status.testnet.miden.io](https://status.testnet.miden.io/) or the client's default (which tracks the canonical testnet host).
 </Callout>

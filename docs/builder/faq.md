@@ -21,6 +21,8 @@ Miden's architecture separates concerns between:
 3. **Proving efficiency**:
 Delegated provers can use optimized hardware that wouldn't be available to end-user devices, specifically designed for the mathematical operations needed in STARK proof generation.
 
+That convenience has a privacy cost: a delegated / remote prover must receive the transaction witness (serialized transaction inputs), so it can see private account and note data that local proving would keep on the client. Choose delegated proving when you trust the prover operator; keep proving local when those inputs must stay private.
+
 ## What is the lifecycle of a transaction?
 
 ### 1. Transaction Creation

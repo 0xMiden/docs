@@ -316,6 +316,11 @@ await client.transactions.submit(wallet, request);
 
 Local proving is CPU-intensive. Offload globally via `ClientOptions.proverUrl`, or per-transaction via the `prover` field:
 
+:::caution Privacy boundary
+Remote proving sends witness data (serialized transaction inputs) to the prover endpoint. Treat the prover operator as trusted for those private inputs. Keep proving local when you need the witness to remain on the client.
+:::
+
+
 ```typescript
 // Global: every transaction uses the remote prover
 const client = await MidenClient.create({
