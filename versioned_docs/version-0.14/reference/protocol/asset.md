@@ -46,7 +46,7 @@ Faucets can issue either fungible or non-fungible assets as defined at account c
 
 #### Fungible asset
 
-Fungible assets are encoded with the amount and the `faucet_id` of the issuing faucet. The amount is always $2^{63}-1$ or smaller, representing the maximum supply for any fungible `Asset`. Examples include ETH and various stablecoins (e.g., DAI, USDT, USDC).
+Fungible assets are encoded with the amount and the `faucet_id` of the issuing faucet. The amount is always $2^{63}-2^{31}$ or smaller, representing the maximum supply for any fungible `Asset`. Examples include ETH and various stablecoins (e.g., DAI, USDT, USDC).
 
 #### Non-fungible asset
 
@@ -159,7 +159,7 @@ The low byte of the faucet account-id suffix is reserved for metadata (it is zer
 
 | Kind | Value word |
 | --- | --- |
-| Fungible | `[amount, 0, 0, 0]` — `amount ≤ 2⁶³−1` |
+| Fungible | `[amount, 0, 0, 0]` — `amount ≤ 2⁶³−2³¹` |
 | Non-fungible | full 4-limb `DATA_HASH` of the NFT payload |
 
 ### Stdlib helpers
