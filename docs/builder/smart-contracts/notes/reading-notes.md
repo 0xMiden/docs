@@ -132,10 +132,7 @@ let metadata: NoteMetadata = input_note::get_metadata(note_idx);
 A note script that reads the target account ID from storage, verifies the consumer, and inspects the creation-time asset list:
 
 ```rust
-use miden::{AccountId, Word, account, active_note, note};
-
-#[account(basic_wallet::BasicWallet)]
-pub struct Wallet;
+use miden::{AccountId, Word, active_note, native_account, note};
 
 #[note]
 struct InspectionNote {
@@ -145,8 +142,8 @@ struct InspectionNote {
 #[note]
 impl InspectionNote {
     #[note_script]
-    pub fn run(self, _arg: Word, account: &mut Wallet) {
-        assert_eq!(account.get_id(), self.target_account_id);
+    pub fn run(self, _arg: Word) {
+        assert_eq!(native_account::get_id(), self.target_account_id);
 
         // Inspection only: this does not remove assets from the active note.
         let _initial_assets = active_note::get_initial_assets();
@@ -171,5 +168,5 @@ pub fn run(_arg: Word) {
 ```
 
 :::info API Reference
-Full API docs on docs.rs: [`miden::active_note`](https://docs.rs/miden/0.14.0-rc.1/miden/active_note/), [`miden::input_note`](https://docs.rs/miden/0.14.0-rc.1/miden/input_note/)
+Full API docs on docs.rs: [`miden::active_note`](https://docs.rs/miden/0.14.0/miden/active_note/), [`miden::input_note`](https://docs.rs/miden/0.14.0/miden/input_note/)
 :::

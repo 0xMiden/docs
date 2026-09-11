@@ -34,11 +34,11 @@ for (const note of all) {
 
 Statuses:
 
-- `"committed"` — onchain, consumable.
+- `"committed"` — the client has verified the inclusion proof. The note script can still prevent a particular account from consuming it.
 - `"consumed"` — already spent.
 - `"expected"` — the client expects this note to arrive.
 - `"processing"` — mid-consume.
-- `"unverified"` — onchain, awaiting local verification.
+- `"unverified"` — an inclusion proof is stored but has not yet been verified.
 
 ## Retrieve a single note
 
@@ -91,6 +91,8 @@ const details = await client.notes.export("0xnote...", { format: NoteExportForma
 
 `import()` returns a note ID as a hex string when the file includes one, or the details commitment for a `Details` file.
 
+`export()` exports output notes created by this client. An imported input note is not an exportable output note; retain the original note file if you need to forward it.
+
 `NoteExportFormat`:
 
 - **`Id`** — just the note ID. A recipient can import it only for a public note.
@@ -99,7 +101,9 @@ const details = await client.notes.export("0xnote...", { format: NoteExportForma
 
 ## Note transport (private notes)
 
-Private notes are delivered through the Miden note transport service. The sender emits a note with `type: "private"`; the recipient fetches it from the transport network.
+Private note details can be delivered through the Miden note transport service. The sender must relay the note after creating it; setting `type: "private"` alone does not deliver the details.
+
+The standard v0.16 client transport path sends note details in plaintext; end-to-end encryption is not implemented in that path. Private onchain visibility does not hide these details from the transport service.
 
 ```typescript
 // Relay an arbitrary private note. You can also pass an input note ID or

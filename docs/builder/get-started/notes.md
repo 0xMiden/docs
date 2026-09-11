@@ -59,6 +59,10 @@ This approach provides several advantages over direct transfers:
 
 To run the code examples in this guide, you'll need to set up a development environment. If you haven't already, follow the setup instructions in the [Accounts](./accounts#set-up-development-environment) guide.
 
+:::note Transaction fees
+Each account that submits a transaction needs native fee tokens, including a faucet that mints `TEST`. These examples show token operations; fund the newly created accounts before their first transaction, following [Transaction Fees](../smart-contracts/transactions/fees.md#paying-your-first-fee).
+:::
+
 ## Minting Tokens
 
 **What is Minting?**
@@ -70,7 +74,7 @@ Minting in Miden creates new tokens and packages them into a **P2ID note** (Pay-
 **Key Concepts:**
 
 - **P2ID Note**: A note that can only be consumed by the account it's addressed to
-- **NoteType**: Determines visibility - `Public` notes are visible onchain and are stored by the Miden network, while `Private` notes are not stored by the network and must be exchanged directly between parties via other channels.
+- **NoteType**: Determines visibility. `Public` note details are stored onchain. `Private` note details must reach the consumer separately; their commitments, metadata, and attachments remain public.
 - **FungibleAsset**: Represents tokens that can be divided and exchanged (like currencies)
 
 Let's see this in action:
@@ -287,7 +291,7 @@ After minting creates a P2ID note containing tokens, the recipient must **consum
 Here's how to consume notes programmatically:
 
 :::tip
-This is a complete, self-contained example that includes the setup and minting steps from the previous section. **The new consume logic starts at the `CONSUMING P2ID NOTES` comment.**
+This program includes the setup and minting steps from the previous section and requires the native fee funding described above. **The new consume logic starts at the `CONSUMING P2ID NOTES` comment.**
 :::
 
 ```rust title="integration/src/bin/consume.rs"
@@ -578,12 +582,13 @@ Sending tokens between accounts follows the same note-based pattern. The sender 
 3. **Recipient discovers note** addressed to their account ID
 4. **Recipient consumes note** - tokens move into their vault
 
-This approach means Alice and Bob's transactions are completely separate and unlinkable, providing strong privacy guarantees.
+Alice and Bob execute separate transactions. Their visibility depends on the
+account and note types they use; public notes expose their details.
 
 Let's implement the complete flow - mint, consume, then send:
 
 :::tip
-This is a complete, self-contained example that includes all previous steps. **The new send logic starts at the `SENDING TOKENS TO BOB` comment.**
+This program includes all previous steps and requires the native fee funding described above. **The new send logic starts at the `SENDING TOKENS TO BOB` comment.**
 :::
 
 ```rust title="integration/src/bin/send.rs"

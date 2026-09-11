@@ -12,7 +12,7 @@ The React SDK treats signing as a pluggable contract: `MidenProvider` accepts an
 ### Para (EVM wallets)
 
 ```tsx
-import { ParaSignerProvider } from "@miden-sdk/use-miden-para-react";
+import { ParaSignerProvider } from "@miden-sdk/para-react";
 import { MidenProvider } from "@miden-sdk/react";
 
 function App() {
@@ -29,7 +29,7 @@ function App() {
 Expose Para-specific data inside your app:
 
 ```tsx
-import { useParaSigner } from "@miden-sdk/use-miden-para-react";
+import { useParaSigner } from "@miden-sdk/para-react";
 
 const { para, wallet, isConnected } = useParaSigner();
 ```
@@ -37,35 +37,27 @@ const { para, wallet, isConnected } = useParaSigner();
 ### Turnkey
 
 ```tsx
-import { TurnkeySignerProvider } from "@miden-sdk/miden-turnkey-react";
+import { TurnkeySignerProvider } from "@miden-sdk/turnkey-react";
 import { MidenProvider } from "@miden-sdk/react";
 
-// defaultOrganizationId is required. The API URL defaults to
-// https://api.turnkey.com.
-<TurnkeySignerProvider config={{ defaultOrganizationId: "your-org-id" }}>
-  <MidenProvider config={{ rpcUrl: "testnet" }}>
-    <YourApp />
-  </MidenProvider>
-</TurnkeySignerProvider>
-
-// Or with an explicit API URL:
-<TurnkeySignerProvider
-  config={{
-    apiBaseUrl: "https://api.turnkey.com",
-    defaultOrganizationId: "your-org-id",
-  }}
->
-  <MidenProvider config={{ rpcUrl: "testnet" }}>
-    <YourApp />
-  </MidenProvider>
-</TurnkeySignerProvider>
+function App() {
+  return (
+    <TurnkeySignerProvider
+      config={{ defaultOrganizationId: "your-org-id" }}
+    >
+      <MidenProvider config={{ rpcUrl: "testnet" }}>
+        <YourApp />
+      </MidenProvider>
+    </TurnkeySignerProvider>
+  );
+}
 ```
 
-Connect via passkey authentication. `useSigner()` returns `SignerContextValue | null` (null when no signer provider is above the component), so always null-guard:
+Connect via passkey authentication:
 
 ```tsx
 import { useSigner } from "@miden-sdk/react";
-import { useTurnkeySigner } from "@miden-sdk/miden-turnkey-react";
+import { useTurnkeySigner } from "@miden-sdk/turnkey-react";
 
 function ConnectButton() {
   const signer = useSigner();
@@ -78,7 +70,7 @@ function ConnectButton() {
   }
   return (
     <button onClick={signer.disconnect}>
-      Disconnect ({turnkey.account?.name})
+      Disconnect ({turnkey.account?.address})
     </button>
   );
 }
@@ -99,7 +91,7 @@ import { MidenProvider } from "@miden-sdk/react";
 
 ## Unified signer interface
 
-Every prebuilt provider exposes the same `useSigner` surface, so UI code that only cares about connect/disconnect stays signer-agnostic. Note the return is `SignerContextValue | null`:
+Use `useSigner()` with any provider. It returns `null` when no signer provider is mounted:
 
 ```tsx
 import { useSigner } from "@miden-sdk/react";
@@ -117,48 +109,37 @@ function Header() {
 
 ## Custom signer providers
 
-For a signing service that doesn't have a prebuilt provider — internal HSM, hardware wallet, or experimental integration — wire `SignerContext` directly:
+Connect your signing service through `SignerContext`. This fragment assumes the SDK is ready and your service provides ECDSA K256/Keccak signatures, a public-key commitment serialized as an SDK word, and a stable 32-byte account seed.
 
 ```tsx
-import {
-  MidenProvider,
-  SignerContext,
-  type SignerContextValue,
-} from "@miden-sdk/react";
+import { MidenProvider, SignerContext, type SignerContextValue } from "@miden-sdk/react";
 import { AccountStorageMode } from "@miden-sdk/miden-sdk";
 
 const signer: SignerContextValue = {
   name: "MyWallet",
-  storeName: `mywallet_${userAddress}`, // unique per user for DB isolation
-  isConnected: true,
+  storeName: `mywallet_${signingService.identity}`,
+  isConnected: signingService.isConnected,
   accountConfig: {
-    publicKeyCommitment: userPublicKeyCommitment, // Uint8Array
+    publicKeyCommitment: signingService.publicKeyCommitment,
     storageMode: AccountStorageMode.private(),
+    accountSeed: signingService.accountSeed,
   },
   signCb: async (pubKey, signingInputs) => {
-    // Route to your signing service
-    return signature; // Uint8Array
+    if (!signingService.isConnected) throw new Error("MyWallet is not connected");
+    return signingService.signMessage(pubKey, signingInputs);
   },
-  connect: async () => {
-    /* trigger wallet connection */
-  },
-  disconnect: async () => {
-    /* clear session */
-  },
+  connect: async () => { await signingService.connect(); },
+  disconnect: async () => { await signingService.disconnect(); },
 };
 
-function App() {
-  return (
-    <SignerContext.Provider value={signer}>
-      <MidenProvider config={{ rpcUrl: "testnet" }}>
-        <YourApp />
-      </MidenProvider>
-    </SignerContext.Provider>
-  );
-}
+<SignerContext.Provider value={signer}>
+  <MidenProvider config={{ rpcUrl: "testnet" }}>
+    <YourApp />
+  </MidenProvider>
+</SignerContext.Provider>
 ```
 
-`storeName` is critical: each user's data lives in its own IndexedDB database, so make the `storeName` unique per signing identity (typically the wallet address or a derived hash).
+Build this value inside your provider's render and update it when the connection changes. Use a unique `storeName` per signing identity to isolate each user's database.
 
 ## Custom `AccountComponent`s
 
@@ -176,20 +157,21 @@ const myDexComponent: AccountComponent = await loadCompiledComponent();
 const accountConfig: SignerAccountConfig = {
   publicKeyCommitment: userPublicKeyCommitment,
   storageMode: AccountStorageMode.private(),
+  accountSeed: stableAccountSeed, // persist this 32-byte seed for this identity
   customComponents: [myDexComponent],
 };
 ```
 
-Components are appended to the `AccountBuilder` after the default basic wallet component and before `build()` is called, so the account always includes wallet functionality plus any extras you pass. The field is optional; leaving it unset (or passing an empty array) preserves the default behaviour.
+`customComponents` is optional. Components are added alongside the default auth and basic wallet components.
 
 ## `MultiSignerProvider`
 
-For apps that need to swap between multiple signer providers at runtime (e.g. "connect with Para" or "connect with Turnkey"), use `MultiSignerProvider`. Each registered signer provider renders its own `<SignerSlot />` (the component takes no children — it registers the provider's current `SignerContext` with the multi-signer context) and `MidenProvider` sits as a sibling inside `MultiSignerProvider`:
+Use `MultiSignerProvider` to switch signers at runtime. Register each provider with `<SignerSlot />` and place `MidenProvider` alongside them:
 
 ```tsx
 import { MultiSignerProvider, SignerSlot, MidenProvider } from "@miden-sdk/react";
-import { ParaSignerProvider } from "@miden-sdk/use-miden-para-react";
-import { TurnkeySignerProvider } from "@miden-sdk/miden-turnkey-react";
+import { ParaSignerProvider } from "@miden-sdk/para-react";
+import { TurnkeySignerProvider } from "@miden-sdk/turnkey-react";
 
 function App() {
   return (
@@ -230,7 +212,7 @@ function SignerPicker() {
 }
 ```
 
-`useMultiSigner()` returns `MultiSignerContextValue | null`; its `connectSigner(name)` / `disconnectSigner()` actions switch and clear the active signer respectively. The name passed to `connectSigner` matches the `name` field on each signer's `SignerContextValue`.
+`connectSigner(name)` uses the provider's `name`; `disconnectSigner()` clears the active signer.
 
 ## Next
 

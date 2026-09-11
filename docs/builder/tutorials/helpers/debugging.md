@@ -6,8 +6,9 @@ description: "Learn how to debug Miden Rust contracts using debug output and ass
 
 # Debugging Guide
 
-Miden contracts don't provide an interactive debugger or console. Use `miden::println!` to trace
-execution paths and assertions to check values during execution.
+Miden supports [interactive DAP debugging](../../tools/clients/rust-client/debugging).
+Use assertions to check values during execution and `miden::println!` markers to trace paths
+when running with a debugger host that renders them.
 
 ## Printing Debug Markers
 
@@ -24,6 +25,19 @@ if balance == felt!(0) {
 `miden::println!` accepts string literals and expressions. It also supports Rust-style formatting
 arguments, such as `miden::println!("balance: {}", balance)`. Formatted output requires
 `extern crate alloc` and a configured global allocator; literal markers don't allocate.
+
+:::note Where Rust markers appear
+With SDK 0.14.0, `miden::println!` emits a `readonly::miden_debug::println` event.
+The normal Rust client and MockChain transaction executors ignore that event. Attaching a DAP
+client preserves the transaction host's handlers, so the live DAP connection alone does not
+make these messages appear.
+
+The `miden-debug` local execution and replay host handles these events. For a transaction,
+[record a DAP session and replay it](../../tools/clients/rust-client/debugging#recording-a-session-for-offline-replay)
+to inspect the markers in the debugger's output. MASM's
+[`miden::core::debug` printers](../../tools/clients/rust-client/debug-output) use separate events
+that the normal transaction executor prints by default.
+:::
 
 ## Using assert_eq
 
@@ -47,7 +61,7 @@ diagnostics with markers and assertions to isolate the failing operation:
 
 1. Place `miden::println!` markers before and after the code you suspect.
 2. Add an `assert_eq` for the value the code expects.
-3. Run again and inspect the last marker and any assertion failure.
+3. Run with a debugger host that renders Rust markers and inspect the last marker and any assertion failure.
 
 ### Example
 
@@ -71,6 +85,6 @@ fails.
 ## Limitations
 
 - `assert_eq` only works with `Felt` values
-- `miden::println!` emits output unconditionally and adds execution work; remove debug-only calls
+- `miden::println!` emits an event and adds execution work even when the host ignores it; remove debug-only calls
   from release code
 - Remove only diagnostic assertions; keep assertions that enforce contract invariants

@@ -70,10 +70,10 @@ const { txId } = await client.transactions.consume({
   notes: [noteId1, noteId2],  // note references — hex strings, NoteIds, records, or Notes
 });
 
-// Single note also accepted directly, no array needed
+// A different, unconsumed note can also be passed directly, without an array.
 await client.transactions.consume({
   account: wallet,
-  notes: noteId1,
+  notes: noteId3,
 });
 ```
 
@@ -190,8 +190,9 @@ if (receivedAnchor.commitment().toHex() !== proposedSummary.blockCommitment().to
 
 // After collecting the required authorization, replay at the anchored block.
 await client.transactions.submit(multisigAccount, request, { anchor: receivedAnchor });
-receivedAnchor.free();
-anchor.free();
+// Release WASM wrappers; Node's native objects do not expose free().
+receivedAnchor.free?.();
+anchor.free?.();
 ```
 
 An anchor makes the request reproducible; it does not prove that the transaction matches the signer's intent. Inspect the summary's account delta and input/output notes before signing. Also verify a received anchor's block against a trusted node when the proposer is not trusted. If `summary.expirationDelta()` is non-zero, the transaction expires at `anchor.blockNum() + summary.expirationDelta()`; if that deadline passes, capture a new anchor and collect authorization again.
@@ -383,7 +384,11 @@ await client.transactions.send({
 
 Query past transactions through `client.transactions.list()`.
 
+The `expiredBefore` filter was removed in v0.16. Expiry is resolved during state sync: sync first and inspect each transaction record's status. `{ status: "uncommitted" }` selects pending transactions, not expired transactions.
+
 ```typescript
+await client.sync();
+
 // All transactions
 const all = await client.transactions.list();
 
@@ -392,9 +397,6 @@ const uncommitted = await client.transactions.list({ status: "uncommitted" });
 
 // By ID
 const specific = await client.transactions.list({ ids: [txId1, txId2] });
-
-// By expiration
-const expired = await client.transactions.list({ expiredBefore: 1000 });
 ```
 
 Each record exposes:

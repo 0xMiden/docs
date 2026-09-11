@@ -12,11 +12,10 @@ In this section, you'll learn about how to deploy and interact with your counter
 
 The `integration/` folder is a crucial part of your Miden project workspace. It serves as the command center for all interactions with your smart contracts. Let's explore its structure and purpose.
 
-Navigate to your project's integration folder:
+From the workspace root, inspect your project's integration folder:
 
 ```bash title=">_ Terminal"
-cd integration
-ls -la
+ls -la integration
 ```
 
 You'll see a structure like:
@@ -72,7 +71,7 @@ The script performs these key operations:
 
 ### Running the Script
 
-Execute the increment script to deploy your contract:
+From the workspace root, run the increment script:
 
 ```bash title=">_ Terminal"
 cd integration
@@ -107,7 +106,7 @@ The script demonstrates Miden's deployment flow:
 
 This process shows how Miden contracts are deployed through state changes rather than separate deployment transactions.
 
-**Miden's Deployment Flow**: In Miden, accounts (contracts) become visible onchain only when they undergo a state change. Simply creating an account locally doesn't deploy it - the account must participate in a transaction that modifies its state. In our case, by incrementing the counter, we're effectively "deploying" the contract and making it visible on the Miden testnet explorer. This is why the increment operation serves both as the deployment and the first interaction with the contract.
+**Miden's Deployment Flow**: Creating an account locally does not deploy it. Its first committed state-changing transaction publishes it onchain. If the account first consumes a funding note, that transaction publishes it with the counter still at zero. Consuming the increment note then changes the count to one.
 
 ## How the Scripts Work
 

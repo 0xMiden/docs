@@ -86,12 +86,9 @@ This tells the compiler where to find the component package.
 
 ### 2. Generated WIT dependency
 
-```toml
-[package.metadata.miden.dependencies]
-basic-wallet = { wit = "../basic-wallet/target/generated-wit/" }
-```
+The compiled dependency package embeds its generated WIT interface. The SDK reads that interface to create Rust bindings for `#[account(...)]`.
 
-This points to the generated interface files used to create Rust bindings.
+Do not also set `package.metadata.miden.dependencies.<name>.wit` for a package that embeds WIT: the SDK rejects the duplicate interface source.
 
 ### Complete example
 
@@ -110,14 +107,9 @@ miden-core = "*"
 miden-protocol = "*"
 counter-account = { path = "../counter-account" }
 
-[package.metadata.miden.dependencies]
-counter-account = { wit = "../counter-account/target/generated-wit/" }
 ```
 
-:::info Build order matters
-Build `counter-account` before `counter-note` so both its compiled package and
-`target/generated-wit/` interface exist when the consumer is compiled.
-:::
+The consumer's build resolves the `counter-account` path dependency and uses the interface embedded in its compiled package. No separate `target/generated-wit/` path is required.
 
 ## Example: Counter note calling counter contract
 

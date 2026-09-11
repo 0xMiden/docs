@@ -32,7 +32,7 @@ rustc --version
 <summary>Expected output</summary>
 
 ```text
-rustc 1.96.1 (31fca3adb 2026-06-26)
+rustc 1.98.1 (...)  # or newer for client/protocol code
 ```
 
 </details>
@@ -43,17 +43,20 @@ For TypeScript development with the Miden Web Client, you'll need Node.js and Ya
 
 **Install Node.js:**
 
-```bash title=">_ Terminal"
-# Install Node.js using the official installer or package manager
-# For macOS with Homebrew:
-brew install node
+On macOS with Homebrew:
 
-# For Ubuntu/Debian:
+```bash title=">_ macOS"
+brew install node
+```
+
+On Ubuntu/Debian:
+
+```bash title=">_ Ubuntu/Debian"
 curl -fsSL https://deb.nodesource.com/setup_lts.x | sudo -E bash -
 sudo apt-get install -y nodejs
-
-# For Windows, download from nodejs.org
 ```
+
+On Windows, use the Node.js installer from nodejs.org.
 
 **Install Yarn:**
 
@@ -88,7 +91,7 @@ The Miden toolchain installer makes it easy to manage Miden components:
 cargo install midenup
 ```
 
-To install a specific release, pass `--version` — this guide is written against `1.0.0-alpha.1`, which as a pre-release is only installed when named explicitly: `cargo install midenup --version 1.0.0-alpha.1`.
+This guide is verified with midenup **1.0.0**. To install that exact release, use `cargo install midenup --version 1.0.0`.
 
 :::info
 To install from source instead, name the package explicitly — the repository contains more than one binary: `cargo install --git https://github.com/0xMiden/midenup.git midenup`
@@ -136,6 +139,7 @@ Check that everything is working correctly:
 
 ```bash title=">_ Terminal"
 midenup show active-toolchain
+miden client --help
 ```
 
 <details>
@@ -143,6 +147,9 @@ midenup show active-toolchain
 
 ```text
 testnet
+CLI actions
+Usage: miden client <COMMAND>
+...
 ```
 
 </details>
@@ -177,7 +184,10 @@ miden new my-test-project
 cd my-test-project
 ```
 
-If successful, you'll see a new directory with Miden project files. For each Rust code example in the following pages, add a new binary under `integration/src/bin/` and run it with `cargo run --bin <name> --release`.
+If successful, you'll see a new directory with Miden project files. The generated `rust-toolchain.toml` selects the Rust toolchain and components required by the project.
+
+For each Rust code example in the following pages, add a new binary under
+`integration/src/bin/` and run it with `cargo run --bin <name> --release`.
 
 ### TypeScript Project
 

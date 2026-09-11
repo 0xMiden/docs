@@ -13,7 +13,7 @@ The `#[component]` macro automatically provides methods on `self` for interactin
 ```rust
 #[component]
 impl MyAccount for MyAccountStorage {
-    fn check_state(&self) {
+    fn check_state(&self, asset_id: Word) {
         // Account identity
         let id: AccountId = self.get_id();
         let nonce: Nonce = self.get_nonce();

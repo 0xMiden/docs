@@ -6,7 +6,7 @@ pagination_prev: null
 
 # Tutorials
 
-Hands-on walkthroughs for building on Miden. Every tutorial pairs with runnable Rust and TypeScript examples from the [miden-tutorials](https://github.com/0xMiden/miden-tutorials) repo and with MockChain tests so you can verify each step locally.
+Hands-on walkthroughs for building on Miden. The [miden-tutorials](https://github.com/0xMiden/miden-tutorials) repo contains Rust and TypeScript recipes and Rust contract tutorials with MockChain tests. Each guide states the environment and prerequisites needed to run its examples.
 
 ## Pick a path
 

@@ -30,7 +30,7 @@ See [Transaction Context](./transactions/transaction-context) for the available 
 
 ### Assertions and error handling
 
-Miden doesn't support error strings or `Result` types in contract execution. Use assertions:
+Use assertions for conditions that must abort contract execution:
 
 ```rust
 assert!(amount > 0);
@@ -39,13 +39,20 @@ assert_eq!(a, b);
 
 When an assertion fails, proof generation fails and the transaction is rejected before reaching the network.
 
+Internal Rust functions can also return and handle `Result` for recoverable
+conditions. Returning an error value does not itself abort a transaction: the
+caller must handle it or explicitly fail an assertion. Exported procedures and
+entry points must follow the SDK's supported signatures.
+
 ### Replay protection
 
 Every state-changing transaction must increment the nonce. The auth component handles this automatically — see [Authentication](./accounts/authentication).
 
 ### Safe arithmetic
 
-Use `saturating_sub` to prevent underflow:
+Use `saturating_sub` to prevent underflow. If the stored block is ahead of the
+current block, it returns zero. Ordinary unsigned subtraction can wrap to a large
+value in a release build:
 
 ```rust
 let current_block = tx::get_block_number().as_u32();
@@ -61,7 +68,7 @@ For Felt arithmetic, values wrap modulo the prime field (no overflow panic), but
 
 ### Anti-patterns
 
-- **Don't store secrets in contract code** — contract code is visible onchain
+- **Don't store secrets in contract code** — public account code is published onchain
 - **Don't skip nonce management** — prevents replay attacks
 - **Be careful with Felt division** — Felt division computes the multiplicative inverse, not integer division. Convert to `u64` first for integer-style operations
 
@@ -74,6 +81,6 @@ All Miden contracts run without the standard library:
 | `std::collections::HashMap` | Use `BTreeMap` from `alloc`, or `StorageMap` for persistent account storage |
 | `std::string::String` | Use `alloc::string::String` |
 | `std::vec::Vec` | Use `alloc::vec::Vec` |
-| `println!()` | Use `miden::println!()` or `miden::debug::println()`; formatting arguments are not supported |
+| `println!()` | Use `miden::println!()` |
 | `eprintln!()` | No direct equivalent — run the transaction under the Mockchain and inspect outputs, or use the external debugger |
 | Error strings in `assert!()` | Use `assert!(condition)` without messages |

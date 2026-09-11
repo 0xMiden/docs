@@ -116,11 +116,12 @@ Minting does not directly credit a recipient's account vault. A faucet creates a
 
 For standard flows:
 
-- The faucet creates a mint note or a P2ID note containing the minted asset.
-- The recipient discovers and consumes the note.
+- A user can send a public, asset-free `MintNote` to a network faucet to request minting. The faucet consumes that request and creates a delivery note containing the minted asset.
+- A user-controlled faucet can mint directly into a delivery note, such as P2ID, in its own transaction.
+- The recipient discovers and consumes the delivery note.
 - The recipient's account must be able to receive the asset, usually by including `BasicWallet`.
 
-This is the same two-transaction note model described in [What are Notes?](../notes/introduction).
+The delivery note is created in one transaction and consumed in another, as described in [What are Notes?](../notes/introduction). A network-faucet flow also includes the earlier transaction that publishes the mint request.
 
 ## Burn returned assets
 

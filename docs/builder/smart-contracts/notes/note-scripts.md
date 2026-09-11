@@ -156,8 +156,6 @@ miden-core = "*"
 miden-protocol = "*"
 counter-account = { path = "../counter-account" }
 
-[package.metadata.miden.dependencies]
-counter-account = { wit = "../counter-account/target/generated-wit/" }
 ```
 
 ## Related

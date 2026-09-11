@@ -169,9 +169,13 @@ self.add_asset(asset: Asset) -> Word
 // Remove an asset from the account vault
 self.remove_asset(asset: Asset) -> Word
 
-// Increment the account nonce (replay protection)
+// Increment the account nonce (only inside #[auth_script])
 self.incr_nonce() -> Nonce
 ```
+
+The kernel allows `incr_nonce` only from the account's authentication procedure,
+and only once per transaction. Calling it from an ordinary account procedure
+fails. Standard authentication components handle this increment automatically.
 
 ### Read-only methods (`&self`)
 
@@ -200,6 +204,10 @@ self.compute_commitment() -> Word
 self.compute_storage_commitment() -> Word
 // ... and more (see API Reference)
 ```
+
+If storage or the vault has changed, `compute_delta_commitment` requires the
+nonce to have been incremented. Compute such a delta inside the authentication
+procedure after the increment; calling it earlier fails.
 
 For the full list of auto-generated methods, see [Account Operations](./account-operations). To export your own types for use in public method signatures, see [Custom Types](./custom-types).
 

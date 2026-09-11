@@ -58,7 +58,7 @@ Run `miden --version`. If you see "command not found," add `$CARGO_HOME/bin` (de
 ### Install a channel
 
 ```bash
-midenup install testnet       # toolchain deployed to the public testnet
+midenup install testnet       # follows the release named by the testnet manifest
 midenup install 0.16.0        # pin to a specific release line
 ```
 
@@ -92,17 +92,17 @@ Removing toolchain directories manually corrupts the `midenup` environment. Use 
 | --- | --- | --- |
 | `miden new` | `cargo miden new` | Create a new Miden Rust project |
 | `miden build` | `midenc miden-project.toml` | Build the current Miden project |
-| `miden new-wallet` | `miden-client new-wallet --deploy` | Create and deploy a wallet account |
+| `miden new-wallet` | `miden-client new-wallet` | Create a local wallet account |
 | `miden account` | `miden-client new-account` | Create a local account |
-| `miden faucet` | `miden-client mint` | Fund an account from the faucet |
+| `miden faucet` | `miden-client mint` | Mint your own asset from a faucet account you control |
+| `miden mint` | `miden-faucet-client mint` | Request native test tokens from the public faucet |
 | `miden call` | `miden-client call` | Call a local account procedure |
 | `miden simulate` | `miden-client exec` | Dry-run a transaction without committing |
 | `miden transfer` | `miden-client transfer` | Transfer assets to another account |
-| `miden deploy` | `miden-client new-account --account-type public --deploy` | Create and deploy a public account |
 | `miden format` | `miden-format` | Format MASM source (install with `--component format`) |
 | `miden registry` | `miden-registry` | Manage the local registry (install with `--component local-registry`) |
 
-Use the component name to access commands that do not have an alias.
+Use the component name to access commands that do not have an alias. The v0.16 channel has no `miden deploy` alias. `new-wallet` and `new-account` create accounts locally; fund and publish an account through its first successful transaction. Older channel aliases that add `--deploy` cannot be used with the stable v0.16 client.
 
 ## Related
 

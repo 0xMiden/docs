@@ -9,7 +9,7 @@ The React SDK is a thin layer on top of the [Web SDK](../web-client/index.md). I
 
 ## When to use it
 
-Reach for the React SDK when your application is already a React app (Next.js, Vite + React, React Native, Electron + React, etc.). The hooks:
+Reach for the React SDK when your application is already a React app (Next.js, Vite + React, or a compatible Electron renderer). The hooks:
 
 - own lifecycle management (the WASM worker, signer wiring, auto-sync loop),
 - expose per-hook result interfaces with a domain-named action (`send`, `mint`, `createWallet`, …) plus `isLoading` / `isCreating` / `isImporting`, `error`, and `reset`,

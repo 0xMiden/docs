@@ -35,11 +35,11 @@ Authentication is an ordinary account component. Attach `AuthSingleSig` with `Ac
 ```rust
 use miden_client::{
     account::{AccountBuilder, AccountType, component::BasicWallet},
-    auth::{Approver, AuthSchemeId, AuthSingleSig},
+    auth::{Approver, AuthSchemeId, AuthSecretKey, AuthSingleSig},
 };
-use miden_protocol::{account::auth::PublicKeyCommitment, Word};
 
-let public_key = PublicKeyCommitment::from(Word::default());
+let secret_key = AuthSecretKey::new_falcon512_poseidon2();
+let public_key = secret_key.public_key().to_commitment();
 
 let account = AccountBuilder::new(seed)
     .account_type(AccountType::Public)
@@ -50,6 +50,10 @@ let account = AccountBuilder::new(seed)
     .with_component(BasicWallet)
     .build()?;
 ```
+
+Here `seed` is a random 32-byte account seed. Keep `secret_key` in your client's
+keystore and register it for this account before submitting transactions. A
+placeholder public-key commitment cannot authorize transactions.
 
 If you import directly from `miden-protocol`, the same enum is called `AuthScheme` (`miden_protocol::account::auth::AuthScheme`) — `miden-client` just re-exports it under a friendlier name.
 

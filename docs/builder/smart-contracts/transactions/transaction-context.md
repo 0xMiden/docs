@@ -6,7 +6,7 @@ description: "Block queries, note commitments, and expiration management with th
 
 # The tx Module
 
-A Miden transaction is a local operation that consumes zero or more input notes and produces state changes plus output notes for a single account. The transaction executes entirely on the client — the VM runs the code, generates a ZK proof, and only the proof is submitted to the network. The `tx` module provides access to block information, note commitments, and expiration controls. Transaction scripts (`#[tx_script]`) serve as standalone entry points that orchestrate the transaction.
+A Miden transaction consumes zero or more input notes and produces state changes plus output notes for a single account. A client or network transaction builder executes the code and proves the result. Submission includes the proof, sealed inputs, and public state updates. The `tx` module provides access to block information, note commitments, and expiration controls. Transaction scripts (`#[tx_script]`) serve as standalone entry points that orchestrate the transaction.
 
 ## The `tx` module
 

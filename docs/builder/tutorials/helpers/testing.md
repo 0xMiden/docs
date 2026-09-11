@@ -43,7 +43,7 @@ your-project/
 name = "integration"
 version = "0.1.0"
 edition = "2024"
-rust-version = "1.96.1"
+rust-version = "1.98.1"
 
 [[test]]
 name = "my_test"
@@ -208,7 +208,7 @@ let bank_package = Arc::new(build_project_in_dir(
 
 // Initialize values declared by the package's storage schema.
 let initialized_slot =
-    StorageSlotName::new("miden::component::miden_bank_account::initialized")
+    StorageSlotName::new("bank_account::bank::initialized")
         .expect("Valid slot name");
 let mut init_storage_data = InitStorageData::default();
 init_storage_data.insert_value(&initialized_slot, Word::default())?;
@@ -367,7 +367,7 @@ let executed_tx = mock_chain
 ### Reading Storage After Transaction
 
 ```rust
-use miden_protocol::{account::StorageMapKey, Felt, Word};
+use miden_protocol::{account::StorageMapKey, asset::FungibleAsset, Felt, Word};
 
 // After adding the transaction and proving its block...
 let account = mock_chain.committed_account(account.id())?;
@@ -376,11 +376,13 @@ let account = mock_chain.committed_account(account.id())?;
 let value: Word = account.storage().get_item(&initialized_slot)?;
 
 // Read Map storage (by slot name)
+// Use the deposited asset's key: limb 2 includes its metadata byte.
+let asset_key = FungibleAsset::new(faucet.id(), 1000)?.to_id_word();
 let key = Word::from([
     depositor.prefix().as_felt(),
     depositor.suffix(),
-    faucet.id().prefix().as_felt(),
-    faucet.id().suffix(),
+    asset_key[3],
+    asset_key[2],
 ]);
 let balance = account
     .storage()

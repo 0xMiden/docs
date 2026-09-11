@@ -156,22 +156,24 @@ struct TokenVaultStorage {
 
 ## Low-level storage access
 
-Direct storage access outside the component traits uses the bindings:
+Direct storage access outside the component traits uses the bindings. Use the
+ID of a value slot for `value_slot_id` and the ID of a map slot for
+`map_slot_id`; map operations reject value slots:
 
 ```rust
 use miden::storage;
 
 // Direct slot access
-let value: Word = storage::get_item(slot_id);
-let old: Word = storage::set_item(slot_id, new_value);
+let value: Word = storage::get_item(value_slot_id);
+let old: Word = storage::set_item(value_slot_id, new_value);
 
 // Direct map access
-let value: Word = storage::get_map_item(slot_id, &key);
-let old: Word = storage::set_map_item(slot_id, key, value);
+let value: Word = storage::get_map_item(map_slot_id, &key);
+let old: Word = storage::set_map_item(map_slot_id, key, value);
 
 // Initial values (at transaction start)
-let initial: Word = storage::get_initial_item(slot_id);
-let initial: Word = storage::get_initial_map_item(slot_id, &key);
+let initial: Word = storage::get_initial_item(value_slot_id);
+let initial: Word = storage::get_initial_map_item(map_slot_id, &key);
 ```
 
 `get_item` and `get_map_item` read the current values. `get_initial_item` and `get_initial_map_item` read the values from the start of the transaction, while `set_item` and `set_map_item` return the values immediately before the write.

@@ -62,9 +62,13 @@ console.log(`Consumed ${result.consumed} notes`);
 await client.proveBlock();
 await client.sync();
 
-const balance = await client.accounts.getBalance(wallet, faucet);
+const updatedWallet = await client.accounts.get(wallet);
+if (!updatedWallet) throw new Error("Wallet not found after sync");
+const balance = updatedWallet.vault().getBalance(faucet.id());
 console.log(`Balance: ${balance}`); // Balance: 1000
 ```
+
+Read the refreshed account after syncing so its vault reflects the committed transaction.
 
 ## Dummy proving
 

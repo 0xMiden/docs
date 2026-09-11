@@ -55,7 +55,7 @@ jobs:
       DEFAULT_BRIDGE_PORTAL_REF: main
       # Guardian is an external (OpenZeppelin) repo released by tag; pin to a tested
       # release rather than tracking a branch. Bump on each Guardian release.
-      DEFAULT_GUARDIAN_REF: v0.17.0-rc.1
+      DEFAULT_GUARDIAN_REF: v0.17.0
     steps:
       - name: Checkout docs site
         uses: actions/checkout@v4

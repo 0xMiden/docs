@@ -66,7 +66,7 @@ confirming that the value is intended to have integer semantics. For fungible as
 
 ### Problem
 
-The Miden VM stack only allows direct access to the first 16 elements. Complex functions with many local variables trigger this error:
+The Miden VM stack only allows direct access to the first 16 elements. If the compiler emits an instruction that accesses beyond that window, compilation fails with this error:
 
 ```
 invalid stack index: only the first 16 elements on the stack are directly accessible
@@ -74,10 +74,12 @@ invalid stack index: only the first 16 elements on the stack are directly access
 
 ### Solution
 
+This is not a limit of 16 Rust local variables. The compiler can reorder or store values in memory. If you encounter this diagnostic, try reducing how many values a function needs at once. The following sketches illustrate possible refactorings; they omit the application-specific getters and processing logic.
+
 **1. Reduce local variables:**
 
 ```rust
-// WRONG: Too many local variables
+// Before: keep several values available at once
 fn complex_operation(&mut self) {
     let a = self.get_a();
     let b = self.get_b();
@@ -85,10 +87,10 @@ fn complex_operation(&mut self) {
     let d = self.get_d();
     let e = self.get_e();
     let f = self.get_f();
-    // ... more variables cause stack overflow
+    // ... use these values later
 }
 
-// CORRECT: Use values directly or minimize locals
+// After: combine values in smaller batches
 fn complex_operation(&mut self) {
     // Process in smaller batches
     let result_ab = self.process(self.get_a(), self.get_b());
@@ -100,12 +102,12 @@ fn complex_operation(&mut self) {
 **2. Break into smaller functions:**
 
 ```rust
-// WRONG: One large function
+// Before: one large function
 fn do_everything(&mut self, a: Word, b: Word, c: Word) {
     // Many operations touching all parameters...
 }
 
-// CORRECT: Split into stages
+// After: split into stages (processing bodies omitted)
 fn stage_one(&mut self, a: Word) -> Felt {
     // Process a
 }
@@ -173,6 +175,8 @@ trait Processor {
 **2. Use note storage for passing data:**
 
 For note scripts, pass complex data via `active_note::get_storage()`:
+
+The example below requires at least two storage elements; indexing a missing element aborts execution.
 
 ```rust
 #[note]
@@ -307,22 +311,24 @@ Use `AssetAmount` or explicitly validate bounds before subtracting raw `Felt` va
 
 ### Problem
 
-The `basic_wallet::move_note_assets_to_account` procedure is available only when the consuming
-account includes the basic wallet component.
+Standard P2ID notes receive assets through the consuming account's wallet `receive_asset` procedure. The `wallet::move_note_assets_to_account` helper calls that account procedure; the account must provide it.
 
 ### Solution
 
-Ensure note scripts that call this procedure target accounts with wallet capability:
+Include `BasicWallet` when an account needs the standard wallet receiving capability:
 
 ```rust
 use miden_client::account::component::BasicWallet;
 
 // When creating an account that needs to receive assets
 let account = AccountBuilder::new(seed)
+    .with_component(auth_component)  // Your configured authentication component
     .with_component(BasicWallet)  // Add wallet capability
     .with_component(YourCustomComponent)
     .build()?;
 ```
+
+Supply the authentication component configured for your application (for example, `AuthSingleSig`) as `auth_component`. `BasicWallet` and a business component do not provide authentication by themselves.
 
 ---
 
@@ -449,7 +455,7 @@ The VM kernel enforces this invariant during execution, surfacing the message:
 executed transaction neither changed the account state, nor consumed any notes
 ```
 
-This commonly catches transaction scripts that take a no-op branch — the script ran fine, but nothing in its body mutated state:
+This can catch a transaction script that takes a no-op branch when it consumes no notes and neither authentication nor fee payment changes the account state:
 
 ```rust
 #[tx_script]
@@ -458,16 +464,17 @@ fn run(arg: Word, account: &mut Account) {
     if should_settle == felt!(1) {
         account.settle();  // mutates state
     }
-    // WRONG: when should_settle != felt!(1), the script returns
-    //        without mutating state and the transaction is rejected.
+    // When should_settle != felt!(1), this body does not change state.
+    // The transaction is rejected if authentication and fee payment
+    // also leave state unchanged and there are no input notes.
 }
 ```
 
-The script executed correctly — Miden just refuses to admit transactions with no observable effect.
+The invariant applies to the complete transaction. A nonce increment during authentication or a fee paid from the account's vault can provide a state change even when the transaction script does nothing. On a chain with zero fees, the standard `NoAuth` component increments the nonce only for a new account or when its state has changed, so a no-op on an existing account can trigger this error.
 
 ### Solution
 
-Give every branch something to mutate, or record the no-op explicitly so the transaction has a state delta:
+If recording an attempted operation is part of your application's behavior, persist that record in the otherwise empty branch:
 
 ```rust
 #[tx_script]
@@ -481,6 +488,8 @@ fn run(arg: Word, account: &mut Account) {
     }
 }
 ```
+
+Storage or vault changes also require the account nonce to increase. Configure an authentication component that handles this, such as the standard `NoAuth` component in a test fixture. Avoid adding a storage write solely to satisfy this invariant when authentication or fee payment already changes state.
 
 Alternatively, if the flow naturally consumes a note, make sure the transaction request includes
 it. Pass the `Note` with optional `NoteArgs`; the client uses the presence of an inclusion proof in
@@ -506,7 +515,7 @@ let request = TransactionRequestBuilder::new()
 | Missing wallet | Asset operation fails | Add `BasicWallet` component |
 | Key mismatch | Zero balances | Use helper function for keys |
 | Note type | Wrong note visibility | Use 1 (Public) or 0 (Private) |
-| Empty transaction | "Neither changed account state nor consumed notes" | Mutate state in every path, or consume a note |
+| Empty transaction | "Neither changed account state nor consumed notes" | Check the complete transaction's state changes and input notes |
 
 ## Next Steps
 

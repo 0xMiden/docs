@@ -103,6 +103,8 @@ let sum = a.saturating_add(b); // safe addition
 let diff = a.saturating_sub(b); // no underflow
 let result = Felt::new(sum).unwrap();
 ```
+
+Saturating arithmetic prevents `u64` overflow, but the result can still be outside the field. The final `unwrap()` panics if `sum >= p`; handle that conversion explicitly when the inputs are not bounded.
 :::
 
 ### Advanced operations
@@ -117,8 +119,12 @@ let inv = f.inv();      // Panics if f == felt!(0)
 let result = f.exp(felt!(3));  // 7^3 mod p = 343
 
 // Squaring: f^2
-let square = f.square();  // 7^2 mod p = 49
+let square = f * f;       // 7^2 mod p = 49
 ```
+
+:::caution Squaring with SDK 0.14.0
+With `miden` 0.14.0 and `midenc` 0.10.0, `Felt::square()` is lowered to the VM's `pow2` operation, which computes `2^f`: `felt!(7).square()` returns 128. Use `f * f` to compute the square in this version.
+:::
 
 ## Word — Four field elements
 

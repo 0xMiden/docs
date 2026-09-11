@@ -14,7 +14,7 @@ Create a new Miden wallet account:
 
 ```bash title=">_ Terminal"
 miden client sync
-miden client new-wallet --deploy
+miden client new-wallet
 ```
 
 <details>
@@ -32,7 +32,7 @@ You can unset it with `miden client account --default none`.
 
 </details>
 
-The first command synchronizes the client with the latest network state. The second creates a basic wallet account with **private** storage and deploys it onchain, giving you full control while keeping your data confidential.
+The first command synchronizes the client with the latest network state. The second creates a basic wallet account with **private** storage locally. Its first successful transaction publishes the account onchain.
 
 ### View Your Account
 
@@ -48,7 +48,7 @@ miden client account
 ```text
 | Account ID | Kind | Type | Nonce | Status |
 |------------|------|------|-------|--------|
-| 0x970e3e4dbcd09b8035532edaa87bc9 | Regular | private | 1 | Tracked |
+| 0x970e3e4dbcd09b8035532edaa87bc9 | Regular | private | 0 | New |
 ```
 
 </details>
@@ -76,7 +76,7 @@ Account Information
 | Code Commitment   | 0x6a11161925930dae89cc24cbddf0d161cead39b0fe88c262d4e790cff35be01d      |
 | Vault Root        | 0x3e128c57f6cfa0d44ab1308994171af13cb513422add28d1916b3ff254fef82d      |
 | Storage Root      | 0x5f95d38174f10c8ce91a0202763b0813fdcbb2714704cda411af6483ebc8d012      |
-| Nonce             | 1                                                                         |
+| Nonce             | 0                                                                         |
 
 Assets:
 
@@ -113,31 +113,46 @@ If you have multiple accounts, set which one to use as default:
 miden client account --default <ACCOUNT_ID>
 ```
 
-### Deploy Your Account
+## Mint Your First Tokens
 
-The `miden client new-wallet --deploy` command above deploys your account onchain. You can verify the deployment by syncing and checking that its status is `Tracked`:
+Request test tokens for the wallet you just created. Replace `<ACCOUNT_ID>` with its account ID:
+
+```bash title=">_ Terminal"
+miden mint --target-account <ACCOUNT_ID> --amount 1000 --no-consume
+```
+
+The [testnet faucet](https://faucet.testnet.miden.io/) sends the tokens in a public note. The amount is in base units. `--no-consume` leaves the note for you to consume with `miden client` in the next step.
+
+After the faucet transaction is confirmed, sync and consume the note:
 
 ```bash title=">_ Terminal"
 miden client sync
-miden client account
+miden client consume-notes --account <ACCOUNT_ID>
 ```
 
-## Mint Your First Tokens
+With no note IDs specified, `consume-notes` consumes the notes available to that account. Public funding notes are discovered by syncing; you do not need to import a file. If the note is not available yet, wait a few seconds and sync again.
 
-Request tokens from the public testnet faucet:
+This first transaction publishes your wallet onchain and adds the tokens to its vault. Its protocol fee is paid from the native test tokens in the funding note, so the remaining balance is less than the requested amount.
 
-```bash title=">_ Terminal"
-miden mint --target-account <ACCOUNT_ID> --amount 1000
-```
-
-This sends a mint request to the [public testnet faucet](https://faucet.testnet.miden.io/) and automatically consumes the resulting note, depositing the tokens into your account.
-
-Display your balance:
+Once the transaction is confirmed, check your account and balance:
 
 ```bash title=">_ Terminal"
 miden client sync
 miden client account -s <ACCOUNT_ID>
 ```
+
+The account now has a nonzero nonce and a funded vault.
+
+<details>
+<summary>Using a downloaded funding note</summary>
+
+If you request tokens through the web faucet and download a note file, import it before running the sync and consume commands above:
+
+```bash title=">_ Terminal"
+miden client import <FUNDING_NOTE_FILE>
+```
+
+</details>
 
 ## Create a New Project
 
@@ -155,7 +170,7 @@ Creates a **Rust workspace** for developing, testing, and deploying Miden smart 
 
 ```bash title=">_ Terminal"
 # Using Yarn
-yarn create-miden-app
+yarn create miden-app
 # Using NPM
 npx create-miden-app
 ```

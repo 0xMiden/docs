@@ -82,7 +82,7 @@ let account = AccountBuilder::new(init_seed)
     .build()?;
 ```
 
-If the account will be reached by a **custom transaction script** — for example a scripted deploy, or a scripted interaction — you must also allowlist that script's root, or the network auth procedure rejects the transaction:
+If the initial deployment uses a **custom transaction script**, you must also allowlist that script's root, or the network auth procedure rejects the transaction. After deployment, users interact by sending notes; the public RPC rejects user-submitted transactions that directly update an existing network account.
 
 In that case, replace the earlier `let auth = ...` construction with this one:
 
@@ -100,7 +100,9 @@ let auth = AuthNetworkAccount::new(
 
 Building the account and adding it to the client store is **not** enough to register it onchain — an account only exists to the network once a committed transaction has advanced its state (nonce `0` → `1`). Submit a transaction against it to deploy it.
 
-Because `AuthNetworkAccount` bumps the nonce itself, an **empty, scriptless transaction is the simplest way** to register the account on a zero-fee development chain — a scriptless transaction needs no additional tx-script allowlist entry. Deploying with a custom transaction script also works, but then that script's root must be allowlisted as above. On a fee-charging chain, make sure the account can fund the transaction fee.
+Because `AuthNetworkAccount` bumps the nonce itself, an **empty, scriptless transaction** can register the account on a **zero-fee development chain**. It needs no additional tx-script allowlist entry. A custom deployment script must be allowlisted as above.
+
+On testnet, the first transaction must also pay a fee. One way to bootstrap the account is to consume an allowed funding note in that transaction. The account needs a component that can receive its assets, and the funding script must be both allowlisted and priced by the fee policy. Consuming that note already deploys the account; do not submit another empty deployment transaction afterward. The example below is only the zero-fee path.
 
 ```rust
 use miden_client::transaction::TransactionRequestBuilder;
@@ -116,8 +118,8 @@ client.sync_state().await?; // repeat until `tx_id` is committed
 
 Once the deploy transaction is committed, the network watches the account and will consume any allowlisted note addressed to it.
 
-:::note Scriptless vs. scripted deploy
-The scriptless deploy above is the minimal path. The [network transactions tutorial](../../tutorials/recipes/rust/network_transactions_tutorial.md) instead deploys with a **custom transaction script** and therefore allowlists that script's root, as shown above. Either works; use the scripted deploy if your contract needs initialization logic to run at deploy time.
+:::note Deployment on testnet
+The [network transactions tutorial](../../tutorials/recipes/rust/network_transactions_tutorial.md) adds `BasicWallet` and permits a P2ID funding note. Its initial funding consumption publishes the network account with count zero. Subsequent increments come from notes consumed by the network transaction builder.
 :::
 
 ## Inspecting a network account
@@ -153,7 +155,7 @@ const { txId, note } = await client.transactions.createNetworkNote({
 
 Use `buildNetworkNote(...)` if you want the built note without submitting it.
 
-The Web SDK can also build and deploy the account. Pair every application script with its fee, pass the fee-faucet ID, and install **all** returned components:
+The Web SDK can also build and deploy the account. Pair every application script with its fee, pass the fee-faucet ID, and install **all** returned components. This example uses an empty deployment transaction on a **zero-fee development chain**. On testnet, replace that empty transaction with an initial funding consumption as described above.
 
 ```typescript
 import {
@@ -185,7 +187,7 @@ await client.transactions.submit(
 );
 ```
 
-`createNetworkAuthComponents` returns the auth component plus the components backing its fee policy. Omitting any of them creates an incomplete account.
+`createNetworkAuthComponents` returns the auth component plus the components backing its fee policy. Omitting any of them creates an incomplete account. It also includes the standard configuration and fee-sponsorship note scripts in the allowlist. To use configuration notes to update the account, additionally install owner- or RBAC-controlled access components, as in the Rust example.
 
 ## Surface support
 

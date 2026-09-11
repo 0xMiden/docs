@@ -28,7 +28,7 @@ import {
 } from "fs";
 import { join, dirname, relative, posix } from "path";
 
-const [srcDir, destDir, ref = "v0.17.0-rc.1"] = process.argv.slice(2);
+const [srcDir, destDir, ref = "v0.17.0"] = process.argv.slice(2);
 if (!srcDir || !destDir || !existsSync(srcDir)) {
   console.error(`ingest-guardian: usage: node scripts/ingest-guardian.mjs <srcDocsDir> <destDir> [ref]; src not found: ${srcDir}`);
   process.exit(1);

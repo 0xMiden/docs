@@ -46,8 +46,6 @@ miden-core = "*"
 miden-protocol = "*"
 basic-wallet = { path = "../basic-wallet" }
 
-[package.metadata.miden.dependencies]
-basic-wallet = { wit = "../basic-wallet/target/generated-wit/" }
 ```
 
 ## Example: basic-wallet-tx-script

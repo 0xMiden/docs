@@ -9,7 +9,10 @@ description: "Create output notes, attach assets, add attachments, and compute r
 The `output_note` module creates and updates notes during a transaction.
 
 ```rust
-use miden::{output_note, Asset, NoteIdx, Tag, NoteType, Recipient};
+extern crate alloc;
+
+use alloc::vec::Vec;
+use miden::{output_note::{self, OutputNoteAssetsInfo}, Asset, NoteIdx, Tag, NoteType, Recipient};
 ```
 
 ## Create a note

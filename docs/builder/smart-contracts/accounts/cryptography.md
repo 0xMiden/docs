@@ -31,6 +31,11 @@ The function panics (proof generation fails) if the signature is invalid.
 
 :::info Where's the signature?
 `emit_falcon_sig_to_stack` requests the signature from the host, which loads it onto the advice stack. The Rust verifier is still named `rpo_falcon512_verify` for compatibility, but it uses Falcon-512 over Poseidon2. You don't pass the signature directly to the verifier.
+
+With the standard transaction host, generating a new signature is allowed only
+inside the authentication procedure, using a valid transaction summary. Outside
+authentication, supply the signature in the transaction's advice inputs before
+execution; the event can then load it for verification.
 :::
 
 ## Hashing

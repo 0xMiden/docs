@@ -86,9 +86,6 @@ miden-core = "*"
 miden-protocol = "*"
 counter-account = { path = "../counter-account" }
 
-# WIT for the account component this note calls, produced by building counter-account.
-[package.metadata.miden.dependencies]
-counter-account = { wit = "../counter-account/target/generated-wit/" }
 ```
 
 Build the contracts with `miden build` in dependency order, as shown below.
@@ -196,7 +193,7 @@ These imports provide:
 - **`StorageMap`**: Key-value storage within account storage slots
 
 :::note[`felt` vs `Felt`]
-`Felt` is the field element type representing values in the Goldilocks prime field (p = 2^64 - 2^32 + 1). `felt!(1)` creates a `Felt` from an integer literal and rejects out-of-range values at compile time. For runtime values, use the fallible `Felt::new(value)` and handle its `Result`.
+`Felt` is the field element type representing values in the Goldilocks prime field (p = 2^64 - 2^32 + 1). `felt!(1)` creates a `Felt` from an integer literal. A literal outside the field range causes a panic when evaluated. For runtime values, use the fallible `Felt::new(value)` and handle its `Result`.
 :::
 
 #### Contract Structure Definition

@@ -188,8 +188,9 @@ console.log(account.isFaucet());
 
 ```typescript
 // Returns the local copy if present; otherwise fetches from the network and stores it.
+// publicAccountId is the hex or bech32 ID of an account deployed on this network.
 const account = await client.accounts.getOrImport(
-  "mtst1arjemrxne8lj5qz4mg9c8mtyxg954483",
+  publicAccountId,
 );
 console.log("Nonce:", account.nonce().toString());
 ```
@@ -251,7 +252,7 @@ Associates valid Miden bech32 addresses with an account. The address is a protoc
 ```typescript
 // 1. By reference — fetches a public account from the network.
 await client.accounts.import("0x1234...");                           // hex
-await client.accounts.import("mtst1arjemrxne8lj5qz4mg9c8mtyxg954483"); // bech32
+await client.accounts.import(publicAccountBech32Id);                 // deployed account's bech32 ID
 
 // 2. From a previously exported file.
 await client.accounts.import({ file: accountFile });

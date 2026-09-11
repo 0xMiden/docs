@@ -17,7 +17,7 @@ Use the Rust APIs to construct standard notes in client or transaction-building 
 | P2IDE | You are sending to a specific account ID with a timelock and/or reclaim path. | `P2ideNote` | `miden::standards::notes::p2ide` |
 | SWAP | You are offering one asset and requiring a specific asset in return. | `SwapNote` | `miden::standards::notes::swap` |
 | PSWAP | You need a partially fillable swap note. | `PswapNote` | `miden::standards::notes::pswap` |
-| MINT | A faucet is minting an asset into a note. | `MintNote` | `miden::standards::notes::mint` |
+| MINT | You are requesting that a network faucet mint an asset and create a delivery note. | `MintNote` | `miden::standards::notes::mint` |
 | BURN | A faucet is burning an asset returned through a note. | `BurnNote` | `miden::standards::notes::burn` |
 
 For the note model itself, start with [What are Notes?](../notes/introduction). This page focuses on how the standards fit into builder workflows.

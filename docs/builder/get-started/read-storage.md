@@ -30,17 +30,19 @@ To run the code examples in this guide, you'll need to set up a development envi
 
 ## Reading from a Public Smart Contract
 
-Let's interact with a counter contract deployed on the Miden testnet. This contract maintains a simple counter value in a named storage map slot.
+Let's read a public counter contract already deployed on the Miden testnet. The examples below include its account ID, so you can query its storage without deploying a contract. This counter stores its value in a named storage map slot.
 
 ### Reading the Count of a Counter contract
 
+Run `cargo run --bin read-count` for Rust, or call `demo()` for TypeScript.
+
 ```rust title="integration/src/bin/read-count.rs"
-use integration::helpers::{counter_storage_slot, COUNTER_STORAGE_KEY};
 use miden_client::{
-    account::{Account, AccountId, StorageMapKey},
+    account::{Account, AccountId, StorageMapKey, StorageSlotName},
     builder::ClientBuilder,
     keystore::FilesystemKeyStore,
     rpc::Endpoint,
+    Felt, Word,
 };
 use miden_client_sqlite_store::ClientBuilderSqliteExt;
 use std::sync::Arc;
@@ -76,7 +78,7 @@ async fn main() -> anyhow::Result<()> {
 
     // A counter contract deployed on the Miden testnet. It is a public fixture and
     // may need updating after a new release.
-    let counter_account_id = AccountId::from_hex("0x6a1b2d59a9ebd3f1534cfb2fcf4d7e")?;
+    let counter_account_id = AccountId::from_hex("0x78ccf49bd142f8917edf7743e3e718")?;
 
     client.import_account_by_id(counter_account_id).await?;
 
@@ -86,13 +88,14 @@ async fn main() -> anyhow::Result<()> {
         .ok_or_else(|| anyhow::anyhow!("Account not found"))?
         .try_into()?;
 
-    // Read the count from the counter account's named storage map slot. Both the slot
-    // name and the map key come from the project's `integration/src/helpers.rs`.
+    // Read the count using the contract's storage slot name and map key.
+    let slot_name = StorageSlotName::new("counter_account::counter_contract::count_map")?;
+    let counter_key = Word::new([Felt::ZERO, Felt::ZERO, Felt::ZERO, Felt::ONE]);
     let count = counter_account
         .storage()
         .get_map_item(
-            &counter_storage_slot()?,
-            StorageMapKey::new(COUNTER_STORAGE_KEY),
+            &slot_name,
+            StorageMapKey::new(counter_key),
         )?;
 
     println!("Count: {}", count[0].as_canonical_u64());
@@ -110,7 +113,7 @@ export async function demo() {
 
     // A counter contract deployed on the Miden testnet. It is a public fixture and
     // may need updating after a new release.
-    const counterAccountId = "0x6a1b2d59a9ebd3f1534cfb2fcf4d7e";
+    const counterAccountId = "0x78ccf49bd142f8917edf7743e3e718";
 
     // Fetch the counter account (imports it into the local store if needed).
     const counter = await client.accounts.getOrImport(counterAccountId);
