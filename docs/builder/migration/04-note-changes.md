@@ -1,177 +1,171 @@
 ---
 sidebar_position: 4
 title: "Note Changes"
-description: "Note identity split, multiple attachments, metadata reshape, nullifier, and capacity changes in v0.15"
+description: "Standard notes gain typed builders, the per-note asset limit drops from 64 to 16, and mint/burn scripts are unified"
 ---
 
 # Note Changes
 
 :::warning Breaking Change
-Note identity is split in two: the old `NoteId` (recipient + assets) becomes `NoteDetailsCommitment`, and a brand‑new `NoteId` also commits to metadata. Notes now carry multiple attachments off the metadata (`NoteMetadata` → `PartialNoteMetadata`), and nullifiers fold in the metadata word and attachments commitment. None of these values roundtrip with 0.14 — recompute and re‑persist note ids and nullifiers.
+Every standard note changed shape. `P2idNote`, `P2ideNote`, `SwapNote`, `MintNote`, and `BurnNote` were marker types with a `create(..)` associated function returning a `Note`; they are now real structs built with a typed builder and converted with `.into()`. Separately, **`MAX_ASSETS_PER_NOTE` dropped from 64 to 16**, so any note packing more than 16 assets now fails to build.
 :::
 
+## Quick Fix
+
+```rust
+// Before (0.15)
+let note = P2idNote::create(
+    sender, target, vec![asset], NoteType::Public, attachments, &mut rng,
+)?;
+
+// After (0.16)
+use miden_standards::note::P2idNote;
+
+let note: Note = P2idNote::builder()
+    .sender(sender)
+    .target(target)
+    .assets(vec![asset])
+    .note_type(NoteType::Public)
+    .generate_serial_number(&mut rng)
+    .build()?
+    .into();
+```
+
+If you encounter errors, continue reading for detailed migration steps.
+
 ---
 
-## `NoteId` → `NoteDetailsCommitment`; new `NoteId` commits to metadata
+## Summary
+
+In 0.15 each standard note was a unit struct — `pub struct P2idNote;` — with a `create` associated function that took every parameter positionally and returned a finished `Note`. In 0.16 each is a real struct holding its fields, built through a `bon` builder and converted to a `Note` with `Into`.
+
+The cost is that every call site changes. The benefit is worth more than a mechanical rewrite, so it is worth pausing on before you reach for search-and-replace: each standard note is now a distinct type, which means your own functions can take a `P2idNote` or a `SwapNote` instead of a bare `Note`. What used to be a runtime check — is this really a P2ID note? — becomes a signature the compiler enforces, and the conversion to `Note` happens once, at the boundary where you actually need one. Optional parameters also stop being positional, and the typed value is inspectable before you convert it.
+
+Watch the asset limit separately. Nothing about it is visible at compile time, so your build stays green and only notes carrying more than 16 assets fail, at the point they are built.
+
+---
+
+## Standard notes are built with typed builders
 
 ### Summary
 
-The 0.14 `NoteId` (a commitment over recipient + assets only) is renamed to **`NoteDetailsCommitment`**. A brand‑new **`NoteId`** is introduced that hashes the details commitment together with the note metadata commitment, so the public note ID now changes when the note's metadata (sender, type, tag, attachments) changes.
-
-```text
-NoteDetailsCommitment = hash(NOTE_RECIPIENT_DIGEST || NOTE_ASSETS_COMMITMENT)    // == old NoteId
-NoteId                = hash(NOTE_DETAILS_COMMITMENT || NOTE_METADATA_COMMITMENT) // new
-```
+Each standard note struct now exposes `builder()` and converts into `Note` via `From` / `Into`.
 
 ### Affected Code
 
 ```rust
-// 0.15 — new API:
-use miden_protocol::note::{NoteDetailsCommitment, NoteId};
-let details_commitment = NoteDetailsCommitment::new(&recipient, &assets);
-let id = NoteId::new(details_commitment, &metadata);   // the real NoteId mixes in metadata
-// On a built note: note.id() / note.details_commitment().
+// Before (0.15)
+pub fn create<R: FeltRng>(
+    sender: AccountId,
+    target: AccountId,
+    assets: Vec<Asset>,
+    note_type: NoteType,
+    attachments: NoteAttachments,
+    rng: &mut R,
+) -> Result<Note, NoteError>
 ```
-`NoteDetails::commitment()` now returns a `NoteDetailsCommitment` (not the public note id, which requires metadata).
-
-### Migration Steps
-
-1. Rename any value you treated as a "note id without metadata" to `NoteDetailsCommitment`.
-2. Replace `NoteId::new(recipient, asset_commitment)` with `NoteDetailsCommitment::new(&recipient, &assets)`.
-3. To obtain the public `NoteId`, call `note.id()`, or `NoteId::new(details_commitment, &metadata)`.
-4. Recompute and re‑persist any stored note IDs — 0.14 ids do not roundtrip, and an id now changes if metadata changes.
-
----
-
-## `NoteMetadata` → `PartialNoteMetadata`; multiple attachments per note
-
-### Summary
-
-The metadata types were renamed and reshuffled to support **multiple attachments per note** (up to `NoteAttachments::MAX_COUNT` = 4):
-
-| 0.14 | 0.15 |
-| --- | --- |
-| `NoteMetadata` (sender/type/tag + single attachment) | `PartialNoteMetadata` (sender/type/tag only) |
-| `NoteMetadataHeader` (the on‑stack metadata word) | `NoteMetadata` (metadata word + attachment headers + attachments commitment) |
-| `NoteAttachment` (single, `with_attachment`) | `NoteAttachments` (collection, `with_attachments`) |
-
-`Note::new(assets, metadata, recipient)` now takes a **`PartialNoteMetadata`**; a new `Note::with_attachments(assets, partial_metadata, recipient, attachments)` carries the attachments. The single `NoteMetadata::with_attachment` / `.attachment()` API is gone.
-
-### Affected Code
 
 ```rust
-// 0.15 — new API:
-use miden_protocol::note::{Note, PartialNoteMetadata, NoteType, NoteAttachments};
-let partial = PartialNoteMetadata::new(sender, NoteType::Public).with_tag(tag);
-let attachments = NoteAttachments::new(vec![attachment_a, attachment_b])?;   // 0..=4
-let note = Note::with_attachments(assets, partial, recipient, attachments);
-// (use Note::new(assets, partial, recipient) for a note with no attachments)
-let found = note.attachments().find(scheme);
+// After (0.16)
+let p2id = P2idNote::builder()
+    .sender(sender)
+    .target(target)
+    .assets(vec![asset])          // or .asset(x), repeatable
+    .note_type(NoteType::Public)
+    .generate_serial_number(&mut rng)   // or .serial_number(word)
+    .build()?;
+let note: Note = p2id.into();
 ```
+
+Note two naming details that are easy to get wrong: the setter is `serial_number`, not `serial_num`, and `generate_serial_number(&mut rng)` is the direct replacement for the old `rng` parameter.
+
+`P2ideNote` takes its optional parameters as optional setters rather than positionally:
+
+```rust
+let p2ide = P2ideNote::builder()
+    .sender(sender)
+    .target(target)
+    .assets(vec![asset])
+    .note_type(NoteType::Private)
+    .serial_number(serial_number)
+    .reclaimer(reclaimer_account_id)        // optional; defaults to the sender
+    .reclaim_height(BlockNumber::from(n))   // optional
+    .timelock_height(BlockNumber::from(m))  // optional
+    .build()?;
+```
+
+`SwapNote` follows the same pattern. In 0.15 `SwapNote::create` returned a `(Note, NoteDetails)` tuple carrying the payback details; in 0.16 you build the `SwapNote` and read its parts from the typed value.
+
+The same builder treatment applies to `MintNote`, `BurnNote`, `PswapNote`, and `TxFeeNote`, along with the configuration notes (`AllowlistConfigNote`, `OwnerConfigNote`, `FaucetMetadataConfigNote`, `NetworkAccountConfigNote`, `FaucetPolicyConfigNote`, `MinBurnAmountConfigNote`).
 
 ### Migration Steps
 
-1. Search/replace the *type* used to construct a note from `NoteMetadata` to `PartialNoteMetadata`.
-2. Replace `NoteMetadataHeader` with `NoteMetadata` (the word‑shaped metadata is `NoteMetadata::to_metadata_word()`).
-3. Replace `.with_attachment(a)` with a `NoteAttachments::new(vec![...])` collection and `Note::with_attachments(...)`.
-4. Replace single `metadata.attachment()` reads with `note.attachments().get(i)` / `.find(scheme)` / `note.has_attachments()`.
+1. Replace every `XNote::create(..)` call with the corresponding `XNote::builder()` chain ending in `.build()?`, then `.into()` wherever a `Note` is required.
+2. Replace the trailing `rng` argument with `.generate_serial_number(&mut rng)`.
+3. Use `.assets(..)` for a collection or `.asset(..)` repeatedly for individual assets.
+4. For `P2ideNote`, set only the optional parameters you actually need. `reclaimer` still defaults to the sender, so existing "sender can reclaim" behaviour is preserved without changes.
+5. Push the `.into()` outward while you are here. Any function of yours that only ever handles one kind of note can take the typed note instead of a `Note`, which turns a runtime check into a compile-time guarantee; convert once, where a `Note` is genuinely needed.
 
----
+### Common Errors
 
-## Attachment MASM: `set_*` → `add_*`; `get_metadata` drops attachments
-
-### Summary
-
-Because a note can now hold several attachments, the kernel/protocol attachment procedures were rewritten:
-
-- `output_note::set_attachment` → **`add_attachment`** (and `set_word_attachment` → `add_word_attachment`, `set_array_attachment` → `add_attachment_from_memory`). They *append* instead of overwriting, and the stack signature dropped the `attachment_kind` field.
-- `note::extract_attachment_info_from_metadata` → **`metadata_into_attachment_schemes`**, returning the four attachment scheme markers.
-- All `get_metadata` procedures (`active_note`, `input_note`, `output_note`) **no longer return attachments** — they return just the single `METADATA` word.
-
-### Affected Code
-
-```masm
-# 0.15 — new API:
-# Operand Stack: [attachment_scheme, ATTACHMENT_COMMITMENT, note_idx]
-exec.output_note::add_attachment
-exec.active_note::get_metadata          # => [METADATA]
-exec.note::metadata_into_attachment_schemes
-# => [attachment_0_scheme, attachment_1_scheme, attachment_2_scheme, attachment_3_scheme]
-```
-
-### Migration Steps
-
-1. Rename `set_attachment` / `set_word_attachment` / `set_array_attachment` to `add_attachment` / `add_word_attachment` / `add_attachment_from_memory`, and drop the `attachment_kind` operand.
-2. Replace `extract_attachment_info_from_metadata` with `metadata_into_attachment_schemes`.
-3. Audit every `get_metadata` consumer: it now leaves only `[METADATA]` — remove the extra cleanup that handled the attachment word.
-
----
-
-## `NoteType` encoding 2‑bit → 1‑bit; `Private` is the default
-
-### Summary
-
-`NoteType` dropped from a 2‑bit encoding to 1 bit. The numeric encodings flipped and `NoteType::Private` is now the `#[default]`. Anything that serialized a note type, packed it into a tag, or relied on the old `Public = 0b01` / `Private = 0b10` values changes.
-
-| | 0.14 | 0.15 |
+| Error Message | Cause | Solution |
 | --- | --- | --- |
-| `Public` | `0b01` | `1` |
-| `Private` | `0b10` | `0` (default) |
-
-### Migration Steps
-
-1. Drop any hard‑coded `0b01` / `0b10` note‑type bit literals; use the `NoteType` variants.
-2. Re‑derive note tags / metadata words that packed the old 2‑bit type (`SwapNote::build_tag`, for example, now uses the 1‑bit encoding — script‑root bits 14 → 15).
-3. If you relied on a particular default, note it is now `Private`.
+| `no function or associated item named create` | Replaced by the builder | Use `XNote::builder()`. |
+| `no method named serial_num` | Setter renamed | Use `serial_number` or `generate_serial_number`. |
+| `expected Note, found P2idNote` | The builder yields the typed note | Add `.into()`. |
+| `a P2ID note must contain at least one asset` | Built with no assets | Add at least one asset. |
 
 ---
 
-## Nullifier now includes metadata and attachments commitment
+## `MAX_ASSETS_PER_NOTE` dropped from 64 to 16
 
 ### Summary
 
-The note nullifier hash now folds in the note's **metadata word** and **attachments commitment** in addition to the serial number, script root, storage commitment, and asset commitment. `Nullifier::new` gained two parameters and the `From<&NoteDetails>` conversion was replaced by `Nullifier::from_details_and_metadata`, because a nullifier can no longer be computed from details alone.
+The protocol limit on assets carried by a single note fell from 64 to 16.
 
 ### Affected Code
 
-```rust
-// 0.15 — new API:
-let nf = Nullifier::new(
-    script_root, storage_commitment, asset_commitment, serial_num,
-    metadata.to_metadata_word(),       // new
-    metadata.attachments_commitment(), // new
-);
-let nf2 = Nullifier::from_details_and_metadata(&note_details, &metadata);
+```diff
+- pub const MAX_ASSETS_PER_NOTE: usize = 64;
++ pub const MAX_ASSETS_PER_NOTE: usize = 16;
 ```
 
+This is enforced by `NoteAssets::new`, so it surfaces as a `NoteError` at build time rather than a compile error.
+
 ### Migration Steps
 
-1. Thread the metadata word and attachments commitment into every `Nullifier::new` call.
-2. Replace `Nullifier::from(&details)` / `(&details).into()` with `Nullifier::from_details_and_metadata(&details, &metadata)`.
-3. Recompute and re‑persist nullifiers — 0.14 nullifiers will not match.
+1. Audit any code path that batches assets into a single note and cap it at 16.
+2. If you previously relied on packing up to 64 assets, split the payload across multiple notes.
+3. If you compute a batch size from the constant rather than hard-coding it, no change is needed beyond a rebuild.
 
 ---
 
-## `MAX_ASSETS_PER_NOTE` 255 → 64; `NOTE_MEM_SIZE` 3072 → 1024
+## `MINT` and `BURN` are unified across faucet kinds
 
 ### Summary
 
-The per‑note asset cap was reduced from 255 to **64**, and the kernel note memory region (`NOTE_MEM_SIZE`) shrank from 3072 to **1024**. Notes carrying more than 64 assets now fail to build, and MASM that hard‑codes note‑memory offsets against the old 3072‑word region must be reworked.
+One `mint.masm` and one `burn.masm` script now serve both fungible and non-fungible faucets, with the variant carried in the note storage. **The script roots changed**, so any hard-coded or cached root is now wrong.
 
 ### Migration Steps
 
-1. Cap note asset lists at 64; split larger payloads across multiple notes.
-2. Audit any MASM that indexes into the note memory region against the new `NOTE_MEM_SIZE = 1024`.
+1. Recompute and re-store any cached standard note script roots.
+2. Remove per-faucet-kind branching that selected between separate mint or burn scripts.
 
 ---
 
-## `SwapNote`/`MintNote` storage trimmed; `PSWAP` added
+## Other note changes
 
-### Summary
+- **`PswapNote` (partial swap)** gained a minimum-fill parameter, and its fields were renamed.
+- **`NoteFile` was reworked and moved to `miden-standards`**, with variants keyed on `NoteId`, `ExpectedNote`, and `Committed`. This mostly affects client code — see [Client Changes](./client-changes).
+- **`NoteTag`** moved under `miden::standards::note::note_tag` in MASM. In the released `0.16.0-rc` line it is still reachable at `miden::standards::note_tag`.
 
-Unused fields were removed from standard note storage: `payback_attachment` from `SwapNoteStorage` and `attachment` from `MintNoteStorage`. A new **`PSWAP`** (partial swap) note and `PswapNote` API (with a `PswapAttachment` scheme and `payback_note` / `remainder_note` discovery helpers) supports partial‑fill asset exchange with remainder re‑creation.
+---
 
-### Migration Steps
+## Common Errors
 
-1. Stop reading/writing the removed `payback_attachment` / `attachment` storage fields on swap/mint notes.
-2. Use `PswapNote` for partial‑fill swaps; reconstruct private paybacks via `PswapNote::payback_note` / `remainder_note`.
+| Error Message | Cause | Solution |
+| --- | --- | --- |
+| `no function or associated item named create` | Notes use builders now | Rewrite with `XNote::builder()`. |
+| `NoteError` about exceeding asset limits | Limit is now 16 | Split across multiple notes. |
+| Note script root mismatch for mint or burn | Scripts were unified | Recompute the roots. |
+| `expected Note, found MintNote` | Builder returns the typed note | Add `.into()`. |

@@ -1,324 +1,169 @@
 ---
 sidebar_position: 10
-title: "Rust SDK & Compiler Changes"
-description: "miden SDK 0.12 → 0.13 (the protocol-v0.15-aligned release): #[component] becomes a trait + storage struct, a required miden-project.toml manifest, explicit #[account(...)] declarations, and tx-kernel binding changes"
+title: "Rust Contract SDK & Compiler"
+description: "Changes to the miden crate and midenc for developers writing smart contracts in Rust"
 ---
 
-# Rust SDK & Compiler Changes
+# Rust Contract SDK & Compiler
 
-This section covers the `miden` Rust SDK and compiler (the `miden` crate and `midenc`), used to write Miden smart contracts, notes, and transaction scripts in Rust. The relevant step is the SDK's **`0.12` → `0.13`** release, which is the line aligned with VM `0.23` / protocol `0.15`. (The `miden` SDK carries its own version number, distinct from the protocol and client crate versions used elsewhere in this guide.)
+:::info Which "Rust SDK"?
+Two different things get called the Rust SDK. This page is about the **`miden` crate and `midenc`**, used to write account components, notes, and transaction scripts *in Rust* and compile them to MASM. The `miden-client` library — used to build applications that talk to a Miden node — is covered in [Client Changes](./client-changes).
+:::
 
 :::warning Breaking Change
-The SDK macros were reworked: `#[component]` is now a **trait + a storage struct**, a `miden-project.toml` manifest is **required**, accounts must be declared explicitly with `#[account(...)]`, and the tx-kernel bindings were aligned with protocol v0.15. The macro changes touch **every account component, every authentication component, and every note/tx-script that references an account.** Work through the sections in order: rewrite the component (1), add the project manifest (2), update account references (3), then the bindings (4).
+Component trait methods must now be marked `#[account_procedure]` to be part of the account interface, and `#[account(..)]` generates one trait per interface instead of inherent methods. Note also that the contract toolchain **lags the rest of the 0.16 line**: it builds against protocol `0.16.0-alpha.4` and VM `0.25`, not the protocol `0.16.0-rc` and VM `0.29.1` that the client and node use.
+:::
+
+## Quick Fix
+
+```rust
+// Before
+#[component]
+trait BasicWallet {
+    fn receive_asset(&mut self, asset: Asset);
+}
+
+// After
+#[component]
+trait BasicWallet {
+    #[account_procedure]
+    fn receive_asset(&mut self, asset: Asset);
+}
+```
+
+If you encounter errors, continue reading for detailed migration steps.
+
+---
+
+## Versions
+
+The contract toolchain versions independently of the rest of the stack, and in this release it is genuinely behind.
+
+| Component | Version |
+| --- | --- |
+| `midenc` / compiler workspace | 0.10.0 |
+| `miden` contract SDK crate (and `miden-base-sys`, `miden-stdlib-sys`, `miden-sdk-alloc`) | 0.14.0 |
+| Protocol it builds against | `0.16.0-alpha.4` |
+| VM crates it builds against | 0.25 |
+| MSRV | 1.97 (plus a nightly toolchain) |
+
+Two consequences worth planning around:
+
+- The MSRV is **1.97**, higher than the 1.96 the rest of the stack requires. Your toolchain must satisfy the highest of the two.
+- Because the toolchain pins protocol `0.16.0-alpha.4` and VM `0.25`, contract code compiled with it sees an earlier snapshot of the 0.16 protocol surface than your client does. The MAST and package wire formats are compatible across VM 0.25 and 0.29.1, so artifacts still load; the skew is in the protocol API surface, not serialization.
+
+---
+
+## Component methods must be marked `#[account_procedure]`
+
+### Summary
+
+A `#[component]` trait's methods are no longer implicitly part of the account interface. Every method that must be callable from a note script, a transaction script, a foreign procedure invocation, or a sibling component now needs `#[account_procedure]` **on the trait declaration**, not on the `impl`.
+
+`#[auth_script]` and `#[account_procedure]` cannot be combined in one component. An authentication component keeps using `#[auth_script]` alone; mixing them is a compile error. Like `#[auth_script]`, `#[account_procedure]` is recognised by the enclosing `#[component]` macro and needs no import.
+
+### Affected Code
+
+```rust
+// Before
+use miden::{Asset, NoteIdx, component, component_storage, output_note};
+
+#[component]
+trait BasicWallet {
+    fn receive_asset(&mut self, asset: Asset);
+    fn move_asset_to_note(&mut self, asset: Asset, note_idx: NoteIdx);
+}
+```
+
+```rust
+// After
+use miden::{Asset, NoteIdx, NoteType, Recipient, Tag, component, component_storage, output_note};
+
+#[component]
+trait BasicWallet {
+    #[account_procedure]
+    fn receive_asset(&mut self, asset: Asset);
+
+    #[account_procedure]
+    fn move_asset_to_note(&mut self, asset: Asset, note_idx: NoteIdx);
+
+    #[account_procedure]
+    fn create_note(&mut self, tag: Tag, note_type: NoteType, recipient: Recipient) -> NoteIdx;
+}
+```
+
+The `impl` block is unchanged — the attribute is not repeated there.
+
+### Migration Steps
+
+1. For each `#[component] trait`, add `#[account_procedure]` above every method called from a note, a transaction script, FPI, or a sibling component.
+2. Leave authentication components alone. They keep `#[auth_script]` and must not gain `#[account_procedure]`.
+3. Purely internal helper methods can stay unmarked.
+
+:::caution The shipped templates disagree with this rule
+The `cargo miden new` account template declares its method without `#[account_procedure]` while the sibling note and tx-script templates call it, and the full-project scaffold has the same gap. The repository's own `examples/counter-contract` does mark them. The template tests only build, never execute, so the gap is not caught by CI. If you scaffold a new project, add the attribute yourself rather than trusting the generated code.
 :::
 
 ---
 
-## `#[component]` is now a trait + a storage struct
+## `#[account(..)]` generates one trait per interface
 
 ### Summary
 
-`#[component]` no longer applies to a `struct` or an inherent `impl`. An account component is now three pieces:
+`#[account(..)]` used to generate the referenced component's methods as **inherent** methods on the wrapper struct. It now generates **one trait per referenced interface**, named after the interface, and implements it for the wrapper. This lets two components exporting the same method name coexist on one account.
 
-1. a `#[component_storage]` struct holding the `#[storage(...)]` fields,
-2. a `#[component]` **trait** declaring the API (the trait name yields the WIT interface), and
-3. a `#[component] impl Trait for Storage` block providing the behavior.
-
-Method receivers (`&self` / `&mut self`) and method bodies are unchanged.
+Most single-component call sites are unchanged, but two situations break.
 
 ### Affected Code
 
-Before (`0.12`):
+The wrapper struct may no longer share its name with a generated trait:
 
 ```rust
-use miden::{component, felt, Felt, StorageMap, Word};
+// Before — compiled
+#[account(counter_contract::CounterContract)]
+struct CounterContract;
 
-#[component]
-struct CounterContract {
-    #[storage(description = "counter contract storage map")]
-    count_map: StorageMap<Word, Felt>,
-}
+// After — rename the wrapper
+#[account(counter_contract::CounterContract)]
+struct Counter;
 
-#[component]
-impl CounterContract {
-    pub fn get_count(&self) -> Felt {
-        let key = Word::new([felt!(0), felt!(0), felt!(0), felt!(1)]);
-        self.count_map.get(key)
-    }
-
-    pub fn increment_count(&mut self) -> Felt {
-        let key = Word::new([felt!(0), felt!(0), felt!(0), felt!(1)]);
-        let new_value = self.count_map.get(key) + felt!(1);
-        self.count_map.set(key, new_value);
-        new_value
-    }
-}
-```
-
-After (`0.13`):
-
-```rust
-use miden::{component, component_storage, felt, Felt, StorageMap, Word};
-
-// 1. storage fields move to a `#[component_storage]` struct
-#[component_storage]
-struct CounterContractStorage {
-    #[storage(description = "counter contract storage map")]
-    count_map: StorageMap<Word, Felt>,
-}
-
-// 2. the API becomes a `#[component]` trait (its name is the WIT interface)
-#[component]
-trait CounterContract {
-    fn get_count(&self) -> Felt;
-    fn increment_count(&mut self) -> Felt;
-}
-
-// 3. the behavior is a `#[component] impl Trait for Storage` block
-#[component]
-impl CounterContract for CounterContractStorage {
-    fn get_count(&self) -> Felt {
-        let key = Word::new([felt!(0), felt!(0), felt!(0), felt!(1)]);
-        self.count_map.get(key)
-    }
-
-    fn increment_count(&mut self) -> Felt {
-        let key = Word::new([felt!(0), felt!(0), felt!(0), felt!(1)]);
-        let new_value = self.count_map.get(key) + felt!(1);
-        self.count_map.set(key, new_value);
-        new_value
-    }
-}
-```
-
-**Authentication components migrate the same way.** `#[auth_script]` was already required in `0.12`; in `0.13` it simply moves onto the trait method declaration (the `impl` method no longer repeats it):
-
-```rust
-// before (0.12): inherent impl
-#[component]
-struct AuthComponent;
-#[component]
-impl AuthComponent {
-    #[auth_script]
-    pub fn auth_procedure(&mut self, _arg: Word) { /* ... */ }
-}
-
-// after (0.13): trait + storage, `#[auth_script]` on the trait method
-#[component_storage]
-struct AuthComponentStorage;
-#[component]
-trait AuthComponent {
-    #[auth_script]
-    fn auth_procedure(&mut self, _arg: Word);
-}
-#[component]
-impl AuthComponent for AuthComponentStorage {
-    fn auth_procedure(&mut self, _arg: Word) { /* ... */ }
-}
-```
-
-### Migration Steps
-
-1. Move each component's `#[storage(...)]` fields into a `#[component_storage]` struct.
-2. Declare the API as a `#[component] trait` (the trait name becomes the WIT interface).
-3. Provide the behavior in a `#[component] impl Trait for Storage` block; drop the `pub` on the method bodies.
-4. For auth components, move `#[auth_script]` from the `impl` method onto the trait method declaration.
-
----
-
-## `miden-project.toml` is now a required file
-
-### Summary
-
-`0.13` introduces a dedicated project manifest, `miden-project.toml`, placed next to `Cargo.toml` at the crate root. The Miden-specific configuration that previously lived in `Cargo.toml` `[package.metadata.*]` now lives here, and the proc-macros read it to resolve the WIT interface name, the project kind, and any FPI/sibling dependencies. **Building a `0.13` project without it fails** (for components, with an undefined `::init` link error).
-
-### Affected Code
-
-Create `miden-project.toml` like this (account component without dependencies):
-
-```toml title="miden-project.toml"
-[package]
-name = "counter-contract"   # crate name; kebab-case
-version = "0.1.0"           # project version; supplies the WIT `@version`
-
-[lib]
-kind = "account-component"  # project kind: "account-component" | "note" | "tx-script"
-# Full WIT id: miden:<package>/<interface>@<version>
-#   <package>   = the kebab-cased [package].name
-#   <interface> = the kebab-cased `#[component]` trait name  (here: `CounterContract`)
-#   <version>   = the [package].version above
-namespace = "miden:counter-contract/counter-contract@0.1.0"
-
-[dependencies]
-miden-core = "*"
-miden-protocol = "*"
-
-# account components only: which account types may host this component
-[package.metadata.miden]
-supported-types = ["RegularAccountUpdatableCode"]
-```
-
-Walking through the fields:
-
-- **`[package]`** — `name` and `version`. The version feeds the `@version` suffix of the WIT id, so bumping it changes the component's interface id.
-- **`[lib].kind`** — the project kind: `account-component`, `note`, or `tx-script`.
-- **`[lib].namespace`** — the full `miden:<package>/<interface>@<version>` WIT id. The **interface segment must equal the kebab-cased `#[component]` trait name**; a mismatch fails to link with an undefined `::init`. (For `note`/`tx-script` projects, the interface segment is the project's own name rather than a component trait.)
-- **`[dependencies]`** — the Miden crates the project links against (`miden-core`, `miden-protocol`), plus any FPI/sibling dependency packages by `path` (see the next section).
-- **`[package.metadata.miden].supported-types`** — account components only.
-
-:::caution Storage-slot caution
-Storage slot names derive from the `[lib].namespace` interface segment (which mirrors the component trait name), and slot names feed `StorageSlotId` derivation. Renaming the component trait (and updating `[lib].namespace` to match) **re-keys the storage slot ids of an already-deployed component**. Keep the trait name stable across upgrades of a live component.
-:::
-
-For a project that calls another account/component (FPI or sibling), add the dependency in both `[dependencies]` (the package) and `[package.metadata.miden.dependencies]` (its generated WIT):
-
-```toml title="miden-project.toml"
-[dependencies]
-miden-core = "*"
-miden-protocol = "*"
-basic-wallet = { path = "../basic-wallet" }
-
-# the dependency's generated WIT, used to generate the call bindings
-[package.metadata.miden.dependencies]
-basic-wallet = { wit = "../basic-wallet/target/generated-wit/" }
-```
-
-The `[package.metadata.miden.dependencies].<name>.wit` entry is what the macros read to generate the typed call bindings, and it is the **same entry used by note scripts, by account components doing FPI, and by sibling component calls**.
-
-### Migration Steps
-
-1. Add a `miden-project.toml` next to `Cargo.toml` with `[package]`, `[lib].kind`, and `[lib].namespace`.
-2. Set the `[lib].namespace` interface segment to the kebab-cased `#[component]` trait name.
-3. Move any `[package.metadata.*]` Miden config out of `Cargo.toml` into this file.
-4. For account components, list `supported-types`. For FPI/sibling calls, add the dependency in `[dependencies]` and its generated WIT under `[package.metadata.miden.dependencies]`.
-
----
-
-## Accounts: declare `#[account(...)]` explicitly with an interface
-
-### Summary
-
-The auto-generated `crate::bindings::Account` struct is gone. Declare the account explicitly with `#[account(...)]` and use that type as the note/tx-script entrypoint account parameter. The dependency reference now **requires the exported WIT interface** (kebab-cased and validated): write `#[account(basic_wallet::BasicWallet)]`, not `#[account(basic_wallet)]`.
-
-### Affected Code
-
-Before (`0.12`):
-
-```rust
-use miden::{active_note, note, AccountId, Word};
-use crate::bindings::Account; // auto-generated
-
-#[note]
-struct P2idNote {
-    target_account_id: AccountId,
-}
-
-#[note]
-impl P2idNote {
-    #[note_script]
-    pub fn script(self, _arg: Word, account: &mut Account) {
-        for asset in active_note::get_assets() {
-            account.receive_asset(asset);
-        }
-    }
-}
-```
-
-After (`0.13`):
-
-```rust
-use miden::{account, active_note, note, AccountId, Word};
-
-// declare the native account explicitly; pick the package's WIT interface
-#[account(basic_wallet::BasicWallet)]
-pub struct Wallet;
-
-#[note]
-struct P2idNote {
-    target_account_id: AccountId,
-}
-
-#[note]
-impl P2idNote {
-    #[note_script]
-    pub fn script(self, _arg: Word, account: &mut Wallet) {
-        for asset in active_note::get_assets() {
-            account.receive_asset(asset);
-        }
-    }
-}
-```
-
-The same `#[account(...)]` type serves two roles. Passed to a `#[note]`/`#[tx_script]` entrypoint it is the transaction's native (active) account. Constructed with `new(account_id)` it is a **foreign account caller**, whose method calls are routed through `execute_foreign_procedure` (FPI):
-
-```rust
-let counter = CounterContract::new(counter_account_id);
+let counter = Counter::new(counter_account_id);
 let count = counter.get_count();
 ```
 
-**FPI is not limited to note/tx scripts — an account component can call another account through FPI too.** Declare the `#[account(...)]` wrapper in the component crate (and the dependency in `miden-project.toml`) and use it from inside the `#[component] impl`:
+Cross-module call sites need the generated trait in scope. A `#[note]` or `#[tx_script]` entrypoint in the same module sees it automatically; a call site in a different module needs to import the trait, which is named after the interface:
 
 ```rust
-#[account(callee_account::CounterContract)]
-struct CalleeAccount;
-
-#[component]
-impl CallerAccount for CallerAccountStorage {
-    fn read_foreign_count(&self, callee_account_id: AccountId) -> Felt {
-        let callee = CalleeAccount::new(callee_account_id);
-        callee.get_count(key)
-    }
-}
+use crate::BasicWallet;   // the generated trait, not the wrapper struct
 ```
 
 ### Migration Steps
 
-1. Remove `use crate::bindings::Account;` and any reliance on the auto-generated `Account`.
-2. Declare each account explicitly with `#[account(package::Interface)]` (kebab-cased exported interface, not just the package name).
-3. Use that type as the `&mut` account parameter of your note/tx-script entrypoints.
-4. For FPI, construct the same type with `new(account_id)` and add the callee as a dependency in `miden-project.toml`.
+1. Rename any wrapper struct that collides with its interface name.
+2. Import the generated trait at cross-module call sites.
 
 ---
 
-## Tx-kernel bindings: protocol v0.15
+## Other changes
 
-### Summary
+- **Transaction-kernel bindings were renamed and moved** to track the protocol 0.16 surface, and several were removed.
+- **Kernel scalars are typed** rather than raw `Felt`, so values that used to be interchangeable now need explicit conversion.
+- **`AssetAmount`** is a validated fungible-amount type, matching the protocol and client surfaces.
+- **`miden-project.toml` requires an explicit `path`** on `[lib]` and every `[[bin]]`. See [VM & Assembler Changes](./vm-assembler#miden-projecttoml-path-is-mandatory-on-every-target).
+- **`#[note]` reserves `get_entrypoint_root`**, so a note struct cannot define a method with that name, and note structs now implement `ToFeltRepr`.
+- **`cargo miden new` fetches templates from a release bundle** rather than embedding them.
 
-The SDK bindings were aligned with VM `0.23` / protocol `0.15` (`miden-field` bumped to `^0.25`).
-
-- **`Felt::new` is now fallible** — it returns `Result<Felt, _>` instead of `Felt`. Replace `Felt::new(x)` with `Felt::new(x).unwrap()` (or handle the error). The `felt!(x)` macro is unchanged and remains the preferred constructor for literals.
-- **`asset::{create_fungible_asset, create_non_fungible_asset}`** now take a trailing `enable_callbacks: bool` argument.
-- **`active_account::{get_balance, get_initial_balance}`** (and the corresponding `ActiveAccount` trait methods) now take an asset key `Word` instead of a faucet `AccountId`.
-- **`faucet::{mint, burn}`** no longer return an `Asset`; the `faucet::{mint_value, burn_value}` helpers were removed. Use the returned value-free API to match the tx kernel.
-- **`output_note::set_attachment` was removed.** The attachment shape is selected by function instead of a runtime `attachment_kind` argument.
-
-### Affected Code
-
-```rust
-// before: output_note::set_attachment(note_idx, scheme, kind, attachment);
-// after, for a single word:
-output_note::add_word_attachment(note_idx, scheme, attachment);
-// or `add_attachment` for a commitment, `add_attachment_from_memory` for multiple words.
-```
-
-:::note Storage encoding note
-Scalar `Felt` values stored in `StorageValue<Felt>` / `StorageMap<_, Felt>` are now packed into the low word limb (`[v, 0, 0, 0]`) instead of the high limb (`[0, 0, 0, v]`), matching protocol v0.15. This is transparent when you recompile and redeploy, but state written by `0.12` code is read back differently by `0.13` code.
-:::
-
-### Migration Steps
-
-1. Wrap `Felt::new(x)` calls in `.unwrap()` (or handle the `Result`); keep using `felt!(x)` for literals.
-2. Add the trailing `enable_callbacks` argument to `asset::create_fungible_asset` / `create_non_fungible_asset`.
-3. Pass an asset key `Word` to `active_account::get_balance` / `get_initial_balance` instead of a faucet `AccountId`.
-4. Drop the return values of `faucet::mint` / `burn`; remove uses of `mint_value` / `burn_value`.
-5. Replace `output_note::set_attachment` with `add_word_attachment` / `add_attachment` / `add_attachment_from_memory`.
-6. Re-deploy contracts that persist scalar `Felt` storage — the low-limb packing means `0.12` state is not read back identically.
+Additive in this line: typed transaction-script arguments, note constructors, and `println!`-style formatting.
 
 ---
 
-## New in 0.13 (no migration required)
+## Common Errors
 
-These are additive and do not require changes to existing code:
-
-- **Sibling component calls** — `#[component(package::Interface, ...)]` on the component trait lets one component call another component deployed on the same account.
-- **`println!`** — a `println!` macro (and `debug::println`) for emitting a debug message during execution.
+| Error Message | Cause | Solution |
+| --- | --- | --- |
+| A component method is not callable from a note or script | Missing `#[account_procedure]` | Add it to the trait method declaration. |
+| Compile error combining auth and account attributes | They are mutually exclusive | Auth components keep `#[auth_script]` only. |
+| Name collision between a wrapper struct and a trait | `#[account(..)]` now generates traits | Rename the wrapper. |
+| `no method named ..` at a cross-module call site | The generated trait is not in scope | Import the trait named after the interface. |
+| `missing field path` in `miden-project.toml` | Now mandatory | Add `path` to every target. |
+| Toolchain version error | MSRV is 1.97 here | Use the higher of the stack's requirements. |
