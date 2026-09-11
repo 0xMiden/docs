@@ -9,7 +9,7 @@ The React SDK is a thin layer on top of the [Web SDK](../web-client/index.md). I
 
 ## When to use it
 
-Reach for the React SDK when your application is already a React app (Next.js, Vite + React, React Native, Electron + React, etc.). The hooks:
+Reach for the React SDK when your application is already a React app (Next.js, Vite + React, or a compatible Electron renderer). The hooks:
 
 - own lifecycle management (the WASM worker, signer wiring, auto-sync loop),
 - expose per-hook result interfaces with a domain-named action (`send`, `mint`, `createWallet`, …) plus `isLoading` / `isCreating` / `isImporting`, `error`, and `reset`,
@@ -29,11 +29,11 @@ You can always reach the underlying WASM client from any hook via `useMidenClien
 | [Query hooks](./query-hooks.md) | `useAccount(s)`, `useNotes`, `useNoteStream`, `useTransactionHistory`, `useSyncState`, `useAssetMetadata` |
 | [Account state and balances](./account-state-and-balances.md) | Active account selection, sync boundaries, balance rendering, and refresh-after-transaction patterns |
 | [Mutation hooks](./mutation-hooks.md) | `useCreateWallet`, `useCreateFaucet`, `useImportAccount`, `useSend`, `useMultiSend`, `useMint`, `useConsume`, `useSwap` |
-| [Advanced hooks](./advanced.md) | `useTransaction`, `useExecuteProgram`, `useCompile`, `useSessionAccount`, `useExportStore`, `useImportStore`, `useImportNote`, `useExportNote`, `useSyncControl`, `useWaitForCommit`, `useWaitForNotes` |
+| [Advanced hooks](./advanced.md) | `useTransaction`, `useChainAnchor`, `usePreview`, `useExecuteProgram`, `useCompile`, `useSessionAccount`, store and note import/export, sync control |
 | [External signers](./signers.md) | `MultiSignerProvider`, `SignerContext`, `useSigner`, `useMultiSigner` — pluggable wallet integrations (Para, Turnkey, MidenFi, custom) |
 | Utilities | `formatAssetAmount`, `parseAssetAmount`, `getNoteSummary`, `toBech32AccountId`, `createNoteAttachment` / `readNoteAttachment`, … |
 
-Each hook exports its own result interface — not a generic `{ data, isLoading, error }` wrapper. Data lives in named fields (e.g. `accounts`, `wallets`, `records`, `wallet`, `faucet`). Transaction-producing mutations additionally expose a `stage` field that advances through `idle → executing → proving → submitting → complete`. See [setup](./setup.md#hook-result-conventions) for per-family details.
+Each hook exports its own result interface — not a generic `{ data, isLoading, error }` wrapper. Data lives in named fields (e.g. `accounts`, `records`, `wallet`, `faucet`). Transaction-producing mutations additionally expose a `stage` field that advances through `idle → executing → proving → submitting → complete`. See [setup](./setup.md#hook-result-conventions) for per-family details.
 
 ## Where to go next
 

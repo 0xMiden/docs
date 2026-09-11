@@ -32,7 +32,7 @@ rustc --version
 <summary>Expected output</summary>
 
 ```text
-rustc 1.93.0-nightly (fa3155a64 2025-09-30)
+rustc 1.98.1 (...)  # or newer for client/protocol code
 ```
 
 </details>
@@ -43,17 +43,20 @@ For TypeScript development with the Miden Web Client, you'll need Node.js and Ya
 
 **Install Node.js:**
 
-```bash title=">_ Terminal"
-# Install Node.js using the official installer or package manager
-# For macOS with Homebrew:
-brew install node
+On macOS with Homebrew:
 
-# For Ubuntu/Debian:
+```bash title=">_ macOS"
+brew install node
+```
+
+On Ubuntu/Debian:
+
+```bash title=">_ Ubuntu/Debian"
 curl -fsSL https://deb.nodesource.com/setup_lts.x | sudo -E bash -
 sudo apt-get install -y nodejs
-
-# For Windows, download from nodejs.org
 ```
+
+On Windows, use the Node.js installer from nodejs.org.
 
 **Install Yarn:**
 
@@ -88,7 +91,7 @@ The Miden toolchain installer makes it easy to manage Miden components:
 cargo install midenup
 ```
 
-To install a specific release, pass `--version` — this guide is written against `1.0.0-alpha.1`, which as a pre-release is only installed when named explicitly: `cargo install midenup --version 1.0.0-alpha.1`.
+This guide is verified with midenup **1.0.0**. To install that exact release, use `cargo install midenup --version 1.0.0`.
 
 :::info
 To install from source instead, name the package explicitly — the repository contains more than one binary: `cargo install --git https://github.com/0xMiden/midenup.git midenup`
@@ -120,10 +123,10 @@ which miden
 
 **Install Miden Toolchain**
 
-Install the latest stable Miden components:
+Install the toolchain for the public testnet and make it the default:
 
 ```bash title=">_ Terminal"
-midenup install stable
+midenup install testnet && midenup override testnet
 ```
 
 :::note
@@ -136,13 +139,17 @@ Check that everything is working correctly:
 
 ```bash title=">_ Terminal"
 midenup show active-toolchain
+miden client --help
 ```
 
 <details>
 <summary>Expected output</summary>
 
 ```text
-stable
+testnet
+CLI actions
+Usage: miden client <COMMAND>
+...
 ```
 
 </details>
@@ -159,11 +166,11 @@ echo $PATH | tr ':' '\n' | grep cargo
 
 **"config error: missing field" when running `miden client` commands**
 
-If you have config files from a previous Miden installation, they may be incompatible with the current version. Delete the old config and database, then re-initialize:
+If you have configuration files from a previous Miden installation, they may be incompatible with the current version. Clear the active client configuration, then re-initialize it for testnet:
 
 ```bash title=">_ Terminal"
-rm -f miden-client.toml store.sqlite3
-miden client init
+miden client clear-config
+miden client init --network testnet
 ```
 
 ## Set Up a Project
@@ -177,7 +184,10 @@ miden new my-test-project
 cd my-test-project
 ```
 
-If successful, you'll see a new directory with Miden project files. For each Rust code example in the following pages, add a new binary under `integration/src/bin/` and run it with `cargo run --bin <name> --release`.
+If successful, you'll see a new directory with Miden project files. The generated `rust-toolchain.toml` selects the Rust toolchain and components required by the project.
+
+For each Rust code example in the following pages, add a new binary under
+`integration/src/bin/` and run it with `cargo run --bin <name> --release`.
 
 ### TypeScript Project
 
@@ -186,7 +196,7 @@ The TypeScript examples use the [`@miden-sdk/miden-sdk`](https://www.npmjs.com/p
 ```bash title=">_ Terminal"
 npm create vite@latest miden-app -- --template vanilla-ts
 cd miden-app
-npm install @miden-sdk/miden-sdk@^0.15.0
+npm install @miden-sdk/miden-sdk@^0.16.0
 ```
 
 Open `src/main.ts` and replace its contents with a simple entry point that calls your demo:

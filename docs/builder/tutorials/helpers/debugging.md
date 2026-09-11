@@ -1,12 +1,43 @@
 ---
 sidebar_position: 2
 title: "Debugging Guide"
-description: "Learn how to debug Miden Rust contracts using assert_eq and cycle counts."
+description: "Learn how to debug Miden Rust contracts using debug output and assertions."
 ---
 
 # Debugging Guide
 
-Miden contracts don't support traditional debugging tools like console.log or print statements. Instead, you can use `assert_eq` statements to check values during execution.
+Miden supports [interactive DAP debugging](../../tools/clients/rust-client/debugging).
+Use assertions to check values during execution and `miden::println!` markers to trace paths
+when running with a debugger host that renders them.
+
+## Printing Debug Markers
+
+Use a literal or string expression to mark the path taken through a contract:
+
+```rust
+miden::println!("entered withdraw");
+
+if balance == felt!(0) {
+    miden::println!("balance is empty");
+}
+```
+
+`miden::println!` accepts string literals and expressions. It also supports Rust-style formatting
+arguments, such as `miden::println!("balance: {}", balance)`. Formatted output requires
+`extern crate alloc` and a configured global allocator; literal markers don't allocate.
+
+:::note Where Rust markers appear
+With SDK 0.14.0, `miden::println!` emits a `readonly::miden_debug::println` event.
+The normal Rust client and MockChain transaction executors ignore that event. Attaching a DAP
+client preserves the transaction host's handlers, so the live DAP connection alone does not
+make these messages appear.
+
+The `miden-debug` local execution and replay host handles these events. For a transaction,
+[record a DAP session and replay it](../../tools/clients/rust-client/debugging#recording-a-session-for-offline-replay)
+to inspect the markers in the debugger's output. MASM's
+[`miden::core::debug` printers](../../tools/clients/rust-client/debug-output) use separate events
+that the normal transaction executor prints by default.
+:::
 
 ## Using assert_eq
 
@@ -23,37 +54,37 @@ assert_eq(actual_value, expected_value);
 `assert_eq` is a **function**, not a macro. Use `assert_eq(a, b)` without the exclamation mark.
 :::
 
-## Debugging with Cycle Counts
+## Narrowing Down Failures
 
-When your code fails, the error output includes a **cycle count** indicating where execution stopped. You can use this to narrow down problems:
+Execution errors include source diagnostics when debug information is available. Combine those
+diagnostics with markers and assertions to isolate the failing operation:
 
-1. **Note the cycle count** when your code fails
-2. **Place an `assert_eq`** before the code you suspect is failing
-3. **Run again** and check the result:
-   - If the assertion fails at an **earlier cycle count**: the value you're checking is wrong
-   - If the assertion passes and fails at the **same cycle count**: the value is correct, the problem is elsewhere
+1. Place `miden::println!` markers before and after the code you suspect.
+2. Add an `assert_eq` for the value the code expects.
+3. Run with a debugger host that renders Rust markers and inspect the last marker and any assertion failure.
 
 ### Example
 
 ```rust
 pub fn withdraw(&mut self, depositor: AccountId, amount: Felt) {
     let balance = self.get_balance(depositor);
+    miden::println!("loaded balance");
 
-    // Debug: Check if balance is what you expect
+    // Check the assumption used by the code below.
     assert_eq(balance, felt!(1000));
 
-    // If the above passes, the problem is below this line
-    // If it fails, the balance isn't what you expected
-
     let new_balance = balance - amount;
-    self.balances.set(key, new_balance);
+    self.balances.set(depositor, new_balance);
+    miden::println!("updated balance");
 }
 ```
 
-By moving the `assert_eq` statement around, you can isolate which value is incorrect.
+Move the markers and assertion through the function to narrow down which assumption or operation
+fails.
 
 ## Limitations
 
-- No console.log or print debugging in contract code
 - `assert_eq` only works with `Felt` values
-- This is currently the primary debugging technique available
+- `miden::println!` emits an event and adds execution work even when the host ignores it; remove debug-only calls
+  from release code
+- Remove only diagnostic assertions; keep assertions that enforce contract invariants

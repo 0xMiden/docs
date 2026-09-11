@@ -9,7 +9,7 @@ sidebar_position: 6
 
 | Method | Produces | Used by |
 | --- | --- | --- |
-| `client.compile.component({ code, slots?, supportAllTypes? })` | `AccountComponent` | [`accounts.create({ components: [...] })`](./accounts.md#contract) |
+| `client.compile.component({ code, namespace?, slots?, supportAllTypes? })` | `AccountComponent` | [`accounts.create({ components: [...] })`](./accounts.md#contract) |
 | `client.compile.txScript({ code, libraries? })` | `TransactionScript` | [`transactions.execute({ script })`](./transactions.md#custom-transaction-scripts-execute) |
 | `client.compile.noteScript({ code, libraries? })` | `NoteScript` | `Note` construction utilities |
 
@@ -30,11 +30,13 @@ const contractCode = `
 
   const COUNTER_SLOT = word("miden::tutorials::counter")
 
+  @account_procedure
   pub proc get_count
     push.COUNTER_SLOT[0..2] exec.active_account::get_item
     exec.sys::truncate_stack
   end
 
+  @account_procedure
   pub proc increment_count
     push.COUNTER_SLOT[0..2] exec.active_account::get_item
     add.1
@@ -45,6 +47,7 @@ const contractCode = `
 
 const component = await client.compile.component({
   code: contractCode,
+  namespace: "external_contract::counter_contract",
   slots: [StorageSlot.emptyValue("miden::tutorials::counter")],
 });
 
@@ -56,8 +59,9 @@ console.log("get_count hash:", getCountHash);
 Options:
 
 - `code` — the MASM source for the component.
+- `namespace` — module path used to derive procedure identities. Reuse it when rebuilding the source as an inline library; linking `{ component }` preserves the exact compiled identity.
 - `slots` — initial storage slots. Use the `StorageSlot` helpers (`emptyValue`, etc.).
-- `supportAllTypes` — defaults to `true`. When `true`, the compiler auto-injects an auth-kernel invocation so the component accepts the standard set of input types for authenticated transactions. Set to `false` if your component already invokes an auth kernel procedure itself, or intentionally omits one.
+- `supportAllTypes` — defaults to `true` and calls `withSupportsAllTypes()` for compatibility. In 0.16, components already apply to every account type; this option does not inject an auth-kernel invocation.
 
 ## Transaction scripts
 
@@ -69,7 +73,9 @@ A script with no `libraries` entry can only reference procedures that exist in t
 const script = await client.compile.txScript({
   code: `
     use miden::core::sys
-    begin
+
+    @transaction_script
+    pub proc main
       push.0
       exec.sys::truncate_stack
     end
@@ -77,7 +83,7 @@ const script = await client.compile.txScript({
 });
 ```
 
-If your script needs to call into an external contract (as in the FPI section below), you must pass that contract's code through `libraries` — the compiler only links what you explicitly provide.
+If your script needs to call into an external contract (as in the FPI section below), pass either the exact compiled component or its source through `libraries` — the compiler only links what you explicitly provide.
 
 ### With inline libraries
 
@@ -88,7 +94,9 @@ const script = await client.compile.txScript({
   code: `
     use external_contract::my_contract
     use miden::core::sys
-    begin
+
+    @transaction_script
+    pub proc main
       call.my_contract::do_something
       exec.sys::truncate_stack
     end
@@ -103,7 +111,7 @@ const script = await client.compile.txScript({
 });
 ```
 
-Each library takes:
+Each inline library takes:
 
 | Field | Required | Description |
 | --- | --- | --- |
@@ -111,12 +119,14 @@ Each library takes:
 | `code` | yes | MASM source. |
 | `linking` | no | `Linking.Dynamic` (default) or `Linking.Static`. `"dynamic"` / `"static"` string literals are also accepted. |
 
+`libraries` also accepts `{ component, linking? }`, which links the exact code installed by an `AccountComponent`, or a pre-built `Library`. Prefer the component form when a script calls a component installed on an account.
+
 ### Linking modes
 
 | Value | Behaviour | When to use |
 | --- | --- | --- |
-| `Linking.Dynamic` (default) | Links via DYNCALL at prove time. The foreign contract's onchain code is fetched by the prover. | FPI — foreign contract lives onchain. |
-| `Linking.Static` | Inlines library code into the script at compile time. | Offchain libraries that must be self-contained. |
+| `Linking.Dynamic` (default) | Retains external procedure MAST roots. The execution host must supply the referenced code. | Linking account procedures without embedding their implementation. |
+| `Linking.Static` | Includes the linked library code in the compiled artifact. | Offchain libraries that must be self-contained. |
 
 ## Note scripts
 
@@ -128,7 +138,8 @@ const noteScript = await client.compile.noteScript({
     use miden::protocol::active_note
     use miden::core::sys
 
-    begin
+    @note_script
+    pub proc main
       # Runs when the consuming account redeems this note.
       # Real note scripts inspect note storage, assets, and account state
       # using procedures from miden::protocol::active_note.
@@ -138,7 +149,7 @@ const noteScript = await client.compile.noteScript({
 });
 ```
 
-Libraries follow the same `{ namespace, code, linking? }` shape as transaction scripts.
+Libraries accept the same inline `{ namespace, code, linking? }`, compiled `{ component, linking? }`, and pre-built `Library` forms as transaction scripts.
 
 ## Procedure hashes (for FPI)
 
@@ -147,6 +158,7 @@ Foreign procedure invocation requires the **hash** of the target procedure. Extr
 ```typescript
 const component = await client.compile.component({
   code: counterContractCode,
+  namespace: "external_contract::counter_contract",
   slots: [StorageSlot.emptyValue("miden::tutorials::counter")],
 });
 
@@ -156,10 +168,13 @@ const script = await client.compile.txScript({
   code: `
     use external_contract::count_reader_contract
     use miden::core::sys
-    begin
+
+    @transaction_script
+    pub proc main
+      padw padw padw padw
       push.${getCountHash}
-      push.${counterAccountId.suffix()}
       push.${counterAccountId.prefix()}
+      push.${counterAccountId.suffix()}
       call.count_reader_contract::copy_count
       exec.sys::truncate_stack
     end
@@ -185,6 +200,7 @@ await client.sync();
 // 1. Compile the contract component
 const component = await client.compile.component({
   code: counterCode,
+  namespace: "external_contract::counter_contract",
   slots: [StorageSlot.emptyValue("miden::tutorials::counter")],
 });
 
@@ -204,13 +220,14 @@ await client.sync();
 const script = await client.compile.txScript({
   code: `
     use external_contract::counter_contract
-    begin
+
+    @transaction_script
+    pub proc main
       call.counter_contract::increment_count
     end
   `,
-  libraries: [
-    { namespace: "external_contract::counter_contract", code: counterCode },
-  ],
+  // Link the exact component installed on the account so procedure identities match.
+  libraries: [{ component }],
 });
 
 // 4. Execute

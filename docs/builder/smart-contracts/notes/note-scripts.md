@@ -13,7 +13,7 @@ Note scripts define the logic that executes when a note is consumed. They determ
 A note script consists of a struct (holding note storage fields) and an impl block with a `#[note_script]` method:
 
 ```rust
-use miden::{account, AccountId, Word, active_note, note};
+use miden::{account, note, AccountId, Word};
 
 #[account(basic_wallet::BasicWallet)]
 pub struct Wallet;
@@ -33,8 +33,9 @@ impl MyNote {
 ```
 
 The `#[note]` macro:
-1. Deserializes note storage into struct fields
-2. Exports the `run` function as the note's entry point
+
+1. Deserializes note storage into the struct fields.
+2. Exports the method marked with `#[note_script]` as the note entry point.
 
 ## Struct fields as note storage
 
@@ -49,7 +50,7 @@ struct MyNote {
 
 The compiler maps struct fields to note storage values based on their order and type. Supported field types include `AccountId`, `Felt`, `Word`, and other SDK types.
 
-If you don't need inputs, use a unit struct:
+If the note has no storage fields, use a unit struct:
 
 ```rust
 #[note]
@@ -82,26 +83,25 @@ pub fn run(self, account: &mut Wallet, _arg: Word) { ... }
 When you include `&mut Wallet` (or `&Wallet`), the note script can call methods on the account's components:
 
 ```rust
+#[account(counter_account::CounterContract)]
+pub struct CounterAccount;
+
 #[note_script]
-pub fn run(self, _arg: Word, account: &mut Wallet) {
-    let assets = active_note::get_assets();
-    for asset in assets {
-        account.receive_asset(asset);  // Cross-component call
-    }
+pub fn run(self, _arg: Word, account: &mut CounterAccount) {
+    account.increment_count();
 }
 ```
 
-Declare the account wrapper with `#[account(package::Interface)]` and point `miden-project.toml` at the dependency's generated WIT — see [Cross-Component Calls](../cross-component-calls).
+Declare the account wrapper with `#[account(package::Interface)]` and configure its package and generated-WIT dependencies in `miden-project.toml` — see [Cross-Component Calls](../cross-component-calls).
 
 ### Without account access
 
-Use this pattern for **trigger or command notes** that carry no assets and only execute logic. If your note transfers assets or calls account methods, include the relevant `&mut AccountWrapper`.
+Use this pattern when the script does not call account-component methods. Add `&AccountWrapper` for read-only calls or `&mut AccountWrapper` for state-changing calls. For asset-moving scripts, see [Reading Notes](./reading-notes#assets).
 
 ```rust
 #[note_script]
 pub fn run(self, _arg: Word) {
-    // For logic-only notes that carry no assets.
-    // Cannot call account methods — see the counter note example below.
+    // Logic that does not require account-component methods.
 }
 ```
 
@@ -148,15 +148,14 @@ version = "0.1.0"
 
 [lib]
 kind = "note"
-namespace = "miden:counter-note/counter-note@0.1.0"
+namespace = "miden:counter-note/miden-counter-note@0.1.0"
+path = "src/lib.rs"
 
 [dependencies]
 miden-core = "*"
 miden-protocol = "*"
 counter-account = { path = "../counter-account" }
 
-[package.metadata.miden.dependencies]
-counter-account = { wit = "../counter-account/target/generated-wit/" }
 ```
 
 ## Related

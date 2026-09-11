@@ -59,6 +59,10 @@ This approach provides several advantages over direct transfers:
 
 To run the code examples in this guide, you'll need to set up a development environment. If you haven't already, follow the setup instructions in the [Accounts](./accounts#set-up-development-environment) guide.
 
+:::note Transaction fees
+Each account that submits a transaction needs native fee tokens, including a faucet that mints `TEST`. These examples show token operations; fund the newly created accounts before their first transaction, following [Transaction Fees](../smart-contracts/transactions/fees.md#paying-your-first-fee).
+:::
+
 ## Minting Tokens
 
 **What is Minting?**
@@ -70,7 +74,7 @@ Minting in Miden creates new tokens and packages them into a **P2ID note** (Pay-
 **Key Concepts:**
 
 - **P2ID Note**: A note that can only be consumed by the account it's addressed to
-- **NoteType**: Determines visibility - `Public` notes are visible onchain and are stored by the Miden network, while `Private` notes are not stored by the network and must be exchanged directly between parties via other channels.
+- **NoteType**: Determines visibility. `Public` note details are stored onchain. `Private` note details must reach the consumer separately; their commitments, metadata, and attachments remain public.
 - **FungibleAsset**: Represents tokens that can be divided and exchanged (like currencies)
 
 Let's see this in action:
@@ -79,23 +83,22 @@ Let's see this in action:
 use miden_client::{
     account::{
         component::{
-            AccessControl, AuthScheme, AuthSingleSig, BasicWallet, BurnPolicyConfig,
-            FungibleFaucet, MintPolicyConfig, PolicyRegistration, TokenName, TokenPolicyManager,
-            TransferPolicy, create_fungible_faucet,
+            AuthScheme, AuthSingleSig, BasicWallet, BurnPolicy, FungibleFaucet, MintPolicy,
+            TokenName, TokenPolicyManager, TransferPolicy,
+            create_singlesig_user_fungible_faucet,
         },
         AccountBuilder, AccountType,
     },
-    asset::{AssetAmount, AssetCallbackFlag, FungibleAsset, TokenSymbol},
-    auth::AuthSecretKey,
+    asset::{AssetAmount, FungibleAsset, TokenSymbol},
+    auth::{Approver, AuthSecretKey},
     builder::ClientBuilder,
     keystore::{FilesystemKeyStore, Keystore},
     note::NoteType,
-    rpc::{Endpoint, GrpcClient},
+    rpc::Endpoint,
     transaction::TransactionRequestBuilder,
 };
 use miden_client_sqlite_store::ClientBuilderSqliteExt;
-use miden_standards::AuthMethod;
-use rand::RngCore;
+use rand::Rng;
 use std::sync::Arc;
 
 #[tokio::main]
@@ -103,7 +106,6 @@ async fn main() -> anyhow::Result<()> {
     // Initialize RPC connection
     let endpoint = Endpoint::testnet();
     let timeout_ms = 10_000;
-    let rpc_client = Arc::new(GrpcClient::new(&endpoint, timeout_ms));
 
     // Initialize keystore
     let keystore_path = std::path::PathBuf::from("./keystore");
@@ -116,10 +118,9 @@ async fn main() -> anyhow::Result<()> {
     // NOTE: The client is our entry point to the Miden network.
     // All interactions with the network go through the client.
     let mut client = ClientBuilder::new()
-        .rpc(rpc_client)
+        .grpc_client(&endpoint, Some(timeout_ms))
         .sqlite_store(store_path)
         .authenticator(keystore.clone())
-        .in_debug_mode(true.into())
         .build()
         .await?;
 
@@ -147,10 +148,10 @@ async fn main() -> anyhow::Result<()> {
     // Build the account
     let account_builder = AccountBuilder::new(alice_seed)
         .account_type(AccountType::Public)
-        .with_auth_component(AuthSingleSig::new(
+        .with_component(AuthSingleSig::new(Approver::new(
             alice_key_pair.public_key().to_commitment(),
             AuthScheme::Falcon512Poseidon2,
-        ))
+        )))
         .with_component(BasicWallet);
 
     // Build the faucet
@@ -160,29 +161,28 @@ async fn main() -> anyhow::Result<()> {
         .decimals(decimals)
         .max_supply(max_supply)
         .build()?;
-    let policies = TokenPolicyManager::new()
-        .with_mint_policy(MintPolicyConfig::AllowAll, PolicyRegistration::Active)?
-        .with_burn_policy(BurnPolicyConfig::AllowAll, PolicyRegistration::Active)?
-        .with_send_policy(TransferPolicy::AllowAll, PolicyRegistration::Active)?
-        .with_receive_policy(TransferPolicy::AllowAll, PolicyRegistration::Active)?;
+    let policies = TokenPolicyManager::builder()
+        .active_mint_policy(MintPolicy::allow_all())
+        .active_burn_policy(BurnPolicy::allow_all())
+        .active_send_policy(TransferPolicy::allow_all())
+        .active_receive_policy(TransferPolicy::allow_all())
+        .build();
 
     let alice_account = account_builder.build()?;
-    let faucet_account = create_fungible_faucet(
+    let faucet_auth = AuthSingleSig::new(Approver::new(
+        faucet_key_pair.public_key().to_commitment(),
+        AuthScheme::Falcon512Poseidon2,
+    ));
+    let faucet_account = create_singlesig_user_fungible_faucet(
         faucet_seed,
         faucet,
-        AccountType::Public,
-        AuthMethod::SingleSig {
-            approver: (
-                faucet_key_pair.public_key().to_commitment(),
-                AuthScheme::Falcon512Poseidon2,
-            ),
-        },
-        AccessControl::AuthControlled,
+        faucet_auth,
         policies,
+        AccountType::Public,
     )?;
 
-    println!("Alice's account ID: {:?}", alice_account.id().to_hex());
-    println!("Faucet account ID: {:?}", faucet_account.id().to_hex());
+    println!("Alice's account ID: {}", alice_account.id().to_hex());
+    println!("Faucet account ID: {}", faucet_account.id().to_hex());
 
     // Add accounts to client
     client.add_account(&alice_account, false).await?;
@@ -193,14 +193,13 @@ async fn main() -> anyhow::Result<()> {
     keystore.add_key(&faucet_key_pair, faucet_account.id()).await?;
 
     let amount: u64 = 1000;
-    // Enable asset callbacks so the faucet's send/receive transfer policies run
-    // when this asset moves between accounts.
-    let fungible_asset = FungibleAsset::new(faucet_account.id(), amount)?
-        .with_callbacks(AssetCallbackFlag::Enabled);
+    // The faucet account ID encodes callback support for the transfer policies above.
+    let fungible_asset = FungibleAsset::new(faucet_account.id(), amount)?;
 
     // Build transaction request to mint fungible asset to Alice's account
     // NOTE: This transaction will create a P2ID note (a Miden note containing the minted asset)
     // for Alice's account. Alice will be able to consume these notes to get the fungible asset in her vault
+    println!("Minting 1000 tokens to Alice...");
     let transaction_request = TransactionRequestBuilder::new().build_mint_fungible_asset(
         fungible_asset,
         alice_account.id(),
@@ -215,7 +214,7 @@ async fn main() -> anyhow::Result<()> {
     client.sync_state().await?;
 
     println!(
-        "Mint transaction submitted successfully, ID: {:?}",
+        "Mint transaction submitted successfully, ID: {}",
         tx_id.to_hex()
     );
 
@@ -292,30 +291,29 @@ After minting creates a P2ID note containing tokens, the recipient must **consum
 Here's how to consume notes programmatically:
 
 :::tip
-This is a complete, self-contained example that includes the setup and minting steps from the previous section. **The new consume logic starts at the `CONSUMING P2ID NOTES` comment.**
+This program includes the setup and minting steps from the previous section and requires the native fee funding described above. **The new consume logic starts at the `CONSUMING P2ID NOTES` comment.**
 :::
 
 ```rust title="integration/src/bin/consume.rs"
 use miden_client::{
     account::{
         component::{
-            AccessControl, AuthScheme, AuthSingleSig, BasicWallet, BurnPolicyConfig,
-            FungibleFaucet, MintPolicyConfig, PolicyRegistration, TokenName, TokenPolicyManager,
-            TransferPolicy, create_fungible_faucet,
+            AuthScheme, AuthSingleSig, BasicWallet, BurnPolicy, FungibleFaucet, MintPolicy,
+            TokenName, TokenPolicyManager, TransferPolicy,
+            create_singlesig_user_fungible_faucet,
         },
         Account, AccountBuilder, AccountType,
     },
-    asset::{AssetAmount, AssetCallbackFlag, AssetVaultKey, FungibleAsset, TokenSymbol},
-    auth::AuthSecretKey,
+    asset::{AssetAmount, AssetId, FungibleAsset, TokenSymbol},
+    auth::{Approver, AuthSecretKey},
     builder::ClientBuilder,
     keystore::{FilesystemKeyStore, Keystore},
     note::NoteType,
-    rpc::{Endpoint, GrpcClient},
+    rpc::Endpoint,
     transaction::TransactionRequestBuilder,
 };
 use miden_client_sqlite_store::ClientBuilderSqliteExt;
-use miden_standards::AuthMethod;
-use rand::RngCore;
+use rand::Rng;
 use std::sync::Arc;
 use tokio::time::Duration;
 
@@ -324,7 +322,6 @@ async fn main() -> anyhow::Result<()> {
     // Initialize RPC connection
     let endpoint = Endpoint::testnet();
     let timeout_ms = 10_000;
-    let rpc_client = Arc::new(GrpcClient::new(&endpoint, timeout_ms));
 
     // Initialize keystore
     let keystore_path = std::path::PathBuf::from("./keystore");
@@ -337,10 +334,9 @@ async fn main() -> anyhow::Result<()> {
     // NOTE: The client is our entry point to the Miden network.
     // All interactions with the network go through the client.
     let mut client = ClientBuilder::new()
-        .rpc(rpc_client)
+        .grpc_client(&endpoint, Some(timeout_ms))
         .sqlite_store(store_path)
         .authenticator(keystore.clone())
-        .in_debug_mode(true.into())
         .build()
         .await?;
 
@@ -368,10 +364,10 @@ async fn main() -> anyhow::Result<()> {
     // Build the account
     let account_builder = AccountBuilder::new(alice_seed)
         .account_type(AccountType::Public)
-        .with_auth_component(AuthSingleSig::new(
+        .with_component(AuthSingleSig::new(Approver::new(
             alice_key_pair.public_key().to_commitment(),
             AuthScheme::Falcon512Poseidon2,
-        ))
+        )))
         .with_component(BasicWallet);
 
     // Build the faucet
@@ -381,29 +377,28 @@ async fn main() -> anyhow::Result<()> {
         .decimals(decimals)
         .max_supply(max_supply)
         .build()?;
-    let policies = TokenPolicyManager::new()
-        .with_mint_policy(MintPolicyConfig::AllowAll, PolicyRegistration::Active)?
-        .with_burn_policy(BurnPolicyConfig::AllowAll, PolicyRegistration::Active)?
-        .with_send_policy(TransferPolicy::AllowAll, PolicyRegistration::Active)?
-        .with_receive_policy(TransferPolicy::AllowAll, PolicyRegistration::Active)?;
+    let policies = TokenPolicyManager::builder()
+        .active_mint_policy(MintPolicy::allow_all())
+        .active_burn_policy(BurnPolicy::allow_all())
+        .active_send_policy(TransferPolicy::allow_all())
+        .active_receive_policy(TransferPolicy::allow_all())
+        .build();
 
     let alice_account = account_builder.build()?;
-    let faucet_account = create_fungible_faucet(
+    let faucet_auth = AuthSingleSig::new(Approver::new(
+        faucet_key_pair.public_key().to_commitment(),
+        AuthScheme::Falcon512Poseidon2,
+    ));
+    let faucet_account = create_singlesig_user_fungible_faucet(
         faucet_seed,
         faucet,
-        AccountType::Public,
-        AuthMethod::SingleSig {
-            approver: (
-                faucet_key_pair.public_key().to_commitment(),
-                AuthScheme::Falcon512Poseidon2,
-            ),
-        },
-        AccessControl::AuthControlled,
+        faucet_auth,
         policies,
+        AccountType::Public,
     )?;
 
-    println!("Alice's account ID: {:?}", alice_account.id().to_hex());
-    println!("Faucet account ID: {:?}", faucet_account.id().to_hex());
+    println!("Alice's account ID: {}", alice_account.id().to_hex());
+    println!("Faucet account ID: {}", faucet_account.id().to_hex());
 
     // Add accounts to client
     client.add_account(&alice_account, false).await?;
@@ -414,14 +409,13 @@ async fn main() -> anyhow::Result<()> {
     keystore.add_key(&faucet_key_pair, faucet_account.id()).await?;
 
     let amount: u64 = 1000;
-    // Enable asset callbacks so the faucet's send/receive transfer policies run
-    // when this asset moves between accounts.
-    let fungible_asset = FungibleAsset::new(faucet_account.id(), amount)?
-        .with_callbacks(AssetCallbackFlag::Enabled);
+    // The faucet account ID encodes callback support for the transfer policies above.
+    let fungible_asset = FungibleAsset::new(faucet_account.id(), amount)?;
 
     // Build transaction request to mint fungible asset to Alice's account
     // NOTE: This transaction will create a P2ID note (a Miden note containing the minted asset)
     // for Alice's account. Alice will be able to consume these notes to get the fungible asset in her vault
+    println!("Minting 1000 tokens to Alice...");
     let transaction_request = TransactionRequestBuilder::new().build_mint_fungible_asset(
         fungible_asset,
         alice_account.id(),
@@ -436,7 +430,7 @@ async fn main() -> anyhow::Result<()> {
     client.sync_state().await?;
 
     println!(
-        "Mint transaction submitted successfully, ID: {:?}",
+        "Mint transaction submitted successfully, ID: {}",
         tx_id.to_hex()
     );
 
@@ -446,6 +440,7 @@ async fn main() -> anyhow::Result<()> {
 
     // Public notes must be committed to a block before they can be consumed.
     // Poll until the network includes our mint note in a block.
+    println!("Waiting for note to be consumable...");
     loop {
         // Sync state to get the latest block
         client.sync_state().await?;
@@ -455,7 +450,6 @@ async fn main() -> anyhow::Result<()> {
             .await?;
 
         if consumable_notes.is_empty() {
-            println!("Waiting for P2ID note to be comitted...");
             tokio::time::sleep(Duration::from_secs(2)).await;
             continue;
         }
@@ -473,7 +467,7 @@ async fn main() -> anyhow::Result<()> {
             .await?;
 
         println!(
-            "Consume transaction submitted successfully, ID: {:?}",
+            "Consume transaction submitted successfully, ID: {}",
             consume_tx_id.to_hex()
         );
 
@@ -485,15 +479,10 @@ async fn main() -> anyhow::Result<()> {
             .ok_or_else(|| anyhow::anyhow!("Account not found"))?
             .try_into()?;
         let vault = alice_account.vault();
-        // The callback flag is part of the vault key, so it must match the flag the
-        // asset was minted with — otherwise the lookup misses and the balance reads 0.
-        let balance_key = AssetVaultKey::new_fungible(
-            faucet_account.id(),
-            AssetCallbackFlag::Enabled,
-        );
+        let asset_id = AssetId::new_fungible(faucet_account.id());
         println!(
-            "Alice's TEST token balance: {:?}",
-            vault.get_balance(balance_key)
+            "Alice's TEST token balance: {}",
+            vault.get_balance(asset_id)?
         );
 
         break; // Exit the loop after consuming the note
@@ -543,6 +532,7 @@ export async function demo() {
     );
 
     // List notes available to Alice and consume them — tokens move into her vault.
+    console.log("Waiting for note to be consumable...");
     const notes = await client.notes.listAvailable({ account: alice });
     const consumeResult = await client.transactions.consume({
         account: alice,
@@ -569,13 +559,13 @@ export async function demo() {
 <summary>Expected output</summary>
 
 ```text
-Alice's account ID: "0x5b2840a923dedc102ea67e0c1eba3c"
-Faucet account ID: "0x29dd1dc628d2842032e751ed1b5da7"
+Alice's account ID: 0x5b2840a923dedc102ea67e0c1eba3c
+Faucet account ID: 0x29dd1dc628d2842032e751ed1b5da7
 Minting 1000 tokens to Alice...
-Mint transaction submitted successfully, ID: "0x7a2dbde87ea2f4d41b396d6d3f6bdb9a8d7e2a51555fa57064a1657ad70fca06"
+Mint transaction submitted successfully, ID: 0x7a2dbde87ea2f4d41b396d6d3f6bdb9a8d7e2a51555fa57064a1657ad70fca06
 Waiting for note to be consumable...
-Consume transaction submitted successfully, ID: "0xa75872c498ee71cd6725aef9411d2559094cec1e1e89670dbf99c60bb8843481"
-Alice's TEST token balance: Ok(AssetAmount(1000))
+Consume transaction submitted successfully, ID: 0xa75872c498ee71cd6725aef9411d2559094cec1e1e89670dbf99c60bb8843481
+Alice's TEST token balance: 1000
 ```
 
 </details>
@@ -592,35 +582,35 @@ Sending tokens between accounts follows the same note-based pattern. The sender 
 3. **Recipient discovers note** addressed to their account ID
 4. **Recipient consumes note** - tokens move into their vault
 
-This approach means Alice and Bob's transactions are completely separate and unlinkable, providing strong privacy guarantees.
+Alice and Bob execute separate transactions. Their visibility depends on the
+account and note types they use; public notes expose their details.
 
 Let's implement the complete flow - mint, consume, then send:
 
 :::tip
-This is a complete, self-contained example that includes all previous steps. **The new send logic starts at the `SENDING TOKENS TO BOB` comment.**
+This program includes all previous steps and requires the native fee funding described above. **The new send logic starts at the `SENDING TOKENS TO BOB` comment.**
 :::
 
 ```rust title="integration/src/bin/send.rs"
 use miden_client::{
     account::{
         component::{
-            AccessControl, AuthScheme, AuthSingleSig, BasicWallet, BurnPolicyConfig,
-            FungibleFaucet, MintPolicyConfig, PolicyRegistration, TokenName, TokenPolicyManager,
-            TransferPolicy, create_fungible_faucet,
+            AuthScheme, AuthSingleSig, BasicWallet, BurnPolicy, FungibleFaucet, MintPolicy,
+            TokenName, TokenPolicyManager, TransferPolicy,
+            create_singlesig_user_fungible_faucet,
         },
         Account, AccountBuilder, AccountType,
     },
-    asset::{AssetAmount, AssetCallbackFlag, AssetVaultKey, FungibleAsset, TokenSymbol},
-    auth::AuthSecretKey,
+    asset::{AssetAmount, AssetId, FungibleAsset, TokenSymbol},
+    auth::{Approver, AuthSecretKey},
     builder::ClientBuilder,
     keystore::{FilesystemKeyStore, Keystore},
-    note::{NoteAttachments, NoteType, P2idNote},
-    rpc::{Endpoint, GrpcClient},
+    note::{NoteType, P2idNote},
+    rpc::Endpoint,
     transaction::TransactionRequestBuilder,
 };
 use miden_client_sqlite_store::ClientBuilderSqliteExt;
-use miden_standards::AuthMethod;
-use rand::RngCore;
+use rand::Rng;
 use std::sync::Arc;
 use tokio::time::Duration;
 
@@ -629,7 +619,6 @@ async fn main() -> anyhow::Result<()> {
     // Initialize RPC connection
     let endpoint = Endpoint::testnet();
     let timeout_ms = 10_000;
-    let rpc_client = Arc::new(GrpcClient::new(&endpoint, timeout_ms));
 
     // Initialize keystore
     let keystore_path = std::path::PathBuf::from("./keystore");
@@ -642,10 +631,9 @@ async fn main() -> anyhow::Result<()> {
     // NOTE: The client is our entry point to the Miden network.
     // All interactions with the network go through the client.
     let mut client = ClientBuilder::new()
-        .rpc(rpc_client)
+        .grpc_client(&endpoint, Some(timeout_ms))
         .sqlite_store(store_path)
         .authenticator(keystore.clone())
-        .in_debug_mode(true.into())
         .build()
         .await?;
 
@@ -673,10 +661,10 @@ async fn main() -> anyhow::Result<()> {
     // Build the account
     let account_builder = AccountBuilder::new(alice_seed)
         .account_type(AccountType::Public)
-        .with_auth_component(AuthSingleSig::new(
+        .with_component(AuthSingleSig::new(Approver::new(
             alice_key_pair.public_key().to_commitment(),
             AuthScheme::Falcon512Poseidon2,
-        ))
+        )))
         .with_component(BasicWallet);
 
     // Build the faucet
@@ -686,29 +674,28 @@ async fn main() -> anyhow::Result<()> {
         .decimals(decimals)
         .max_supply(max_supply)
         .build()?;
-    let policies = TokenPolicyManager::new()
-        .with_mint_policy(MintPolicyConfig::AllowAll, PolicyRegistration::Active)?
-        .with_burn_policy(BurnPolicyConfig::AllowAll, PolicyRegistration::Active)?
-        .with_send_policy(TransferPolicy::AllowAll, PolicyRegistration::Active)?
-        .with_receive_policy(TransferPolicy::AllowAll, PolicyRegistration::Active)?;
+    let policies = TokenPolicyManager::builder()
+        .active_mint_policy(MintPolicy::allow_all())
+        .active_burn_policy(BurnPolicy::allow_all())
+        .active_send_policy(TransferPolicy::allow_all())
+        .active_receive_policy(TransferPolicy::allow_all())
+        .build();
 
     let alice_account = account_builder.build()?;
-    let faucet_account = create_fungible_faucet(
+    let faucet_auth = AuthSingleSig::new(Approver::new(
+        faucet_key_pair.public_key().to_commitment(),
+        AuthScheme::Falcon512Poseidon2,
+    ));
+    let faucet_account = create_singlesig_user_fungible_faucet(
         faucet_seed,
         faucet,
-        AccountType::Public,
-        AuthMethod::SingleSig {
-            approver: (
-                faucet_key_pair.public_key().to_commitment(),
-                AuthScheme::Falcon512Poseidon2,
-            ),
-        },
-        AccessControl::AuthControlled,
+        faucet_auth,
         policies,
+        AccountType::Public,
     )?;
 
-    println!("Alice's account ID: {:?}", alice_account.id().to_hex());
-    println!("Faucet account ID: {:?}", faucet_account.id().to_hex());
+    println!("Alice's account ID: {}", alice_account.id().to_hex());
+    println!("Faucet account ID: {}", faucet_account.id().to_hex());
 
     // Add accounts to client
     client.add_account(&alice_account, false).await?;
@@ -719,14 +706,13 @@ async fn main() -> anyhow::Result<()> {
     keystore.add_key(&faucet_key_pair, faucet_account.id()).await?;
 
     let amount: u64 = 1000;
-    // Enable asset callbacks so the faucet's send/receive transfer policies run
-    // when this asset moves between accounts.
-    let fungible_asset = FungibleAsset::new(faucet_account.id(), amount)?
-        .with_callbacks(AssetCallbackFlag::Enabled);
+    // The faucet account ID encodes callback support for the transfer policies above.
+    let fungible_asset = FungibleAsset::new(faucet_account.id(), amount)?;
 
     // Build transaction request to mint fungible asset to Alice's account
     // NOTE: This transaction will create a P2ID note (a Miden note containing the minted asset)
     // for Alice's account. Alice will be able to consume these notes to get the fungible asset in her vault
+    println!("Minting 1000 tokens to Alice...");
     let transaction_request = TransactionRequestBuilder::new().build_mint_fungible_asset(
         fungible_asset,
         alice_account.id(),
@@ -741,7 +727,7 @@ async fn main() -> anyhow::Result<()> {
     client.sync_state().await?;
 
     println!(
-        "Mint transaction submitted successfully, ID: {:?}",
+        "Mint transaction submitted successfully, ID: {}",
         tx_id.to_hex()
     );
 
@@ -751,6 +737,7 @@ async fn main() -> anyhow::Result<()> {
 
     // Public notes must be committed to a block before they can be consumed.
     // Poll until the network includes our mint note in a block.
+    println!("Waiting for note to be consumable...");
     loop {
         // Sync state to get the latest block
         client.sync_state().await?;
@@ -760,7 +747,6 @@ async fn main() -> anyhow::Result<()> {
             .await?;
 
         if consumable_notes.is_empty() {
-            println!("Waiting for P2ID note to be comitted...");
             tokio::time::sleep(Duration::from_secs(2)).await;
             continue;
         }
@@ -778,7 +764,7 @@ async fn main() -> anyhow::Result<()> {
             .await?;
 
         println!(
-            "Consume transaction submitted successfully, ID: {:?}",
+            "Consume transaction submitted successfully, ID: {}",
             consume_tx_id.to_hex()
         );
 
@@ -790,15 +776,10 @@ async fn main() -> anyhow::Result<()> {
             .ok_or_else(|| anyhow::anyhow!("Account not found"))?
             .try_into()?;
         let vault = alice_account.vault();
-        // The callback flag is part of the vault key, so it must match the flag the
-        // asset was minted with — otherwise the lookup misses and the balance reads 0.
-        let balance_key = AssetVaultKey::new_fungible(
-            faucet_account.id(),
-            AssetCallbackFlag::Enabled,
-        );
+        let asset_id = AssetId::new_fungible(faucet_account.id());
         println!(
-            "Alice's TEST token balance: {:?}",
-            vault.get_balance(balance_key)
+            "Alice's TEST token balance: {}",
+            vault.get_balance(asset_id)?
         );
 
         break; // Exit the loop after consuming the note
@@ -814,31 +795,31 @@ async fn main() -> anyhow::Result<()> {
     let bob_key_pair = AuthSecretKey::new_falcon512_poseidon2();
     let bob_account = AccountBuilder::new(bob_seed)
         .account_type(AccountType::Public)
-        .with_auth_component(AuthSingleSig::new(
+        .with_component(AuthSingleSig::new(Approver::new(
             bob_key_pair.public_key().to_commitment(),
             AuthScheme::Falcon512Poseidon2,
-        ))
+        )))
         .with_component(BasicWallet)
         .build()?;
 
     client.add_account(&bob_account, false).await?;
     keystore.add_key(&bob_key_pair, bob_account.id()).await?;
 
-    println!("Bob's account ID: {:?}", bob_account.id().to_hex());
+    println!("Bob's account ID: {}", bob_account.id().to_hex());
 
     let bob_account_id = bob_account.id();
     let send_amount = 100;
-    let fungible_asset_to_send = FungibleAsset::new(faucet_account.id(), send_amount)?
-        .with_callbacks(AssetCallbackFlag::Enabled);
+    let fungible_asset_to_send = FungibleAsset::new(faucet_account.id(), send_amount)?;
 
-    let p2id_note = P2idNote::create(
-        alice_account.id(),
-        bob_account_id,
-        vec![fungible_asset_to_send.into()],
-        NoteType::Public,
-        NoteAttachments::empty(),
-        client.rng(),
-    )?;
+    println!("Sending 100 tokens to Bob...");
+    let p2id_note = P2idNote::builder()
+        .sender(alice_account.id())
+        .target(bob_account_id)
+        .asset(fungible_asset_to_send)
+        .note_type(NoteType::Public)
+        .generate_serial_number(client.rng())
+        .build()?
+        .into();
 
     // Create transaction request to send P2ID note to Bob
     let send_p2id_note_transaction_request = TransactionRequestBuilder::new()
@@ -852,7 +833,7 @@ async fn main() -> anyhow::Result<()> {
     client.sync_state().await?;
 
     println!(
-        "Send 100 tokens to Bob note transaction ID: {:?}",
+        "Send transaction submitted successfully, ID: {}",
         send_p2id_note_tx_id.to_hex()
     );
 
@@ -898,6 +879,7 @@ export async function demo() {
         mintResult.txId.toHex(),
     );
 
+    console.log("Waiting for note to be consumable...");
     const notes = await client.notes.listAvailable({ account: alice });
     const consumeResult = await client.transactions.consume({
         account: alice,
@@ -946,10 +928,12 @@ Alice's account ID: 0xd6b8bb0ed10b1610282c513501778a
 Faucet account ID: 0xe48c43d6ad6496201bcfa585a5a4b6
 Minting 1000 tokens to Alice...
 Mint transaction submitted successfully, ID: 0x948a0eef754068b3126dd3261b6b54214fa5608fb13c5e5953faf59bad79c75f
+Waiting for note to be consumable...
 Consume transaction submitted successfully, ID: 0xc69ab84b784120abe858bb536aebda90bd2067695f11d5da93ab0b704f39ad78
 Alice's TEST token balance: 1000
 Bob's account ID: 0x103f8a1ad4b983104aec0412ab0b0d
-Send 100 tokens to Bob note transaction ID: "0x51ac27474ade3a54adadd50db6c2b9a2ede254c5f9137f93d7a970f0bc7d66d5"
+Sending 100 tokens to Bob...
+Send transaction submitted successfully, ID: 0x51ac27474ade3a54adadd50db6c2b9a2ede254c5f9137f93d7a970f0bc7d66d5
 ```
 
 </details>

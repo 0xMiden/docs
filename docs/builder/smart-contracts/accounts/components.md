@@ -23,7 +23,9 @@ struct CounterContractStorage {
 
 #[component]
 trait CounterContract {
+    #[account_procedure]
     fn get_count(&self) -> Felt;
+    #[account_procedure]
     fn increment_count(&mut self) -> Felt;
 }
 
@@ -62,28 +64,32 @@ version = "0.1.0"
 [lib]
 kind = "account-component"
 namespace = "miden:counter-contract/counter-contract@0.1.0"
+path = "src/lib.rs"
 
 [dependencies]
 miden-core = "*"
 miden-protocol = "*"
 ```
 
-The namespace interface segment must match the kebab-cased `#[component]` trait name. If this component calls another account or exposes generated WIT to a note script, add that dependency to both `[dependencies]` and `[package.metadata.miden.dependencies]`.
+The namespace interface segment must match the kebab-cased `#[component]` trait name. For generated WIT dependencies, see [Cross-Component Calls](../cross-component-calls#2-generated-wit-dependency).
 
 ## Storage struct
 
 The storage struct defines the component's storage layout:
 
 ```rust
-use miden::{component_storage, StorageMap, StorageValue, Word};
+use miden::{component_storage, AccountId, Felt, StorageMap, StorageValue, Word};
 
 #[component_storage]
 struct MyContractStorage {
     #[storage(description = "owner account identifier")]
     owner: StorageValue<Word>,
 
+    #[storage(description = "initialization flag")]
+    initialized: StorageValue<Word>,
+
     #[storage(description = "user balances")]
-    balances: StorageMap<Word, Word>,
+    balances: StorageMap<AccountId, Felt>,
 }
 ```
 
@@ -103,11 +109,11 @@ The `description` is optional and becomes part of the generated metadata. Slot I
 
 ## Trait and impl block — methods
 
-Declare public methods on the `#[component]` trait, then implement that trait for the storage struct.
+Declare callable methods on the `#[component]` trait, mark each one with `#[account_procedure]`, then implement that trait for the storage struct. Unmarked trait methods are not exported from the account interface. Authentication entrypoints use `#[auth_script]` instead; the two attributes cannot be combined.
 
 ### Read methods (`&self`)
 
-Methods that take `&self` are **read-only** — they can query storage and account state but cannot modify anything:
+Methods that take `&self` can read component storage but cannot mutate it through `self`:
 
 ```rust
 fn get_balance(&self, depositor: AccountId) -> Felt {
@@ -117,17 +123,13 @@ fn get_balance(&self, depositor: AccountId) -> Felt {
 
 ### Write methods (`&mut self`)
 
-Methods that take `&mut self` can **modify state** — write to storage, add/remove assets, create notes:
+Methods that take `&mut self` can update component storage and call mutating methods on `self`:
 
 ```rust
 fn deposit(&mut self, asset: Asset) {
     self.add_asset(asset);
 }
 ```
-
-:::info ZK proof implications
-Read methods (`&self`) produce proofs that don't include state transitions. Write methods (`&mut self`) produce proofs that do. The distinction is enforced by the compiler and determines which kernel operations are available.
-:::
 
 ### Private methods
 
@@ -162,20 +164,18 @@ The `#[component]` macro automatically provides methods on `self` for account op
 
 ```rust
 // Add an asset to the account vault
-self.add_asset(asset: Asset) -> Asset
+self.add_asset(asset: Asset) -> Word
 
 // Remove an asset from the account vault
-self.remove_asset(asset: Asset) -> Asset
+self.remove_asset(asset: Asset) -> Word
 
-// Increment the account nonce (replay protection)
-self.incr_nonce() -> Felt
-
-// Compute commitment of account state changes (read-only)
-self.compute_delta_commitment() -> Word
-
-// Check if a procedure was called during this transaction (read-only)
-self.was_procedure_called(proc_root: Word) -> bool
+// Increment the account nonce (only inside #[auth_script])
+self.incr_nonce() -> Nonce
 ```
+
+The kernel allows `incr_nonce` only from the account's authentication procedure,
+and only once per transaction. Calling it from an ordinary account procedure
+fails. Standard authentication components handle this increment automatically.
 
 ### Read-only methods (`&self`)
 
@@ -184,13 +184,19 @@ self.was_procedure_called(proc_root: Word) -> bool
 self.get_id() -> AccountId
 
 // Get the account nonce
-self.get_nonce() -> Felt
+self.get_nonce() -> Nonce
 
-// Get fungible asset balance for an asset key
-self.get_balance(asset_key: Word) -> Felt
+// Get the value word stored under an asset key
+self.get_asset(asset_key: Word) -> Word
 
-// Check non-fungible asset ownership
-self.has_non_fungible_asset(asset: Asset) -> bool
+// Check fungible or non-fungible asset ownership
+self.has_asset(asset_id: Word) -> bool
+
+// Compute commitment of account state changes
+self.compute_delta_commitment() -> Word
+
+// Check if a procedure was called during this transaction
+self.was_procedure_called(proc_root: Word) -> bool
 
 // Get storage and vault commitments
 self.get_vault_root() -> Word
@@ -198,6 +204,10 @@ self.compute_commitment() -> Word
 self.compute_storage_commitment() -> Word
 // ... and more (see API Reference)
 ```
+
+If storage or the vault has changed, `compute_delta_commitment` requires the
+nonce to have been incremented. Compute such a delta inside the authentication
+procedure after the increment; calling it earlier fails.
 
 For the full list of auto-generated methods, see [Account Operations](./account-operations). To export your own types for use in public method signatures, see [Custom Types](./custom-types).
 

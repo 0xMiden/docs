@@ -16,9 +16,9 @@ Account creation uses a few small option values. Wallets are the default shape; 
 | faucet `type` field | `0` \| `1` | Fungible or non-fungible faucet selector |
 | `auth` field | `"falcon"` \| `"ecdsa"` | Signing scheme — Falcon is the default |
 | `storage` field | `"public"` \| `"private"` | Account visibility mode |
-| low-level `AccountType` | `AccountType.Public` \| `AccountType.Private` | WASM builder visibility flag |
+| low-level `AccountStorageMode` | `AccountStorageMode.public()` \| `AccountStorageMode.private()` | WASM builder visibility flag |
 
-The v0.15 protocol no longer encodes wallet/faucet/contract role or mutability in the low-level `AccountType`; role comes from the create options and attached components.
+The protocol does not encode wallet/faucet/contract role or mutability in the account ID; role comes from the create options and attached components.
 
 ## Create
 
@@ -95,11 +95,13 @@ const counterCode = `
 
   const COUNTER_SLOT = word("miden::tutorials::counter")
 
+  @account_procedure
   pub proc get_count
     push.COUNTER_SLOT[0..2] exec.active_account::get_item
     exec.sys::truncate_stack
   end
 
+  @account_procedure
   pub proc increment_count
     push.COUNTER_SLOT[0..2] exec.active_account::get_item
     add.1
@@ -143,7 +145,7 @@ import {
   MidenClient,
   AccountBuilder,
   AccountComponent,
-  AccountType,
+  AccountStorageMode,
 } from "@miden-sdk/miden-sdk";
 
 const client = await MidenClient.createTestnet();
@@ -155,7 +157,7 @@ const account = new AccountBuilder(seed)
   .withAuthComponent(
     AccountComponent.createAuthComponentFromCommitment(commitment, 1),
   )
-  .accountType(AccountType.Public)
+  .storageMode(AccountStorageMode.public())
   .withBasicWalletComponent()
   .build().account;
 
@@ -186,8 +188,9 @@ console.log(account.isFaucet());
 
 ```typescript
 // Returns the local copy if present; otherwise fetches from the network and stores it.
+// publicAccountId is the hex or bech32 ID of an account deployed on this network.
 const account = await client.accounts.getOrImport(
-  "mtst1arjemrxne8lj5qz4mg9c8mtyxg954483",
+  publicAccountId,
 );
 console.log("Nonce:", account.nonce().toString());
 ```
@@ -240,7 +243,7 @@ await client.accounts.addAddress("0xACCOUNT...", "mtst1address...");
 await client.accounts.removeAddress("0xACCOUNT...", "mtst1address...");
 ```
 
-Associates one or more bech32 addresses with an account. Useful when your UI lets users alias accounts by a human-readable string.
+Associates valid Miden bech32 addresses with an account. The address is a protocol value, not an arbitrary UI alias.
 
 ## Import
 
@@ -249,7 +252,7 @@ Associates one or more bech32 addresses with an account. Useful when your UI let
 ```typescript
 // 1. By reference — fetches a public account from the network.
 await client.accounts.import("0x1234...");                           // hex
-await client.accounts.import("mtst1arjemrxne8lj5qz4mg9c8mtyxg954483"); // bech32
+await client.accounts.import(publicAccountBech32Id);                 // deployed account's bech32 ID
 
 // 2. From a previously exported file.
 await client.accounts.import({ file: accountFile });
@@ -279,8 +282,7 @@ const accountFile = await client.accounts.export("0x1234...");
 ## Error behaviour
 
 - `get()` returns `null` when the account is not in the local store.
-- `getDetails()`, `getBalance()`, and `export()` throw `"Account not found: 0x..."` when the account is missing.
-- `import({ seed, ... })` on a private account throws at resolve time — private state isn't recoverable from a seed.
+- `getDetails()`, `getBalance()`, and `export()` throw when the account is missing.
 
 ## Next
 

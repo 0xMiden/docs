@@ -7,6 +7,9 @@ sidebar_position: 4
 
 Mutation hooks own the full transaction lifecycle — execute, prove, submit — and serialize under the Web SDK's concurrency lock so two components can't corrupt the WASM state.
 
+These examples assume the provider configuration from [Setup](./setup.md).
+For automatic delivery of private notes, configure its `noteTransportUrl` setting.
+
 Two result-shape families show up across this page:
 
 **Transaction-producing hooks** (`useSend`, `useMultiSend`, `useMint`, `useConsume`, `useSwap`, `useTransaction`):
@@ -42,16 +45,23 @@ See [setup](./setup.md#hook-result-conventions) for the `TransactionStage` progr
 
 Creates a new wallet account. Returns the `Account` object.
 
+With the 0.16.0 packages, pass the low-level authentication enum explicitly.
+The React hooks' default refers to an enum member missing from the high-level
+SDK export, causing `invalid enum value passed`. Obtain the numeric enum from
+`getWasmOrThrow()` as shown below for wallets, faucets, and seed imports.
+
 ```tsx
-import { useCreateWallet, AuthScheme } from "@miden-sdk/react";
+import { useCreateWallet } from "@miden-sdk/react";
+import { getWasmOrThrow } from "@miden-sdk/miden-sdk/lazy";
 
 function NewWalletButton() {
   const { createWallet, wallet, isCreating, error } = useCreateWallet();
 
   const handleCreate = async () => {
+    const { AuthScheme } = await getWasmOrThrow();
     const account = await createWallet({
       storageMode: "private",                    // "private" | "public" (default private)
-      authScheme: AuthScheme.AuthRpoFalcon512,   // default
+      authScheme: AuthScheme.AuthRpoFalcon512,
     });
     console.log("Created:", account.bech32id());
   };
@@ -67,7 +77,7 @@ function NewWalletButton() {
 | Field | Default | Description |
 | --- | --- | --- |
 | `storageMode` | `"private"` | `"private"` / `"public"` |
-| `authScheme` | `AuthScheme.AuthRpoFalcon512` | Signing scheme |
+| `authScheme` | Pass explicitly in 0.16.0 | Numeric WASM signing scheme |
 | `initSeed` | random | 32-byte seed for deterministic account-ID derivation |
 
 ## `useCreateFaucet`
@@ -76,16 +86,19 @@ Creates a fungible-token faucet.
 
 ```tsx
 import { useCreateFaucet } from "@miden-sdk/react";
+import { getWasmOrThrow } from "@miden-sdk/miden-sdk/lazy";
 
 function NewFaucetButton() {
   const { createFaucet, faucet, isCreating } = useCreateFaucet();
 
   const handleCreate = async () => {
+    const { AuthScheme } = await getWasmOrThrow();
     const created = await createFaucet({
       tokenSymbol: "TEST",
       decimals: 8,             // default 8
       maxSupply: 10_000_000n,  // number | bigint
       storageMode: "public",   // default "private"; public allows FPI reads
+      authScheme: AuthScheme.AuthRpoFalcon512,
     });
     console.log("Faucet:", created.bech32id());
   };
@@ -104,7 +117,7 @@ function NewFaucetButton() {
 | `maxSupply` | required | `bigint \| number` |
 | `decimals` | `8` | Token decimals |
 | `storageMode` | `"private"` | Public faucets are discoverable/readable onchain |
-| `authScheme` | `AuthScheme.AuthRpoFalcon512` | Signing scheme |
+| `authScheme` | Pass explicitly in 0.16.0 | Numeric WASM signing scheme |
 
 ## `useSend`
 
@@ -257,8 +270,16 @@ await swap({
 
 Imports an account by ID (fetches from network), by previously-exported file, or by seed.
 
+For seed recovery with the 0.16.0 browser packages, set `useWorker: false` in
+`MidenProvider`'s `config`. With the worker enabled, a subsequent transaction can
+reach the network but fail during local `applyTransaction` with `account data
+wasn't found`. The direct client path restores the account and confirms a signed
+transaction. If you encounter the worker error, check the account's onchain state
+before retrying the transaction.
+
 ```tsx
-import { useImportAccount, AuthScheme } from "@miden-sdk/react";
+import { useImportAccount } from "@miden-sdk/react";
+import { getWasmOrThrow } from "@miden-sdk/miden-sdk/lazy";
 
 const { importAccount, account, isImporting, error } = useImportAccount();
 
@@ -269,6 +290,7 @@ const imported = await importAccount({
 });
 
 // By seed — public accounts only
+const { AuthScheme } = await getWasmOrThrow();
 await importAccount({
   type: "seed",
   seed: initSeed,        // Uint8Array

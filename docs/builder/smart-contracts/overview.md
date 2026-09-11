@@ -70,6 +70,7 @@ struct MyWalletStorage;
 
 #[component]
 trait MyWallet {
+    #[account_procedure]
     fn receive_asset(&mut self, asset: Asset);
 }
 

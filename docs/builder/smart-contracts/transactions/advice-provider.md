@@ -56,10 +56,13 @@ let num_felts: Felt = adv_push_mapvaln(key);
 
 ### `adv_load_preimage`
 
-Loads a preimage from the advice provider given a commitment and expected word count. This is useful when a note or transaction script needs to retrieve data that was hashed and stored by the sender.
+Pops a preimage from the advice stack and checks it against a commitment and expected word count. Load the data onto the stack first, for example with `adv_push_mapvaln`; `adv_load_preimage` does not look up the advice map itself. This is useful when a note or transaction script needs to retrieve data that was hashed and stored by the sender.
 
 ```rust
-use miden::adv_load_preimage;
+extern crate alloc;
+
+use alloc::vec::Vec;
+use miden::{adv_load_preimage, Felt};
 
 // Load `num_words` Words whose hash matches `commitment`.
 let felts: Vec<Felt> = adv_load_preimage(num_words, commitment);
@@ -71,6 +74,9 @@ let felts: Vec<Felt> = adv_load_preimage(num_words, commitment);
 The canonical pattern (used in `basic-wallet-tx-script`) combines `adv_push_mapvaln` with `adv_load_preimage` to retrieve structured data encoded as a preimage:
 
 ```rust
+extern crate alloc;
+
+use alloc::vec::Vec;
 use miden::{intrinsics::advice::adv_push_mapvaln, *};
 
 // 1. Look up the key — returns the number of Felts stored there
@@ -103,10 +109,12 @@ let values: &[Word] = &[word_a, word_b];
 adv_insert(key, values);
 ```
 
+An existing key can be inserted again with the same values. Inserting different
+values under an existing key fails; advice-map entries cannot be overwritten.
 
 ### `adv_insert_mem`
 
-Inserts a range of memory into the advice map. The VM reads `Word`s from addresses `[start_addr, end_addr)` and stores them under the key. Both address arguments are `u32`.
+Inserts a range of memory into the advice map. Both `u32` addresses use Miden's field-element address space: `[start_addr, end_addr)` contains `end_addr - start_addr` Felts. A Word occupies four addresses, so the interval below covers two Words. These are VM addresses, not Rust byte pointers; use `adv_insert` when the data is already a Rust slice of Words.
 
 ```rust
 use miden::intrinsics::advice::adv_insert_mem;
@@ -128,6 +136,10 @@ use miden::intrinsics::advice::emit_falcon_sig_to_stack;
 emit_falcon_sig_to_stack(msg, pub_key);
 ```
 
+The standard transaction host generates new signatures only during the
+authentication procedure, with a valid transaction summary. A script outside
+authentication must receive a signature in its advice inputs before execution;
+the event loads that supplied signature for the verifier.
 
 :::info API Reference
 Full API docs on docs.rs: [`miden::intrinsics::advice`](https://docs.rs/miden/latest/miden/intrinsics/advice/)

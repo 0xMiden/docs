@@ -30,17 +30,19 @@ To run the code examples in this guide, you'll need to set up a development envi
 
 ## Reading from a Public Smart Contract
 
-Let's interact with a counter contract deployed on the Miden testnet. This contract maintains a simple counter value in a named storage map slot.
+Let's read a public counter contract already deployed on the Miden testnet. The examples below include its account ID, so you can query its storage without deploying a contract. This counter stores its value in a named storage map slot.
 
 ### Reading the Count of a Counter contract
 
+Run `cargo run --bin read-count` for Rust, or call `demo()` for TypeScript.
+
 ```rust title="integration/src/bin/read-count.rs"
-use integration::helpers::{counter_storage_slot, COUNTER_STORAGE_KEY};
 use miden_client::{
-    account::{Account, AccountId},
+    account::{Account, AccountId, StorageMapKey, StorageSlotName},
     builder::ClientBuilder,
     keystore::FilesystemKeyStore,
-    rpc::{Endpoint, GrpcClient},
+    rpc::Endpoint,
+    Felt, Word,
 };
 use miden_client_sqlite_store::ClientBuilderSqliteExt;
 use std::sync::Arc;
@@ -50,7 +52,6 @@ async fn main() -> anyhow::Result<()> {
     // Initialize RPC connection
     let endpoint = Endpoint::testnet();
     let timeout_ms = 10_000;
-    let rpc_client = Arc::new(GrpcClient::new(&endpoint, timeout_ms));
 
     // Initialize keystore
     let keystore_path = std::path::PathBuf::from("./keystore");
@@ -63,10 +64,9 @@ async fn main() -> anyhow::Result<()> {
     // NOTE: The client is our entry point to the Miden network.
     // All interactions with the network go through the client.
     let mut client = ClientBuilder::new()
-        .rpc(rpc_client)
+        .grpc_client(&endpoint, Some(timeout_ms))
         .sqlite_store(store_path)
         .authenticator(keystore.clone())
-        .in_debug_mode(true.into())
         .build()
         .await?;
 
@@ -78,7 +78,7 @@ async fn main() -> anyhow::Result<()> {
 
     // A counter contract deployed on the Miden testnet. It is a public fixture and
     // may need updating after a new release.
-    let counter_account_id = AccountId::from_hex("0x6a1b2d59a9ebd3f1534cfb2fcf4d7e")?;
+    let counter_account_id = AccountId::from_hex("0x78ccf49bd142f8917edf7743e3e718")?;
 
     client.import_account_by_id(counter_account_id).await?;
 
@@ -88,13 +88,17 @@ async fn main() -> anyhow::Result<()> {
         .ok_or_else(|| anyhow::anyhow!("Account not found"))?
         .try_into()?;
 
-    // Read the count from the counter account's named storage map slot. Both the slot
-    // name and the map key come from the project's `integration/src/helpers.rs`.
+    // Read the count using the contract's storage slot name and map key.
+    let slot_name = StorageSlotName::new("counter_account::counter_contract::count_map")?;
+    let counter_key = Word::new([Felt::ZERO, Felt::ZERO, Felt::ZERO, Felt::ONE]);
     let count = counter_account
         .storage()
-        .get_map_item(&counter_storage_slot()?, COUNTER_STORAGE_KEY)?;
+        .get_map_item(
+            &slot_name,
+            StorageMapKey::new(counter_key),
+        )?;
 
-    println!("Count: {:?}", count);
+    println!("Count: {}", count[0].as_canonical_u64());
 
     Ok(())
 }
@@ -109,7 +113,7 @@ export async function demo() {
 
     // A counter contract deployed on the Miden testnet. It is a public fixture and
     // may need updating after a new release.
-    const counterAccountId = "0x6a1b2d59a9ebd3f1534cfb2fcf4d7e";
+    const counterAccountId = "0x78ccf49bd142f8917edf7743e3e718";
 
     // Fetch the counter account (imports it into the local store if needed).
     const counter = await client.accounts.getOrImport(counterAccountId);
@@ -130,7 +134,7 @@ export async function demo() {
 <summary>Expected output</summary>
 
 ```text
-Count: Word([1, 0, 0, 0])
+Count: 1
 ```
 
 </details>
@@ -143,23 +147,22 @@ You can also query the assets (tokens) held by an account:
 use miden_client::{
     account::{
         component::{
-            AccessControl, AuthScheme, AuthSingleSig, BasicWallet, BurnPolicyConfig,
-            FungibleFaucet, MintPolicyConfig, PolicyRegistration, TokenName, TokenPolicyManager,
-            TransferPolicy, create_fungible_faucet,
+            AuthScheme, AuthSingleSig, BasicWallet, BurnPolicy, FungibleFaucet, MintPolicy,
+            TokenName, TokenPolicyManager, TransferPolicy,
+            create_singlesig_user_fungible_faucet,
         },
         Account, AccountBuilder, AccountType,
     },
-    asset::{AssetAmount, AssetCallbackFlag, AssetVaultKey, FungibleAsset, TokenSymbol},
-    auth::AuthSecretKey,
+    asset::{AssetAmount, AssetId, FungibleAsset, TokenSymbol},
+    auth::{Approver, AuthSecretKey},
     builder::ClientBuilder,
     keystore::{FilesystemKeyStore, Keystore},
     note::NoteType,
-    rpc::{Endpoint, GrpcClient},
+    rpc::Endpoint,
     transaction::TransactionRequestBuilder,
 };
 use miden_client_sqlite_store::ClientBuilderSqliteExt;
-use miden_standards::AuthMethod;
-use rand::RngCore;
+use rand::Rng;
 use std::sync::Arc;
 use tokio::time::Duration;
 
@@ -168,7 +171,6 @@ async fn main() -> anyhow::Result<()> {
     // Initialize RPC connection
     let endpoint = Endpoint::testnet();
     let timeout_ms = 10_000;
-    let rpc_client = Arc::new(GrpcClient::new(&endpoint, timeout_ms));
 
     // Initialize keystore
     let keystore_path = std::path::PathBuf::from("./keystore");
@@ -181,10 +183,9 @@ async fn main() -> anyhow::Result<()> {
     // NOTE: The client is our entry point to the Miden network.
     // All interactions with the network go through the client.
     let mut client = ClientBuilder::new()
-        .rpc(rpc_client)
+        .grpc_client(&endpoint, Some(timeout_ms))
         .sqlite_store(store_path)
         .authenticator(keystore.clone())
-        .in_debug_mode(true.into())
         .build()
         .await?;
 
@@ -212,10 +213,10 @@ async fn main() -> anyhow::Result<()> {
     // Build the account
     let account_builder = AccountBuilder::new(alice_seed)
         .account_type(AccountType::Public)
-        .with_auth_component(AuthSingleSig::new(
+        .with_component(AuthSingleSig::new(Approver::new(
             alice_key_pair.public_key().to_commitment(),
             AuthScheme::Falcon512Poseidon2,
-        ))
+        )))
         .with_component(BasicWallet);
 
     // Build the faucet
@@ -225,29 +226,28 @@ async fn main() -> anyhow::Result<()> {
         .decimals(decimals)
         .max_supply(max_supply)
         .build()?;
-    let policies = TokenPolicyManager::new()
-        .with_mint_policy(MintPolicyConfig::AllowAll, PolicyRegistration::Active)?
-        .with_burn_policy(BurnPolicyConfig::AllowAll, PolicyRegistration::Active)?
-        .with_send_policy(TransferPolicy::AllowAll, PolicyRegistration::Active)?
-        .with_receive_policy(TransferPolicy::AllowAll, PolicyRegistration::Active)?;
+    let policies = TokenPolicyManager::builder()
+        .active_mint_policy(MintPolicy::allow_all())
+        .active_burn_policy(BurnPolicy::allow_all())
+        .active_send_policy(TransferPolicy::allow_all())
+        .active_receive_policy(TransferPolicy::allow_all())
+        .build();
 
     let alice_account = account_builder.build()?;
-    let faucet_account = create_fungible_faucet(
+    let faucet_auth = AuthSingleSig::new(Approver::new(
+        faucet_key_pair.public_key().to_commitment(),
+        AuthScheme::Falcon512Poseidon2,
+    ));
+    let faucet_account = create_singlesig_user_fungible_faucet(
         faucet_seed,
         faucet,
-        AccountType::Public,
-        AuthMethod::SingleSig {
-            approver: (
-                faucet_key_pair.public_key().to_commitment(),
-                AuthScheme::Falcon512Poseidon2,
-            ),
-        },
-        AccessControl::AuthControlled,
+        faucet_auth,
         policies,
+        AccountType::Public,
     )?;
 
-    println!("Alice's account ID: {:?}", alice_account.id().to_hex());
-    println!("Faucet account ID: {:?}", faucet_account.id().to_hex());
+    println!("Alice's account ID: {}", alice_account.id().to_hex());
+    println!("Faucet account ID: {}", faucet_account.id().to_hex());
 
     // Add accounts to client
     client.add_account(&alice_account, false).await?;
@@ -258,10 +258,9 @@ async fn main() -> anyhow::Result<()> {
     keystore.add_key(&faucet_key_pair, faucet_account.id()).await?;
 
     let amount: u64 = 1000;
-    // Enable asset callbacks so the faucet's send/receive transfer policies run
-    // when this asset moves between accounts.
-    let fungible_asset = FungibleAsset::new(faucet_account.id(), amount)?
-        .with_callbacks(AssetCallbackFlag::Enabled);
+    // The faucet factory encodes callback support in the faucet account ID because
+    // transfer policies are configured above.
+    let fungible_asset = FungibleAsset::new(faucet_account.id(), amount)?;
 
     // Mint the asset to Alice — this creates a P2ID note she can consume.
     let transaction_request = TransactionRequestBuilder::new().build_mint_fungible_asset(
@@ -277,6 +276,7 @@ async fn main() -> anyhow::Result<()> {
 
     // Public notes must be committed to a block before they can be consumed.
     // Poll until the network includes our mint note in a block.
+    println!("Waiting for note to be consumable...");
     loop {
         client.sync_state().await?;
 
@@ -285,7 +285,6 @@ async fn main() -> anyhow::Result<()> {
             .await?;
 
         if consumable_notes.is_empty() {
-            println!("Waiting for P2ID note to be comitted...");
             tokio::time::sleep(Duration::from_secs(2)).await;
             continue;
         }
@@ -315,15 +314,10 @@ async fn main() -> anyhow::Result<()> {
         .ok_or_else(|| anyhow::anyhow!("Account not found"))?
         .try_into()?;
 
-    // The callback flag is part of the vault key, so it must match the flag the asset
-    // was minted with — otherwise the lookup misses and the balance reads 0.
-    let balance_key = AssetVaultKey::new_fungible(
-        faucet_account.id(),
-        AssetCallbackFlag::Enabled,
-    );
-    let balance = alice_account.vault().get_balance(balance_key)?;
+    let asset_id = AssetId::new_fungible(faucet_account.id());
+    let balance = alice_account.vault().get_balance(asset_id)?;
 
-    println!("Alice's TEST token balance: {:?}", balance);
+    println!("Alice's TEST token balance: {}", balance);
 
     Ok(())
 }
@@ -362,6 +356,7 @@ export async function demo() {
         waitForConfirmation: true,
     });
 
+    console.log("Waiting for note to be consumable...");
     const notes = await client.notes.listAvailable({ account: alice });
     await client.transactions.consume({
         account: alice,
@@ -384,10 +379,10 @@ export async function demo() {
 <summary>Expected output</summary>
 
 ```text
-Alice's account ID: "0x5b2840a923dedc102ea67e0c1eba3c"
-Faucet account ID: "0x29dd1dc628d2842032e751ed1b5da7"
-Waiting for P2ID note to be comitted...
-Alice's TEST token balance: AssetAmount(1000)
+Alice's account ID: 0x5b2840a923dedc102ea67e0c1eba3c
+Faucet account ID: 0x29dd1dc628d2842032e751ed1b5da7
+Waiting for note to be consumable...
+Alice's TEST token balance: 1000
 ```
 
 </details>

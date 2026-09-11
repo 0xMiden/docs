@@ -10,7 +10,7 @@ Miden Standards are reusable building blocks for common smart-contract behavior:
 Use them when you want your account, note, or transaction flow to interoperate with the rest of the Miden ecosystem instead of defining every interface from scratch.
 
 :::caution Versioned APIs
-These pages track the v0.15 standards surface. Use the version selector if you are building against an older protocol release.
+These pages track the v0.16 standards surface. Use the version selector if you are building against an older protocol release.
 :::
 
 This section is a builder guide, not the canonical standards specification. It explains which standard to reach for, how it fits into the smart-contract model, and where to switch to reference docs when you need exact procedure names, storage schemas, or script roots.

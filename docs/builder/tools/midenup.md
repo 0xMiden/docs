@@ -2,12 +2,12 @@
 title: midenup
 sidebar_label: Midenup
 sidebar_position: 2
-description: "The Miden toolchain installer — bootstrap, pin, and switch between Miden VM / compiler / client / stdlib toolchains from a single `miden` entry point."
+description: "The Miden toolchain installer — bootstrap, pin, and switch between Miden VM, compiler, client, and package toolchains from a single `miden` entry point."
 ---
 
 # midenup
 
-`midenup` is the Miden toolchain installer. One install gives you a unified `miden` command that delegates to the Miden VM, compiler (`midenc` + `cargo-miden`), client, stdlib, and transaction kernel — all versioned together as a single release channel.
+`midenup` is the Miden toolchain installer. One install gives you a unified `miden` command that delegates to the Miden VM, compiler (`midenc` + `cargo-miden`), client, formatter, local package registry, and protocol packages — all versioned together as a single release channel.
 
 <CardGrid cols={2}>
   <Card title="midenup on GitHub ↗" href="https://github.com/0xMiden/midenup" eyebrow="Source · Installer">
@@ -42,14 +42,14 @@ Run `miden --version`. If you see "command not found," add `$CARGO_HOME/bin` (de
   <Card title="Miden client" eyebrow="SDK + CLI">
     `miden-client` — accounts, transactions, notes, proving.
   </Card>
-  <Card title="Standard library" eyebrow="MASM stdlib">
-    `miden-stdlib` — the canonical MASM standard library.
+  <Card title="Formatter" eyebrow="MASM source">
+    `miden-format` — format Miden Assembly source files.
   </Card>
-  <Card title="Transaction kernel" eyebrow="Kernel library">
-    `miden-base` — the transaction kernel that runs inside every account and note script.
+  <Card title="Protocol packages" eyebrow="Kernel libraries">
+    Core, protocol, standards, and transaction-kernel MASP packages used by the toolchain.
   </Card>
-  <Card title="(more coming)" eyebrow="Roadmap">
-    Additional Miden components will be added to `midenup` as they ship.
+  <Card title="Local registry" eyebrow="Package management">
+    `miden-registry` — publish and inspect packages in a filesystem-backed local registry.
   </Card>
 </CardGrid>
 
@@ -58,15 +58,15 @@ Run `miden --version`. If you see "command not found," add `$CARGO_HOME/bin` (de
 ### Install a channel
 
 ```bash
-midenup install stable        # latest matching component set
-midenup install 0.14          # pin to a specific release line
+midenup install testnet       # follows the release named by the testnet manifest
+midenup install 0.16.0        # pin to a specific release line
 ```
 
 ### Switch the active toolchain
 
 ```bash
-midenup set 0.14              # pin for the current project (writes miden-toolchain.toml)
-midenup override 0.14         # set the system-wide default
+midenup set 0.16.0            # pin for the current project (writes miden-toolchain.toml)
+midenup override 0.16.0       # set the system-wide default
 midenup show active-toolchain # which one is active right now?
 ```
 
@@ -75,7 +75,7 @@ A `miden-toolchain.toml` in the current directory always wins — otherwise the 
 ### Uninstall
 
 ```bash
-midenup uninstall 0.14
+midenup uninstall 0.16.0
 ```
 
 Delete `$MIDENUP_HOME` to uninstall `midenup` itself. Find its location with `midenup show home`.
@@ -91,16 +91,18 @@ Removing toolchain directories manually corrupts the `midenup` environment. Use 
 | `miden` command | Delegates to | What it does |
 | --- | --- | --- |
 | `miden new` | `cargo miden new` | Create a new Miden Rust project |
-| `miden build` | `cargo miden build` | Build the project |
-| `miden new-wallet` | `miden-client new-wallet --deploy` | Create and deploy a wallet account |
-| `miden account` | `miden-client account` | Create or inspect a local account |
-| `miden faucet` | `miden-client mint` | Fund an account from the faucet |
-| `miden deploy` | `miden-client -s public --account-type regular-account-immutable-code` | Deploy a public, immutable-code contract |
-| `miden call` | `miden-client account --show` | Read state from an account (view) |
-| `miden send` | `miden-client send` | Send a state-changing transaction |
+| `miden build` | `midenc miden-project.toml` | Build the current Miden project |
+| `miden new-wallet` | `miden-client new-wallet` | Create a local wallet account |
+| `miden account` | `miden-client new-account` | Create a local account |
+| `miden faucet` | `miden-client mint` | Mint your own asset from a faucet account you control |
+| `miden mint` | `miden-faucet-client mint` | Request native test tokens from the public faucet |
+| `miden call` | `miden-client call` | Call a local account procedure |
 | `miden simulate` | `miden-client exec` | Dry-run a transaction without committing |
+| `miden transfer` | `miden-client transfer` | Transfer assets to another account |
+| `miden format` | `miden-format` | Format MASM source (install with `--component format`) |
+| `miden registry` | `miden-registry` | Manage the local registry (install with `--component local-registry`) |
 
-Everything outside the alias table is forwarded to the underlying binary — e.g., `miden exec …` goes straight through to `miden-client exec`.
+Use the component name to access commands that do not have an alias. The v0.16 channel has no `miden deploy` alias. `new-wallet` and `new-account` create accounts locally; fund and publish an account through its first successful transaction. Older channel aliases that add `--deploy` cannot be used with the stable v0.16 client.
 
 ## Related
 
@@ -109,7 +111,7 @@ Everything outside the alias table is forwarded to the underlying binary — e.g
     Full environment setup — prerequisites, node install, first account.
   </Card>
   <Card title="CLI basics" href="../get-started/setup/cli-basics" eyebrow="Commands">
-    Walk through `miden account`, `miden send`, `miden faucet`, and the rest.
+    Walk through `miden client account`, `miden client note`, `miden client sync`, and the rest.
   </Card>
   <Card title="Network" href="./network" eyebrow="Testnet · Services">
     Endpoints the `miden` CLI points at — RPC, faucet, remote prover, block explorer.

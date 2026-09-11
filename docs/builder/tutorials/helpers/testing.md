@@ -30,6 +30,7 @@ your-project/
 └── integration/
     ├── Cargo.toml
     ├── src/
+    │   ├── lib.rs        # Exports test helpers
     │   └── helpers.rs    # Test utilities
     └── tests/
         └── my_test.rs    # Test files
@@ -41,10 +42,8 @@ your-project/
 [package]
 name = "integration"
 version = "0.1.0"
-edition = "2021"
-
-[lib]
-path = "src/helpers.rs"
+edition = "2024"
+rust-version = "1.98.1"
 
 [[test]]
 name = "my_test"
@@ -53,50 +52,54 @@ path = "tests/my_test.rs"
 [dependencies]
 anyhow = "1.0"
 tokio = { version = "1", features = ["rt-multi-thread", "macros"] }
+miden-protocol = "0.16"
+miden-standards = { version = "0.16", features = ["testing"] }
+miden-testing = "0.16"
+rand = "0.10"
+```
 
-# Miden dependencies
-cargo-miden = { version = "0.8" }
-miden-client = { version = "0.15", features = ["tonic", "testing"] }
-miden-client-sqlite-store = { version = "0.15", package = "miden-client-sqlite-store" }
-miden-core = { version = "0.23" }
-miden-standards = { version = "0.15", default-features = false, features = ["testing"] }
-miden-testing = "0.15"
-miden-mast-package = { version = "0.23", default-features = false }
-rand = { version = "0.9" }
+Export the helpers from the integration crate:
+
+```rust title="integration/src/lib.rs"
+pub mod helpers;
 ```
 
 ## Building Contracts for Tests
 
-Use `cargo-miden` to build your contracts programmatically:
+Use the `miden` toolchain to build contracts and then load the generated `.masp` artifact:
 
 ```rust title="integration/src/helpers.rs"
-use std::path::Path;
+use std::{path::{Path, PathBuf}, process::Command};
 use anyhow::{bail, Context, Result};
-use cargo_miden::{run, OutputType};
-use miden_mast_package::Package;
+use miden_protocol::{assembly::Package, utils::serde::Deserializable};
 
 pub fn build_project_in_dir(dir: &Path, release: bool) -> Result<Package> {
-    let profile = if release { "--release" } else { "--debug" };
-    let manifest_path = dir.join("Cargo.toml");
-    let manifest_arg = manifest_path.to_string_lossy();
+    let profile_dir = if release { "release" } else { "dev" };
 
-    let args = vec![
-        "cargo", "miden", "build",
-        profile,
-        "--manifest-path", &manifest_arg,
-    ];
+    let mut command = Command::new("miden");
+    command.arg("build");
+    if release {
+        command.arg("--release");
+    }
 
-    let output = run(args.into_iter().map(String::from), OutputType::Masm)
-        .context("Failed to compile project")?
-        .context("Cargo miden build returned None")?;
+    let status = command
+        .current_dir(dir)
+        .status()
+        .context("failed to run miden build")?;
+    if !status.success() {
+        bail!("miden build failed with {status}");
+    }
 
-    let artifact_path = match output {
-        cargo_miden::CommandOutput::BuildCommandOutput { output } => match output {
-            cargo_miden::BuildOutput::Masm { artifact_path } => artifact_path,
-            other => bail!("Expected Masm output, got {:?}", other),
-        },
-        other => bail!("Expected BuildCommandOutput, got {:?}", other),
-    };
+    let artifact_dir = dir.join("target/miden").join(profile_dir);
+    let mut artifacts = std::fs::read_dir(&artifact_dir)?
+        .filter_map(|entry| entry.ok().map(|entry| entry.path()))
+        .filter(|path| path.extension().is_some_and(|ext| ext == "masp"));
+    let artifact_path: PathBuf = artifacts
+        .next()
+        .context("miden build produced no MASP artifact")?;
+    if artifacts.next().is_some() {
+        bail!("expected one MASP artifact in {}", artifact_dir.display());
+    }
 
     let package_bytes = std::fs::read(&artifact_path)?;
     Package::read_from_bytes(&package_bytes)
@@ -132,12 +135,12 @@ async fn my_test() -> anyhow::Result<()> {
 Faucets mint assets for testing:
 
 ```rust
-use miden_client::auth::AuthSchemeId;
+use miden_protocol::account::auth::AuthScheme;
 
 // Create a faucet with 1,000,000 max supply and 100 initial tokens
 let faucet = builder.add_existing_basic_faucet(
     Auth::BasicAuth {
-        auth_scheme: AuthSchemeId::Falcon512Poseidon2,
+        auth_scheme: AuthScheme::Falcon512Poseidon2,
     },
     "TEST",           // Token symbol
     1_000_000,        // Max supply
@@ -150,13 +153,12 @@ let faucet = builder.add_existing_basic_faucet(
 Create accounts with initial assets:
 
 ```rust
-use miden_client::asset::FungibleAsset;
-use miden_client::auth::AuthSchemeId;
+use miden_protocol::{account::auth::AuthScheme, asset::FungibleAsset};
 
 // Create a wallet with 100 tokens from the faucet
 let sender = builder.add_existing_wallet_with_assets(
     Auth::BasicAuth {
-        auth_scheme: AuthSchemeId::Falcon512Poseidon2,
+        auth_scheme: AuthScheme::Falcon512Poseidon2,
     },
     [FungibleAsset::new(faucet.id(), 100)?.into()],
 )?;
@@ -167,19 +169,19 @@ let sender = builder.add_existing_wallet_with_assets(
 For accounts with custom components, create configuration helpers:
 
 ```rust title="integration/src/helpers.rs"
-use miden_client::account::{AccountType, StorageSlot};
+use miden_protocol::account::{component::InitStorageData, AccountType};
 
 #[derive(Clone)]
 pub struct AccountCreationConfig {
     pub account_type: AccountType,
-    pub storage_slots: Vec<StorageSlot>,
+    pub init_storage_data: InitStorageData,
 }
 
 impl Default for AccountCreationConfig {
     fn default() -> Self {
         Self {
             account_type: AccountType::Public,
-            storage_slots: vec![],
+            init_storage_data: InitStorageData::default(),
         }
     }
 }
@@ -188,8 +190,15 @@ impl Default for AccountCreationConfig {
 ### Creating Account from Package
 
 ```rust
-use miden_client::account::{StorageMap, StorageSlot, StorageSlotName};
-use std::sync::Arc;
+use std::{path::Path, sync::Arc};
+
+use miden_protocol::{
+    account::{
+        component::InitStorageData, AccountBuilder, AccountComponent, StorageSlotName,
+    },
+    Word,
+};
+use miden_testing::{AccountState, Auth};
 
 // Build the contract
 let bank_package = Arc::new(build_project_in_dir(
@@ -197,68 +206,41 @@ let bank_package = Arc::new(build_project_in_dir(
     true,  // release mode
 )?);
 
-// Configure named storage slots
+// Initialize values declared by the package's storage schema.
 let initialized_slot =
-    StorageSlotName::new("miden::component::miden_bank_account::initialized")
+    StorageSlotName::new("bank_account::bank::initialized")
         .expect("Valid slot name");
-let balances_slot =
-    StorageSlotName::new("miden::component::miden_bank_account::balances")
-        .expect("Valid slot name");
+let mut init_storage_data = InitStorageData::default();
+init_storage_data.insert_value(&initialized_slot, Word::default())?;
 
 let config = AccountCreationConfig {
-    storage_slots: vec![
-        StorageSlot::with_value(initialized_slot, Word::default()),
-        StorageSlot::with_map(
-            balances_slot.clone(),
-            StorageMap::with_entries([]).expect("Empty storage map"),
-        ),
-    ],
+    init_storage_data,
     ..Default::default()
 };
 
-// Create the account
-let mut account = create_testing_account_from_package(
-    bank_package.clone(),
-    config,
-).await?;
-
-// Add to MockChain
-builder.add_account(account.clone())?;
+// Instantiate the component from the package and add an existing account.
+let component = AccountComponent::from_package(
+    &bank_package,
+    &config.init_storage_data,
+)?;
+let account = builder.add_account_from_builder(
+    Auth::IncrNonce,
+    AccountBuilder::new([7_u8; 32])
+        .account_type(config.account_type)
+        .with_component(component),
+    AccountState::Exists,
+)?;
 ```
 
 ## Creating Notes
 
-### Note Configuration
-
-```rust title="integration/src/helpers.rs"
-use miden_client::note::{NoteAssets, NoteTag, NoteType};
-use miden_core::Felt;
-
-pub struct NoteCreationConfig {
-    pub note_type: NoteType,
-    pub tag: NoteTag,
-    pub assets: NoteAssets,
-    pub inputs: Vec<Felt>,
-}
-
-impl Default for NoteCreationConfig {
-    fn default() -> Self {
-        Self {
-            note_type: NoteType::Public,
-            tag: NoteTag::new(0),
-            assets: Default::default(),
-            inputs: Default::default(),
-        }
-    }
-}
-```
-
 ### Creating Notes with Assets
 
 ```rust
-use miden_client::asset::{Asset, FungibleAsset};
-use miden_client::note::NoteAssets;
-use miden_client::transaction::RawOutputNote;
+use std::{path::Path, sync::Arc};
+
+use miden_protocol::{asset::FungibleAsset, transaction::RawOutputNote};
+use miden_standards::testing::note::NoteBuilder;
 
 // Build note script
 let deposit_note_package = Arc::new(build_project_in_dir(
@@ -269,17 +251,13 @@ let deposit_note_package = Arc::new(build_project_in_dir(
 // Create assets to attach
 let deposit_amount: u64 = 1000;
 let fungible_asset = FungibleAsset::new(faucet.id(), deposit_amount)?;
-let note_assets = NoteAssets::new(vec![Asset::Fungible(fungible_asset)])?;
 
-// Create the note
-let deposit_note = create_testing_note_from_package(
-    deposit_note_package.clone(),
-    sender.id(),  // Note sender
-    NoteCreationConfig {
-        assets: note_assets,
-        ..Default::default()
-    },
-)?;
+// Create the note from the compiled package.
+let mut rng = rand::rng();
+let deposit_note = NoteBuilder::new(sender.id(), &mut rng)
+    .package((*deposit_note_package).clone())
+    .add_assets([fungible_asset.into()])
+    .build()?;
 
 // Add to MockChain
 builder.add_output_note(RawOutputNote::Full(deposit_note.clone()));
@@ -287,36 +265,31 @@ builder.add_output_note(RawOutputNote::Full(deposit_note.clone()));
 
 ### Creating Notes with Inputs
 
-For notes that read parameters via `active_note::get_inputs()`:
+For notes that read parameters via `active_note::get_storage()`:
 
 ```rust
-use miden_core::Felt;
+use miden_protocol::{Felt, Word};
 
-// Note inputs are a vector of Felts
-let inputs = vec![
-    // Asset data [0-3]
-    Felt::new(withdraw_amount),
-    Felt::new(0),
-    faucet.id().suffix(),
-    faucet.id().prefix().as_felt(),
-    // Serial number [4-7]
-    Felt::new(0x1234567890abcdef),
-    Felt::new(0xfedcba0987654321),
-    Felt::new(0xdeadbeefcafebabe),
-    Felt::new(0x0123456789abcdef),
-    // Additional parameters
-    Felt::new(tag as u64),
-    Felt::new(1),  // note_type (1 = Public)
+// Note storage is a vector of Felts. Define and document the schema for each note.
+let serial_num = Word::from([
+    Felt::new(0x1234567890abcdef).expect("serial limb is below the field modulus"),
+    Felt::new(0xfedcba0987654321).expect("serial limb is below the field modulus"),
+    Felt::new(0xdeadbeefcafebabe).expect("serial limb is below the field modulus"),
+    Felt::new(0x0123456789abcdef).expect("serial limb is below the field modulus"),
+]);
+let storage = vec![
+    // Serial number [0-3]
+    serial_num[0], serial_num[1], serial_num[2], serial_num[3],
+    // Additional parameters [4-5]
+    Felt::from(tag),
+    Felt::ONE, // note_type (1 = Public)
 ];
 
-let note = create_testing_note_from_package(
-    note_package.clone(),
-    sender.id(),
-    NoteCreationConfig {
-        inputs,
-        ..Default::default()
-    },
-)?;
+let mut rng = rand::rng();
+let note = NoteBuilder::new(sender.id(), &mut rng)
+    .package((*note_package).clone())
+    .note_storage(storage)?
+    .build()?;
 ```
 
 ## Executing Transactions
@@ -327,21 +300,19 @@ let note = create_testing_note_from_package(
 // Build MockChain after adding all accounts and notes
 let mut mock_chain = builder.build()?;
 
-// Build transaction context
-// Args: (account_id, input_note_ids, expected_output_note_ids)
-let tx_context = mock_chain
-    .build_tx_context(account.id(), &[note.id()], &[])?
+// Build and execute a transaction that consumes a committed note.
+let executed_tx = mock_chain
+    .build_transaction(account.id())
+    .authenticated_input_note(note.id())
     .build()?;
-
-// Execute
-let executed_tx = tx_context.execute().await?;
-
-// Apply state changes to local account copy
-account.apply_delta(&executed_tx.account_delta())?;
+let executed_tx = executed_tx.execute().await?;
 
 // Add to pending transactions and prove block
 mock_chain.add_pending_executed_transaction(&executed_tx)?;
 mock_chain.prove_next_block()?;
+
+// Read the updated account from committed chain state.
+let account = mock_chain.committed_account(account.id())?;
 ```
 
 ### Transaction with Script
@@ -349,7 +320,7 @@ mock_chain.prove_next_block()?;
 For transaction scripts (like initialization):
 
 ```rust
-use miden_client::transaction::TransactionScript;
+use miden_protocol::transaction::TransactionScript;
 
 // Build the transaction script
 let init_package = Arc::new(build_project_in_dir(
@@ -357,16 +328,15 @@ let init_package = Arc::new(build_project_in_dir(
     true,
 )?);
 
-let init_program = init_package.unwrap_program();
-let init_tx_script = TransactionScript::new((*init_program).clone());
+let init_tx_script = TransactionScript::from_package(&init_package)?;
 
 // Execute with script
-let tx_context = mock_chain
-    .build_tx_context(account.id(), &[], &[])?
+let executed_tx = mock_chain
+    .build_transaction(account.id())
     .tx_script(init_tx_script)
-    .build()?;
-
-let executed_tx = tx_context.execute().await?;
+    .build()?
+    .execute()
+    .await?;
 ```
 
 ### Transactions with Expected Output Notes
@@ -374,7 +344,7 @@ let executed_tx = tx_context.execute().await?;
 When your contract creates output notes, specify them:
 
 ```rust
-use miden_client::transaction::RawOutputNote;
+use miden_protocol::{note::Note, transaction::RawOutputNote};
 
 // Build the expected output note
 let expected_note = Note::new(
@@ -383,10 +353,13 @@ let expected_note = Note::new(
     recipient,
 );
 
-let tx_context = mock_chain
-    .build_tx_context(account.id(), &[input_note.id()], &[])?
-    .extend_expected_output_notes(vec![RawOutputNote::Full(expected_note)])
-    .build()?;
+let executed_tx = mock_chain
+    .build_transaction(account.id())
+    .authenticated_input_note(input_note.id())
+    .expected_output_note(RawOutputNote::Full(expected_note))
+    .build()?
+    .execute()
+    .await?;
 ```
 
 ## Verifying State Changes
@@ -394,24 +367,31 @@ let tx_context = mock_chain
 ### Reading Storage After Transaction
 
 ```rust
-// After executing and applying delta...
+use miden_protocol::{account::StorageMapKey, asset::FungibleAsset, Felt, Word};
+
+// After adding the transaction and proving its block...
+let account = mock_chain.committed_account(account.id())?;
 
 // Read Value storage (by slot name)
 let value: Word = account.storage().get_item(&initialized_slot)?;
 
 // Read Map storage (by slot name)
+// Use the deposited asset's key: limb 2 includes its metadata byte.
+let asset_key = FungibleAsset::new(faucet.id(), 1000)?.to_id_word();
 let key = Word::from([
     depositor.prefix().as_felt(),
     depositor.suffix(),
-    faucet.id().prefix().as_felt(),
-    faucet.id().suffix(),
+    asset_key[3],
+    asset_key[2],
 ]);
-let balance = account.storage().get_map_item(&balances_slot, key)?;
+let balance = account
+    .storage()
+    .get_map_item(&balances_slot, StorageMapKey::new(key))?;
 
 // Assert expected values
 assert_eq!(
     balance,
-    Word::from([Felt::new(0), Felt::new(0), Felt::new(0), Felt::new(1000)]),
+    Word::from([Felt::from(1000_u32), Felt::ZERO, Felt::ZERO, Felt::ZERO]),
     "Balance should match deposited amount"
 );
 ```
@@ -425,12 +405,13 @@ assert_eq!(
 async fn should_fail_without_initialization() -> anyhow::Result<()> {
     // Setup WITHOUT initialization step...
 
-    let tx_context = mock_chain
-        .build_tx_context(account.id(), &[note.id()], &[])?
-        .build()?;
-
     // Execute and expect failure
-    let result = tx_context.execute().await;
+    let result = mock_chain
+        .build_transaction(account.id())
+        .authenticated_input_note(note.id())
+        .build()?
+        .execute()
+        .await;
 
     assert!(
         result.is_err(),
@@ -456,7 +437,11 @@ async fn deposit_exceeds_max_should_fail() -> anyhow::Result<()> {
 
     // ... setup code ...
 
-    let result = tx_context.execute().await;
+    let transaction = mock_chain
+        .build_transaction(account.id())
+        .authenticated_input_note(note.id())
+        .build()?;
+    let result = transaction.execute().await;
 
     assert!(
         result.is_err(),
@@ -469,129 +454,114 @@ async fn deposit_exceeds_max_should_fail() -> anyhow::Result<()> {
 
 ## Complete Test Example
 
-```rust title="integration/tests/deposit_test.rs"
-use integration::helpers::{
-    build_project_in_dir, create_testing_account_from_package,
-    create_testing_note_from_package, AccountCreationConfig, NoteCreationConfig,
-};
-use miden_client::{
-    account::{StorageMap, StorageSlot, StorageSlotName},
-    asset::{Asset, FungibleAsset},
-    auth::AuthSchemeId,
-    note::NoteAssets,
-    transaction::{RawOutputNote, TransactionScript},
-    Felt, Word,
-};
-use miden_testing::{Auth, MockChain};
+```rust title="integration/tests/counter_test.rs"
 use std::{path::Path, sync::Arc};
 
+use anyhow::Context;
+use integration::helpers::build_project_in_dir;
+use miden_protocol::{
+    account::{
+        auth::AuthScheme,
+        component::InitStorageData,
+        AccountBuilder,
+        AccountComponent,
+        AccountType,
+        StorageMapKey,
+        StorageSlotName,
+    },
+    crypto::rand::RandomCoin,
+    note::NoteScript,
+    transaction::RawOutputNote,
+    Felt,
+    Word,
+};
+use miden_standards::testing::note::NoteBuilder;
+use miden_testing::{AccountState, Auth, MockChain};
+
+const COUNTER_STORAGE_KEY: Word =
+    Word::new([Felt::ZERO, Felt::ZERO, Felt::ZERO, Felt::ONE]);
+
+fn counter_storage_slot() -> anyhow::Result<StorageSlotName> {
+    Ok(StorageSlotName::new(
+        "counter_account::counter_contract::count_map",
+    )?)
+}
+
 #[tokio::test]
-async fn deposit_test() -> anyhow::Result<()> {
-    // 1. Setup MockChain builder
+async fn counter_test() -> anyhow::Result<()> {
     let mut builder = MockChain::builder();
 
-    // 2. Create faucet and sender
-    let faucet = builder.add_existing_basic_faucet(
+    let sender = builder.add_existing_wallet(Auth::BasicAuth {
+        auth_scheme: AuthScheme::Falcon512Poseidon2,
+    })?;
+
+    let contract_package = Arc::new(build_project_in_dir(
+        Path::new("../contracts/counter-account"),
+        true,
+    )?);
+    let note_package = Arc::new(build_project_in_dir(
+        Path::new("../contracts/increment-note"),
+        true,
+    )?);
+
+    let counter_storage_slot = counter_storage_slot()?;
+    let mut init_storage_data = InitStorageData::default();
+    init_storage_data.insert_map_entry(
+        counter_storage_slot.clone(),
+        COUNTER_STORAGE_KEY,
+        0_u64,
+    )?;
+
+    let counter_component = AccountComponent::from_package(&contract_package, &init_storage_data)
+        .context("failed to build account component from counter package")?;
+    let counter_account = builder.add_account_from_builder(
         Auth::BasicAuth {
-            auth_scheme: AuthSchemeId::Falcon512Poseidon2,
+            auth_scheme: AuthScheme::Falcon512Poseidon2,
         },
-        "TEST",
-        1000,
-        Some(100),
-    )?;
-    let sender = builder.add_existing_wallet_with_assets(
-        Auth::BasicAuth {
-            auth_scheme: AuthSchemeId::Falcon512Poseidon2,
-        },
-        [FungibleAsset::new(faucet.id(), 100)?.into()],
+        AccountBuilder::new([3_u8; 32])
+            .account_type(AccountType::Public)
+            .with_component(counter_component),
+        AccountState::Exists,
     )?;
 
-    // 3. Build contracts
-    let bank_package = Arc::new(build_project_in_dir(
-        Path::new("../contracts/bank-account"), true
-    )?);
-    let deposit_note_package = Arc::new(build_project_in_dir(
-        Path::new("../contracts/deposit-note"), true
-    )?);
-    let init_tx_script_package = Arc::new(build_project_in_dir(
-        Path::new("../contracts/init-tx-script"), true
-    )?);
+    let mut note_rng = RandomCoin::new(Word::from(
+        NoteScript::from_package(note_package.as_ref())
+            .context("failed to build note script from package")?
+            .root(),
+    ));
+    let counter_note = NoteBuilder::new(sender.id(), &mut note_rng)
+        .package((*note_package).clone())
+        .build()
+        .context("failed to build counter note from package")?;
 
-    // 4. Create bank account with named storage slots
-    let initialized_slot =
-        StorageSlotName::new("miden::component::miden_bank_account::initialized")
-            .expect("Valid slot name");
-    let balances_slot =
-        StorageSlotName::new("miden::component::miden_bank_account::balances")
-            .expect("Valid slot name");
-
-    let bank_cfg = AccountCreationConfig {
-        storage_slots: vec![
-            StorageSlot::with_value(initialized_slot, Word::default()),
-            StorageSlot::with_map(
-                balances_slot.clone(),
-                StorageMap::with_entries([]).expect("Empty storage map"),
-            ),
-        ],
-        ..Default::default()
-    };
-    let mut bank_account = create_testing_account_from_package(
-        bank_package.clone(), bank_cfg
-    ).await?;
-
-    // 5. Create deposit note
-    let deposit_amount: u64 = 1000;
-    let fungible_asset = FungibleAsset::new(faucet.id(), deposit_amount)?;
-    let note_assets = NoteAssets::new(vec![Asset::Fungible(fungible_asset)])?;
-    let deposit_note = create_testing_note_from_package(
-        deposit_note_package.clone(),
-        sender.id(),
-        NoteCreationConfig { assets: note_assets, ..Default::default() },
-    )?;
-
-    // 6. Add to builder and build chain
-    builder.add_account(bank_account.clone())?;
-    builder.add_output_note(RawOutputNote::Full(deposit_note.clone()));
+    builder.add_output_note(RawOutputNote::Full(counter_note.clone()));
     let mut mock_chain = builder.build()?;
 
-    // 7. Initialize bank
-    let init_program = init_tx_script_package.unwrap_program();
-    let init_tx_script = TransactionScript::new((*init_program).clone());
-    let init_tx_context = mock_chain
-        .build_tx_context(bank_account.id(), &[], &[])?
-        .tx_script(init_tx_script)
+    let transaction = mock_chain
+        .build_transaction(counter_account.id())
+        .authenticated_input_note(counter_note.id())
         .build()?;
-    let executed_init = init_tx_context.execute().await?;
-    bank_account.apply_delta(&executed_init.account_delta())?;
-    mock_chain.add_pending_executed_transaction(&executed_init)?;
+    let executed_transaction = transaction.execute().await?;
+
+    mock_chain.add_pending_executed_transaction(&executed_transaction)?;
     mock_chain.prove_next_block()?;
 
-    // 8. Execute deposit
-    let tx_context = mock_chain
-        .build_tx_context(bank_account.id(), &[deposit_note.id()], &[])?
-        .build()?;
-    let executed_tx = tx_context.execute().await?;
-    bank_account.apply_delta(&executed_tx.account_delta())?;
-    mock_chain.add_pending_executed_transaction(&executed_tx)?;
-    mock_chain.prove_next_block()?;
+    let count = mock_chain
+        .committed_account(counter_account.id())?
+        .storage()
+        .get_map_item(
+            &counter_storage_slot,
+            StorageMapKey::new(COUNTER_STORAGE_KEY),
+        )?;
 
-    // 9. Verify balance
-    let depositor_key = Word::from([
-        sender.id().prefix().as_felt(),
-        sender.id().suffix(),
-        faucet.id().prefix().as_felt(),
-        faucet.id().suffix(),
-    ]);
-    let balance = bank_account.storage().get_map_item(&balances_slot, depositor_key)?;
-    let expected = Word::from([
-        Felt::new(0), Felt::new(0), Felt::new(0), Felt::new(deposit_amount)
-    ]);
-    assert_eq!(balance, expected, "Balance should match deposit");
+    assert_eq!(count[0].as_canonical_u64(), 1);
 
-    println!("Deposit test passed!");
     Ok(())
 }
 ```
+
+For a step-by-step walkthrough, see
+[Test Your Contract](../../get-started/your-first-smart-contract/test).
 
 ## Running Tests
 
@@ -599,8 +569,8 @@ async fn deposit_test() -> anyhow::Result<()> {
 # Run all tests
 cargo test -p integration -- --nocapture
 
-# Run specific test
-cargo test -p integration deposit_test -- --nocapture
+# Run the configured integration test target
+cargo test -p integration --test my_test -- --nocapture
 
 # Run with verbose output
 RUST_LOG=debug cargo test -p integration -- --nocapture
@@ -611,13 +581,9 @@ RUST_LOG=debug cargo test -p integration -- --nocapture
 1. **MockChain Builder Pattern** - Use `MockChain::builder()` to set up test environments
 2. **Build Contracts First** - Use `build_project_in_dir()` to compile contracts before tests
 3. **Configure Storage Slots** - Match your contract's storage layout when creating accounts
-4. **Apply Deltas** - Always call `apply_delta()` on local account copies after transactions
+4. **Read Committed State** - After proving a block, use `committed_account()` for updated state
 5. **Prove Blocks** - Call `prove_next_block()` after adding executed transactions
 6. **Test Failures** - Use `result.is_err()` to verify constraint violations
-
-:::tip View Complete Source
-See the complete test implementations in the [miden-bank repository](https://github.com/keinberger/miden-bank/tree/main/integration/tests).
-:::
 
 ## Next Steps
 

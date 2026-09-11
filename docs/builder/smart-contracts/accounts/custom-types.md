@@ -14,7 +14,7 @@ If you forget `#[export_type]` on a public API type, the compiler will emit an e
 
 ## Exporting structs
 
-Struct fields must be public and use types that are either SDK types (`Felt`, `Word`, `Asset`, etc.) or themselves marked with `#[export_type]`:
+Struct fields must be named and use types supported by component interfaces, such as Rust primitives, SDK types (`Felt`, `Word`, `Asset`, etc.), or other types marked with `#[export_type]`:
 
 ```rust
 use miden::{component, component_storage, export_type, Asset, Felt, Word};
@@ -36,12 +36,13 @@ struct MyAccountStorage;
 
 #[component]
 trait MyAccount {
-    fn process(&self, a: StructA, asset: Asset) -> StructB;
+    #[account_procedure]
+    fn process(&self, a: StructA) -> StructB;
 }
 
 #[component]
 impl MyAccount for MyAccountStorage {
-    fn process(&self, a: StructA, asset: Asset) -> StructB {
+    fn process(&self, a: StructA) -> StructB {
         StructB {
             bar: a.foo[0],
             baz: a.foo[1],
@@ -55,7 +56,7 @@ impl MyAccount for MyAccountStorage {
 Enums use the same annotation. Enum variants can be unit variants:
 
 ```rust
-use miden::{export_type, Felt};
+use miden::export_type;
 
 #[export_type]
 pub enum Status {
@@ -69,11 +70,13 @@ pub enum Status {
 Exported types can reference other exported types:
 
 ```rust
+#[derive(Clone, Copy, Debug)]
 #[export_type]
 pub struct Inner {
     pub value: Felt,
 }
 
+#[derive(Clone, Copy, Debug)]
 #[export_type]
 pub struct Outer {
     pub nested: Inner,
@@ -103,9 +106,9 @@ pub mod my_types {
 | Rule | Details |
 |------|---------|
 | When needed | Any custom type in a public method signature on a `#[component]` trait |
-| Struct fields | Must be `pub` |
-| Allowed field types | `Felt`, `Word`, `Asset`, `AccountId`, or other `#[export_type]` types |
-| Enums | Unit variants supported |
+| Structs | Named-field and unit structs are supported; tuple structs are not |
+| Allowed field types | Supported primitives, SDK types, `Option`, `Result`, or other `#[export_type]` types |
+| Enums | Unit variants and single-field tuple variants are supported |
 | Modules | Types in submodules work — just apply `#[export_type]` to each |
 | Order | Declaration order doesn't matter — forward references are resolved |
 

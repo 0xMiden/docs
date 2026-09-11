@@ -5,7 +5,7 @@ sidebar_position: 1
 
 # Web SDK (@miden-sdk/miden-sdk)
 
-The Web SDK is the browser-focused toolkit for the Miden network. It wraps the Rust client, compiles to WebAssembly, and exposes a typed JavaScript API through the `MidenClient` class. Use it from web apps, wallets, dApps, service workers, Node servers — any JavaScript runtime that supports Web Workers and WebAssembly.
+The Web SDK is the JavaScript toolkit for the Miden network. In browsers, it wraps the Rust client as WebAssembly and exposes a typed API through the `MidenClient` class for web apps, wallets, dApps, and worker contexts. The same package provides a native Node.js entry backed by N-API and SQLite.
 
 ## Capabilities
 
@@ -30,16 +30,16 @@ The Web SDK is the browser-focused toolkit for the Miden network. It wraps the R
 │    │                                           │
 │    └─ wraps WasmWebClient (Rust → WASM)        │
 │                                                │
-│  Runs prove / execute on a dedicated           │
-│  Web Worker to keep the main thread responsive │
+│  Browser default: prove / execute on a         │
+│  dedicated Web Worker                          │
 └────────────────────────────────────────────────┘
 ```
 
-The SDK is built from the `web-client` Rust crate in [0xMiden/miden-client](https://github.com/0xMiden/miden-client), compiled with `wasm-bindgen`, and bundled with the WASM module, JavaScript bindings, and a dedicated Web Worker script.
+The browser build comes from the `web-client` Rust crate in [0xMiden/web-sdk](https://github.com/0xMiden/web-sdk), compiled with `wasm-bindgen`, and bundled with the WASM module, JavaScript bindings, and a dedicated Web Worker script. Under Node.js, the package selects its native N-API binding and SQLite storage instead.
 
 ## Resource management
 
-Each `MidenClient` instance holds a dedicated Web Worker thread. When you no longer need a client — for example in a multi-wallet app that creates one client per active network — call `client.terminate()` to release the worker.
+In browsers, each `MidenClient` created with the default `useWorker: true` setting holds a dedicated Web Worker thread. When you no longer need a client — for example in a multi-wallet app that creates one client per active network — call `client.terminate()` to release its underlying resources. Node.js clients and browser clients created with `useWorker: false` do not allocate this worker, but should still be terminated when finished.
 
 ```typescript
 import { MidenClient } from "@miden-sdk/miden-sdk";
@@ -48,7 +48,7 @@ const client = await MidenClient.createTestnet();
 
 // ... use the client ...
 
-// Free the Web Worker when you are done
+// Release client resources when you are done
 client.terminate();
 ```
 
@@ -61,7 +61,7 @@ In environments that support the TC39 [explicit resource management](https://git
 }
 ```
 
-After `terminate()`, every subsequent method call throws `Error("Client terminated")`.
+After `terminate()`, subsequent client operations throw `Error("Client terminated")`.
 
 ## Where to go next
 
