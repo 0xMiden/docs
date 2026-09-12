@@ -46,7 +46,7 @@ Faucets can issue either fungible or non-fungible assets as defined at account c
 
 #### Fungible asset
 
-Fungible assets are encoded with the amount and the `faucet_id` of the issuing faucet. The amount is always $2^{63}-1$ or smaller, representing the maximum supply for any fungible `Asset`. Examples include ETH and various stablecoins (e.g., DAI, USDT, USDC).
+Fungible assets are encoded with the amount and the `faucet_id` of the issuing faucet. The amount is always $2^{63}-2^{31}$ or smaller, representing the maximum supply for any fungible `Asset`. Examples include ETH and various stablecoins (e.g., DAI, USDT, USDC).
 
 #### Non-fungible asset
 
@@ -122,6 +122,49 @@ A callback is not invoked in any of these cases:
 - The callback storage slot contains the empty word.
 
 This means assets with callbacks enabled can still be used even if the faucet has not (yet) registered a callback procedure.
+
+## Encoding
+
+Every native asset occupies two words (64 bytes): an `ASSET_KEY` (vault key) that identifies the asset in an account vault SMT, and an `ASSET_VALUE` that carries the asset payload.
+
+### `ASSET_KEY` / `AssetVaultKey` layout
+
+The vault key is a [`Word`](https://docs.rs/miden-protocol) with this limb order (matching `AssetVaultKey::to_word()` in v0.14):
+
+```text
+[
+  asset_id_suffix,   // Felt
+  asset_id_prefix,   // Felt
+  faucet_id_suffix_and_metadata,  // Felt
+  faucet_id_prefix   // Felt
+]
+```
+
+Where `faucet_id_suffix_and_metadata` packs:
+
+```text
+[ faucet_id_suffix (56 bits) | 7 zero bits | callbacks_enabled (1 bit) ]
+```
+
+The low byte of the faucet account-id suffix is reserved for metadata (it is zero in a bare faucet id). The least-significant bit of that byte is the [`AssetCallbackFlag`](#callbacks): `0` disabled, `1` enabled.
+
+### Fungible vs non-fungible keys
+
+| Kind | `asset_id_*` limbs | Meaning |
+| --- | --- | --- |
+| Fungible | both zero | All fungible units from a faucet share one vault leaf and merge by amount. |
+| Non-fungible | taken from `DATA_HASH[0..2]` | Each NFT has a distinct key (and therefore a distinct leaf). |
+
+### `ASSET_VALUE` layout
+
+| Kind | Value word |
+| --- | --- |
+| Fungible | `[amount, 0, 0, 0]` — `amount ≤ 2⁶³−2³¹` |
+| Non-fungible | full 4-limb `DATA_HASH` of the NFT payload |
+
+### Stdlib helpers
+
+When building assets from arbitrary code (not as the faucet itself), use `miden::protocol::asset::create_fungible_asset` / `create_non_fungible_asset`. Both take an `enable_callbacks` flag so the metadata bit is set explicitly — see [Protocol library](./protocol_library.md#asset-procedures-midenprotocolasset).
 
 ## Alternative asset models
 
