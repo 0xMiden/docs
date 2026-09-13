@@ -141,7 +141,7 @@ Count: 1
 
 ## Reading Account Token Balances
 
-You can also query the assets (tokens) held by an account:
+You can also query the assets (tokens) held by an account. This example uses the native-fee funding helpers from [Notes & Transactions](./notes#bootstrap-native-fee-funding). Add those helpers first, then keep the program running while you fund the faucet and Alice at their prompts.
 
 ```rust title="integration/src/bin/token-balance.rs"
 use miden_client::{
@@ -165,6 +165,7 @@ use miden_client_sqlite_store::ClientBuilderSqliteExt;
 use rand::Rng;
 use std::sync::Arc;
 use tokio::time::Duration;
+use integration::funding::fund_account;
 
 #[tokio::main]
 async fn main() -> anyhow::Result<()> {
@@ -257,6 +258,10 @@ async fn main() -> anyhow::Result<()> {
     keystore.add_key(&alice_key_pair, alice_account.id()).await?;
     keystore.add_key(&faucet_key_pair, faucet_account.id()).await?;
 
+    // The faucet mints; Alice later consumes. Fund both before either transaction.
+    fund_account(&mut client, faucet_account.id()).await?;
+    fund_account(&mut client, alice_account.id()).await?;
+
     let amount: u64 = 1000;
     // The faucet factory encodes callback support in the faucet account ID because
     // transfer policies are configured above.
@@ -325,6 +330,7 @@ async fn main() -> anyhow::Result<()> {
 
 ```typescript title="src/demo.ts"
 import { MidenClient } from "@miden-sdk/miden-sdk";
+import { fundAccount } from "./funding";
 
 export async function demo() {
     // Initialize client to connect with the Miden Testnet.
@@ -347,25 +353,29 @@ export async function demo() {
     });
     console.log("Faucet account ID:", faucet.id().toString());
 
+    // The faucet mints; Alice later consumes. Fund both before either transaction.
+    await fundAccount(client, faucet.id());
+    await fundAccount(client, alice.id());
+
     // Mint 1000 tokens to Alice and consume the resulting P2ID note.
     await client.transactions.mint({
-        account: faucet,
-        to: alice,
+        account: faucet.id(),
+        to: alice.id(),
         amount: 1000n,
         type: "public",
         waitForConfirmation: true,
     });
 
     console.log("Waiting for note to be consumable...");
-    const notes = await client.notes.listAvailable({ account: alice });
+    const notes = await client.notes.listAvailable({ account: alice.id() });
     await client.transactions.consume({
-        account: alice,
+        account: alice.id(),
         notes: [notes[0]],
         waitForConfirmation: true,
     });
 
     // Fetch Alice again so the vault reflects the consumed note.
-    const updatedAlice = await client.accounts.get(alice);
+    const updatedAlice = await client.accounts.get(alice.id());
     if (!updatedAlice) {
         throw new Error("Alice's account was not found");
     }

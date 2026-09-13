@@ -60,8 +60,158 @@ This approach provides several advantages over direct transfers:
 To run the code examples in this guide, you'll need to set up a development environment. If you haven't already, follow the setup instructions in the [Accounts](./accounts#set-up-development-environment) guide.
 
 :::note Transaction fees
-Each account that submits a transaction needs native fee tokens, including a faucet that mints `TEST`. These examples show token operations; fund the newly created accounts before their first transaction, following [Transaction Fees](../smart-contracts/transactions/fees.md#paying-your-first-fee).
+Each account that submits a transaction needs native fee tokens, including a faucet that mints `TEST`. The bootstrap below pauses each program so you can fund a newly created account before its first transaction.
 :::
+
+### Bootstrap native fee funding
+
+Add the following shared helpers once, then use them with each program on this page. In the Rust project, add `pub mod funding;` to the existing `integration/src/lib.rs` file.
+
+Start a program and keep its terminal or browser tab running after it prints the account IDs. For each prompt, request a **public** native-fee funding note for that displayed account from a trusted faucet on the same network, then paste only the funding note ID. Do not consume the note with the CLI or another client store: the running program must discover and consume it. Request enough native tokens to cover this bootstrap transaction and the account's later transactions in the example; the required amount depends on network fees.
+
+```rust title="integration/src/funding.rs"
+use miden_client::{
+    account::AccountId,
+    auth::TransactionAuthenticator,
+    note::{Note, NoteId},
+    store::TransactionFilter,
+    transaction::{TransactionRequestBuilder, TransactionStatus},
+    Client,
+};
+use std::io::{self, Write};
+use tokio::time::{sleep, Duration, Instant};
+
+const WAIT_TIMEOUT: Duration = Duration::from_secs(300);
+
+pub async fn fund_account<AUTH>(
+    client: &mut Client<AUTH>,
+    account_id: AccountId,
+) -> anyhow::Result<()>
+where
+    AUTH: TransactionAuthenticator + Sync + 'static,
+{
+    println!("Request a public native-fee funding note for {account_id}.");
+    print!("Paste its note ID here: ");
+    io::stdout().flush()?;
+
+    let mut note_id = String::new();
+    io::stdin().read_line(&mut note_id)?;
+    let note_id = NoteId::try_from_hex(note_id.trim())?;
+
+    let deadline = Instant::now() + WAIT_TIMEOUT;
+    let funding_note: Note = loop {
+        client.sync_state().await?;
+        let notes = client.get_consumable_notes(Some(account_id)).await?;
+
+        if let Some((record, _)) = notes
+            .into_iter()
+            .find(|(record, _)| record.id() == Some(note_id))
+        {
+            break record.try_into()?;
+        }
+
+        if Instant::now() >= deadline {
+            anyhow::bail!(
+                "Timed out waiting for funding note {note_id}; verify its ID, visibility, and network"
+            );
+        }
+
+        sleep(Duration::from_secs(2)).await;
+    };
+
+    let request = TransactionRequestBuilder::new().build_consume_notes(vec![funding_note])?;
+    let tx_id = client.submit_new_transaction(account_id, request).await?;
+    println!("Native funding transaction submitted, ID: {}", tx_id.to_hex());
+
+    let deadline = Instant::now() + WAIT_TIMEOUT;
+    loop {
+        client.sync_state().await?;
+        let records = client
+            .get_transactions(TransactionFilter::Ids(vec![tx_id]))
+            .await?;
+
+        if let Some(record) = records.first() {
+            match &record.status {
+                TransactionStatus::Committed { .. } => {
+                    println!("Native funding confirmed for {account_id}");
+                    return Ok(());
+                },
+                TransactionStatus::Discarded(cause) => {
+                    anyhow::bail!("Native funding transaction was discarded: {cause}");
+                },
+                TransactionStatus::Pending => {},
+            }
+        }
+
+        if Instant::now() >= deadline {
+            anyhow::bail!(
+                "Timed out waiting for transaction {} to commit; check this ID before retrying",
+                tx_id.to_hex()
+            );
+        }
+
+        sleep(Duration::from_secs(2)).await;
+    }
+}
+```
+
+```typescript title="src/funding.ts"
+import {
+    type AccountId,
+    MidenClient,
+    NoteId,
+} from "@miden-sdk/miden-sdk";
+
+const WAIT_TIMEOUT_MS = 300_000;
+
+export async function fundAccount(
+    client: MidenClient,
+    accountId: AccountId,
+): Promise<void> {
+    console.log(
+        `Request a public native-fee funding note for ${accountId.toString()}.`,
+    );
+    const enteredId = window.prompt("Paste its note ID here:");
+    if (!enteredId?.trim()) {
+        throw new Error("A native funding note ID is required");
+    }
+
+    const noteId = NoteId.fromHex(enteredId.trim());
+    const normalizedId = noteId.toString();
+    const deadline = Date.now() + WAIT_TIMEOUT_MS;
+
+    while (Date.now() < deadline) {
+        await client.sync();
+        const notes = await client.notes.listAvailable({ account: accountId });
+        const fundingNote = notes.find(
+            (note) => note.id()?.toString() === normalizedId,
+        );
+
+        if (fundingNote) {
+            const { txId } = await client.transactions.consume({
+                account: accountId,
+                notes: [fundingNote],
+            });
+            console.log(
+                "Native funding transaction submitted, ID:",
+                txId.toHex(),
+            );
+            await client.transactions.waitFor(txId, {
+                timeout: WAIT_TIMEOUT_MS,
+            });
+            await client.sync();
+            console.log("Native funding confirmed for", accountId.toString());
+            return;
+        }
+
+        await new Promise<void>((resolve) => window.setTimeout(resolve, 2_000));
+    }
+
+    throw new Error(
+        `Timed out waiting for funding note ${normalizedId}; verify its ID, visibility, and network`,
+    );
+}
+```
 
 ## Minting Tokens
 
@@ -100,6 +250,7 @@ use miden_client::{
 use miden_client_sqlite_store::ClientBuilderSqliteExt;
 use rand::Rng;
 use std::sync::Arc;
+use integration::funding::fund_account;
 
 #[tokio::main]
 async fn main() -> anyhow::Result<()> {
@@ -192,6 +343,9 @@ async fn main() -> anyhow::Result<()> {
     keystore.add_key(&alice_key_pair, alice_account.id()).await?;
     keystore.add_key(&faucet_key_pair, faucet_account.id()).await?;
 
+    // Keep this program running while you fund the faucet at the prompt.
+    fund_account(&mut client, faucet_account.id()).await?;
+
     let amount: u64 = 1000;
     // The faucet account ID encodes callback support for the transfer policies above.
     let fungible_asset = FungibleAsset::new(faucet_account.id(), amount)?;
@@ -224,6 +378,7 @@ async fn main() -> anyhow::Result<()> {
 
 ```typescript title="src/demo.ts"
 import { MidenClient } from "@miden-sdk/miden-sdk";
+import { fundAccount } from "./funding";
 
 export async function demo() {
     // Initialize client to connect with the Miden Testnet.
@@ -247,13 +402,16 @@ export async function demo() {
     });
     console.log("Faucet account ID:", faucet.id().toString());
 
+    // Keep this browser tab running while you fund the faucet at the prompt.
+    await fundAccount(client, faucet.id());
+
     // Mint 1000 tokens to Alice.
     // This creates a P2ID note containing the asset; Alice consumes it
     // to actually receive the tokens in her vault (see the next section).
     console.log("Minting 1000 tokens to Alice...");
     const { txId } = await client.transactions.mint({
-        account: faucet, // faucet is the executing account
-        to: alice,
+        account: faucet.id(), // faucet is the executing account
+        to: alice.id(),
         amount: 1000n,
         type: "public",  // note visibility
     });
@@ -316,6 +474,7 @@ use miden_client_sqlite_store::ClientBuilderSqliteExt;
 use rand::Rng;
 use std::sync::Arc;
 use tokio::time::Duration;
+use integration::funding::fund_account;
 
 #[tokio::main]
 async fn main() -> anyhow::Result<()> {
@@ -407,6 +566,10 @@ async fn main() -> anyhow::Result<()> {
     // Add keys to keystore
     keystore.add_key(&alice_key_pair, alice_account.id()).await?;
     keystore.add_key(&faucet_key_pair, faucet_account.id()).await?;
+
+    // The faucet mints; Alice later consumes. Fund both before either transaction.
+    fund_account(&mut client, faucet_account.id()).await?;
+    fund_account(&mut client, alice_account.id()).await?;
 
     let amount: u64 = 1000;
     // The faucet account ID encodes callback support for the transfer policies above.
@@ -494,6 +657,7 @@ async fn main() -> anyhow::Result<()> {
 
 ```typescript title="src/demo.ts"
 import { MidenClient } from "@miden-sdk/miden-sdk";
+import { fundAccount } from "./funding";
 
 export async function demo() {
     // Initialize client to connect with the Miden Testnet.
@@ -517,11 +681,15 @@ export async function demo() {
     });
     console.log("Faucet account ID:", faucet.id().toString());
 
+    // The faucet mints; Alice later consumes. Fund both before either transaction.
+    await fundAccount(client, faucet.id());
+    await fundAccount(client, alice.id());
+
     // Mint 1000 tokens to Alice. Creates a P2ID note that she'll consume.
     console.log("Minting 1000 tokens to Alice...");
     const mintResult = await client.transactions.mint({
-        account: faucet,
-        to: alice,
+        account: faucet.id(),
+        to: alice.id(),
         amount: 1000n,
         type: "public",
         waitForConfirmation: true,
@@ -533,9 +701,9 @@ export async function demo() {
 
     // List notes available to Alice and consume them — tokens move into her vault.
     console.log("Waiting for note to be consumable...");
-    const notes = await client.notes.listAvailable({ account: alice });
+    const notes = await client.notes.listAvailable({ account: alice.id() });
     const consumeResult = await client.transactions.consume({
-        account: alice,
+        account: alice.id(),
         notes: [notes[0]],
         waitForConfirmation: true,
     });
@@ -545,7 +713,7 @@ export async function demo() {
     );
 
     // Fetch Alice again so her vault reflects the consumed note.
-    const updatedAlice = await client.accounts.get(alice);
+    const updatedAlice = await client.accounts.get(alice.id());
     if (!updatedAlice) {
         throw new Error("Alice's account was not found");
     }
@@ -613,6 +781,7 @@ use miden_client_sqlite_store::ClientBuilderSqliteExt;
 use rand::Rng;
 use std::sync::Arc;
 use tokio::time::Duration;
+use integration::funding::fund_account;
 
 #[tokio::main]
 async fn main() -> anyhow::Result<()> {
@@ -704,6 +873,10 @@ async fn main() -> anyhow::Result<()> {
     // Add keys to keystore
     keystore.add_key(&alice_key_pair, alice_account.id()).await?;
     keystore.add_key(&faucet_key_pair, faucet_account.id()).await?;
+
+    // The faucet mints; Alice later consumes and sends. Fund both first.
+    fund_account(&mut client, faucet_account.id()).await?;
+    fund_account(&mut client, alice_account.id()).await?;
 
     let amount: u64 = 1000;
     // The faucet account ID encodes callback support for the transfer policies above.
@@ -843,6 +1016,7 @@ async fn main() -> anyhow::Result<()> {
 
 ```typescript title="src/demo.ts"
 import { MidenClient } from "@miden-sdk/miden-sdk";
+import { fundAccount } from "./funding";
 
 export async function demo() {
     // Initialize client to connect with the Miden Testnet.
@@ -865,11 +1039,15 @@ export async function demo() {
     });
     console.log("Faucet account ID:", faucet.id().toString());
 
+    // The faucet mints; Alice later consumes and sends. Fund both first.
+    await fundAccount(client, faucet.id());
+    await fundAccount(client, alice.id());
+
     // Mint 1000 tokens to Alice and consume the resulting P2ID note.
     console.log("Minting 1000 tokens to Alice...");
     const mintResult = await client.transactions.mint({
-        account: faucet,
-        to: alice,
+        account: faucet.id(),
+        to: alice.id(),
         amount: 1000n,
         type: "public",
         waitForConfirmation: true,
@@ -880,9 +1058,9 @@ export async function demo() {
     );
 
     console.log("Waiting for note to be consumable...");
-    const notes = await client.notes.listAvailable({ account: alice });
+    const notes = await client.notes.listAvailable({ account: alice.id() });
     const consumeResult = await client.transactions.consume({
-        account: alice,
+        account: alice.id(),
         notes: [notes[0]],
         waitForConfirmation: true,
     });
@@ -892,7 +1070,7 @@ export async function demo() {
     );
 
     // Fetch Alice again so her vault reflects the consumed note.
-    const updatedAlice = await client.accounts.get(alice);
+    const updatedAlice = await client.accounts.get(alice.id());
     if (!updatedAlice) {
         throw new Error("Alice's account was not found");
     }
@@ -909,9 +1087,9 @@ export async function demo() {
     // Send 100 tokens from Alice to Bob.
     console.log("Sending 100 tokens to Bob...");
     const { txId } = await client.transactions.send({
-        account: alice,
-        to: bob,
-        token: faucet,
+        account: alice.id(),
+        to: bob.id(),
+        token: faucet.id(),
         amount: 100n,
         type: "public",
         waitForConfirmation: true,
