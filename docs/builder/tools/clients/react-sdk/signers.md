@@ -9,15 +9,23 @@ The React SDK treats signing as a pluggable contract: `MidenProvider` accepts an
 
 ## Built-in signer providers
 
+:::warning React SDK 0.16 limitation
+`@miden-sdk/react` 0.16.0 cannot create a new account through an external signer. Para and Turnkey integrations must pass `importAccountId` for a pre-existing account whose auth component matches the connected signer. Importing an ID does not create an account or reconstruct private account state; the account must already be accessible to the client. The MidenFi adapter's normal path already imports its existing wallet account.
+:::
+
 ### Para (EVM wallets)
 
 ```tsx
 import { ParaSignerProvider } from "@miden-sdk/para-react";
 import { MidenProvider } from "@miden-sdk/react";
 
-function App() {
+function App({ existingAccountId }: { existingAccountId: string }) {
   return (
-    <ParaSignerProvider apiKey="your-api-key" environment="PRODUCTION">
+    <ParaSignerProvider
+      apiKey="your-api-key"
+      environment="PRODUCTION"
+      importAccountId={existingAccountId}
+    >
       <MidenProvider config={{ rpcUrl: "testnet" }}>
         <YourApp />
       </MidenProvider>
@@ -40,10 +48,11 @@ const { para, wallet, isConnected } = useParaSigner();
 import { TurnkeySignerProvider } from "@miden-sdk/turnkey-react";
 import { MidenProvider } from "@miden-sdk/react";
 
-function App() {
+function App({ existingAccountId }: { existingAccountId: string }) {
   return (
     <TurnkeySignerProvider
       config={{ defaultOrganizationId: "your-org-id" }}
+      importAccountId={existingAccountId}
     >
       <MidenProvider config={{ rpcUrl: "testnet" }}>
         <YourApp />
@@ -109,7 +118,7 @@ function Header() {
 
 ## Custom signer providers
 
-Connect your signing service through `SignerContext`. This fragment assumes the SDK is ready and your service provides ECDSA K256/Keccak signatures, a public-key commitment serialized as an SDK word, and a stable 32-byte account seed.
+Connect your signing service through `SignerContext`. With React SDK 0.16.0, the service must provide a pre-existing account ID and ECDSA K256/Keccak signatures for that account, plus its public-key commitment serialized as an SDK word.
 
 ```tsx
 import { MidenProvider, SignerContext, type SignerContextValue } from "@miden-sdk/react";
@@ -121,8 +130,8 @@ const signer: SignerContextValue = {
   isConnected: signingService.isConnected,
   accountConfig: {
     publicKeyCommitment: signingService.publicKeyCommitment,
-    storageMode: AccountStorageMode.private(),
-    accountSeed: signingService.accountSeed,
+    storageMode: AccountStorageMode.public(),
+    importAccountId: signingService.accountId,
   },
   signCb: async (pubKey, signingInputs) => {
     if (!signingService.isConnected) throw new Error("MyWallet is not connected");
@@ -141,46 +150,40 @@ const signer: SignerContextValue = {
 
 Build this value inside your provider's render and update it when the connection changes. Use a unique `storeName` per signing identity to isolate each user's database.
 
+`importAccountId` must identify an account that was created for this signer and is already available from the network. It bypasses account construction; omitting it uses the unsupported 0.16.0 creation path. A public account ID alone cannot recover a private account's state.
+
 ## Custom `AccountComponent`s
 
-Attach application-specific components — compiled from `.masp` packages, e.g. a DEX module — alongside the default auth and basic wallet components:
-
-```tsx
-import { type SignerAccountConfig } from "@miden-sdk/react";
-import {
-  AccountComponent,
-  AccountStorageMode,
-} from "@miden-sdk/miden-sdk";
-
-const myDexComponent: AccountComponent = await loadCompiledComponent();
-
-const accountConfig: SignerAccountConfig = {
-  publicKeyCommitment: userPublicKeyCommitment,
-  storageMode: AccountStorageMode.private(),
-  accountSeed: stableAccountSeed, // persist this 32-byte seed for this identity
-  customComponents: [myDexComponent],
-};
-```
-
-`customComponents` is optional. Components are added alongside the default auth and basic wallet components.
+Do not use `SignerAccountConfig.customComponents` to create an external-signer account with React SDK 0.16.0. The creation path is unsupported, while the `importAccountId` path bypasses the account builder and does not attach supplied components. Create the account with its application-specific components first, then import that existing account.
 
 ## `MultiSignerProvider`
 
-Use `MultiSignerProvider` to switch signers at runtime. Register each provider with `<SignerSlot />` and place `MidenProvider` alongside them:
+Use `MultiSignerProvider` to switch signers at runtime. Register each provider with `<SignerSlot />` and place `MidenProvider` alongside them. On React SDK 0.16.0, each Para or Turnkey slot must import its own pre-existing account:
 
 ```tsx
 import { MultiSignerProvider, SignerSlot, MidenProvider } from "@miden-sdk/react";
 import { ParaSignerProvider } from "@miden-sdk/para-react";
 import { TurnkeySignerProvider } from "@miden-sdk/turnkey-react";
 
-function App() {
+function App({
+  paraAccountId,
+  turnkeyAccountId,
+}: {
+  paraAccountId: string;
+  turnkeyAccountId: string;
+}) {
   return (
     <MultiSignerProvider>
-      <ParaSignerProvider apiKey="your-api-key" environment="PRODUCTION">
+      <ParaSignerProvider
+        apiKey="your-api-key"
+        environment="PRODUCTION"
+        importAccountId={paraAccountId}
+      >
         <SignerSlot />
       </ParaSignerProvider>
       <TurnkeySignerProvider
         config={{ defaultOrganizationId: "your-org-id" }}
+        importAccountId={turnkeyAccountId}
       >
         <SignerSlot />
       </TurnkeySignerProvider>
