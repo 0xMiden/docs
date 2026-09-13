@@ -123,7 +123,22 @@ which miden
 
 **Install Miden Toolchain**
 
-Install the toolchain for the public testnet and make it the default:
+These v0.16 guides require a coherent v0.16 client, compiler, and protocol
+toolchain for the network you use. `midenup` resolves network names through the
+[published channel manifest](https://0xmiden.github.io/midenup/channel-manifest.json).
+
+:::warning Release prerequisite
+The published manifest currently maps `testnet` to the v0.15 channel. The
+explicit `0.16.0` channel is not a substitute: it still mixes prerelease client
+and protocol components. Neither channel is a verified setup for these v0.16
+testnet guides, and `devnet` is a different network.
+
+Do not continue with the network-dependent guides until `testnet` points to a
+coherent v0.16 release channel.
+:::
+
+After the manifest meets that requirement, install the public testnet toolchain
+and make it the default:
 
 ```bash title=">_ Terminal"
 midenup install testnet && midenup override testnet
@@ -166,12 +181,36 @@ echo $PATH | tr ':' '\n' | grep cargo
 
 **"config error: missing field" when running `miden client` commands**
 
-If you have configuration files from a previous Miden installation, they may be incompatible with the current version. Clear the active client configuration, then re-initialize it for testnet:
+If a previous `miden-client.toml` is incompatible with the current client, move
+only that file aside and re-initialize the same scope and network. The CLI loads
+`./.miden/miden-client.toml` from the current directory first, then falls back to
+the global configuration (`$MIDEN_CLIENT_HOME/miden-client.toml` when that
+variable is set, otherwise `~/.miden/miden-client.toml`).
+
+For example, to regenerate a local configuration without deleting its database
+or keys, replace `<NETWORK>` with that configuration's network. Keep any existing
+backup rather than overwriting it:
 
 ```bash title=">_ Terminal"
-miden client clear-config
-miden client init --network testnet
+mv -i .miden/miden-client.toml .miden/miden-client.toml.previous
+miden client init --local --network <NETWORK>
 ```
+
+For a global configuration, move the corresponding global
+`miden-client.toml` aside and omit `--local`. Review the regenerated store and
+keystore paths before making transactions, especially if the previous file used
+custom paths.
+
+Regenerating this file does not migrate an older database or make state from one
+network usable on another. Keep the old files until you have confirmed the
+release's storage compatibility and recovered the accounts you need.
+
+Do not use `miden client clear-config` for migration or configuration switching.
+It recursively removes the entire local `.miden/` directory, including the
+store and private keys; when no local `.miden/` directory exists, it falls back
+to removing the global directory. Its confirmation prompt does not enumerate
+that state. Use it only for confirmed disposable client state after preserving
+anything you need.
 
 ## Set Up a Project
 

@@ -204,10 +204,17 @@ When you initialize the Miden client with `--local`, a `.miden/` directory is cr
 Private keys in the `.miden/keystore/` directory are **not encrypted**. Keep these files secure and never share them.
 :::
 
-To remove the local configuration and return to your global client configuration, run this command from the same working directory:
+To use your global client configuration, run `miden client` commands from a
+directory that does not contain `./.miden/miden-client.toml`. Local lookup is
+limited to the current working directory, and the CLI falls back to the global
+configuration when that local file is absent. You do not need to delete the
+local directory to switch.
 
-```bash title=">_ Terminal"
-miden client clear-config
-```
+`miden client clear-config` is destructive cleanup, not a configuration
+switch. It recursively removes the entire local `.miden/` directory, including
+the store and private keys; when no local `.miden/` directory exists, it falls
+back to removing the global directory. Its confirmation prompt does not
+enumerate that state. Use it only for confirmed disposable client state after
+preserving anything you need.
 
 ---
