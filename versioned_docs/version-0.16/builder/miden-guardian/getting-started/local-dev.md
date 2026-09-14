@@ -254,9 +254,8 @@ See the root [`README.md`](https://github.com/OpenZeppelin/guardian/blob/v0.17.0
 
 Cargo feature gates (`integration`, `e2e`) document what each suite
 needs at the top of the relevant test modules under
-[`crates/server/src/testing`](https://github.com/OpenZeppelin/guardian/blob/v0.17.0/crates/server/src/testing). Agents in
-this repo have a `guardian-validation-matrix` skill that picks the
-smallest meaningful set for a given change.
+[`crates/server/src/testing`](https://github.com/OpenZeppelin/guardian/blob/v0.17.0/crates/server/src/testing). Use those gates to run the smallest
+meaningful test set for a given change.
 
 ## Common gotchas
 

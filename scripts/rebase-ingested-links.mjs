@@ -32,12 +32,28 @@ const walk = (dir) =>
     return statSync(p).isDirectory() ? walk(p) : [p];
   });
 
+// Older source docs still use pre-v0.4 public routes. Resolve those aliases to
+// their current files so canonical docs.miden.xyz links can be frozen too.
+const LEGACY_TARGET_ALIASES = new Map([
+  ["miden-vm/overview", "reference/miden-vm/overview"],
+  ["miden-node/rpc", "reference/node/rpc"],
+  ["core-concepts/miden-vm", "reference/miden-vm"],
+  ["core-concepts/compiler", "reference/compiler"],
+  ["builder/migration/account-changes", "builder/migration/03-account-changes"],
+  ["builder/smart-contracts/accounts", "builder/smart-contracts/accounts/introduction"],
+  ["builder/tutorials/rust-compiler/testing", "builder/tutorials/helpers/testing"],
+  ["builder/tutorials/rust-compiler/debugging", "builder/tutorials/helpers/debugging"],
+  ["builder/tutorials/rust-compiler/pitfalls", "builder/tutorials/helpers/pitfalls"],
+]);
+
 // Resolve a tree-root-absolute target (e.g. "full-node/installation" when the
 // tree is a reference section, or "reference/node/full-node/installation" when
 // the tree is a full version snapshot) to an actual doc file, or null.
 const resolveTarget = (targetPath) => {
-  const clean = targetPath.replace(/^\//, "").replace(/\/$/, "");
-  const noExt = clean.replace(/\.mdx?$/, "");
+  const localPath = targetPath.replace(/^https:\/\/docs\.miden\.xyz/, "");
+  const clean = localPath.replace(/^\//, "").replace(/\/$/, "");
+  const aliased = LEGACY_TARGET_ALIASES.get(clean) || clean;
+  const noExt = aliased.replace(/\.mdx?$/, "");
   const candidates = noExt === ""
     ? ["index.md", "index.mdx"]
     : [`${noExt}.md`, `${noExt}.mdx`, `${noExt}/index.md`, `${noExt}/index.mdx`];
@@ -52,9 +68,9 @@ let filesChanged = 0;
 let linksRebased = 0;
 const unresolved = [];
 
-// Match markdown links/images whose target starts with "/" (root-absolute),
-// excluding protocol-relative ("//") and pure anchors. Capture target + optional #anchor.
-const LINK_RE = /(\]\()(\/(?!\/)[^)\s#]*)(#[^)\s]*)?(\))/g;
+// Match root-absolute and canonical docs.miden.xyz Markdown targets, excluding
+// protocol-relative URLs and pure anchors. Capture target + optional #anchor.
+const LINK_RE = /(\]\()((?:https:\/\/docs\.miden\.xyz)?\/(?!\/)[^)\s#]*)(#[^)\s]*)?(\))/g;
 
 for (const file of walk(docsTreeDir)) {
   if (!/\.mdx?$/.test(file)) continue;

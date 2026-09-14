@@ -4,7 +4,7 @@ sidebar_position: 7
 ---
 
 :::note
-For a complete example on how to run the client and submit transactions to the Miden node, refer to the [`Getting started documentation`](https://docs.miden.xyz/builder/tools/clients/rust-client/get-started/#prerequisites).
+For a complete example on how to run the client and submit transactions to the Miden node, refer to the [`Getting started documentation`](./get-started/index.md#prerequisites).
 :::
 
 ## Prover Fallback Pattern

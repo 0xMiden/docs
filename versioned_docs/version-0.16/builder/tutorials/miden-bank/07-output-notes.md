@@ -210,7 +210,7 @@ impl BankStorage {
 | `storage`     | Script storage items (account ID for P2ID) |
 
 :::warning Array Ordering
-Note the order: `suffix` comes before `prefix`. This is the opposite of how `AccountId` fields are typically accessed. See [Common Pitfalls](https://docs.miden.xyz/builder/tutorials/rust-compiler/pitfalls#array-ordering-rustmasm-reversal) for details.
+Note the order: `suffix` comes before `prefix`. This is the opposite of how `AccountId` fields are typically accessed. See [Common Pitfalls](../helpers/pitfalls.md#array-ordering-rustmasm-reversal) for details.
 :::
 
 ### Understanding output_note::create()
@@ -882,7 +882,7 @@ impl WithdrawRequestNote {
 7. **Always validate before subtraction** to prevent underflow exploits
 
 :::tip View Complete Source
-See the complete implementation in the [examples/miden-bank](https://github.com/0xMiden/miden-tutorials/tree/main/examples/miden-bank) directory.
+See the complete implementation in the [examples/miden-bank](https://github.com/0xMiden/tutorials/tree/965739b626acf3c63a0e547d313859079ee03c18/examples/miden-bank) directory.
 :::
 
 ## Next Steps

@@ -5,7 +5,7 @@ sidebar_position: 7
 
 # Recipes
 
-Short patterns covering the common cases. For longer walkthroughs — building a full wallet app from scratch, including UI — see the [React wallet tutorial](https://github.com/0xMiden/tutorials/blob/main/docs/src/web-client/react_wallet_tutorial.md) in the tutorials repo, which uses these hooks end-to-end.
+Short patterns covering the common cases. For longer walkthroughs — building a full wallet app from scratch, including UI — see the [React wallet tutorial](https://github.com/0xMiden/tutorials/blob/965739b626acf3c63a0e547d313859079ee03c18/docs/src/web-client/react_wallet_tutorial.md) in the tutorials repo, which uses these hooks end-to-end.
 
 ## Show transaction progress
 
@@ -148,5 +148,5 @@ toBech32AccountId(hexAccountId);
 
 ## Next
 
-- Longer walkthrough: [React wallet tutorial](https://github.com/0xMiden/tutorials/blob/main/docs/src/web-client/react_wallet_tutorial.md) — builds a complete wallet app on top of these hooks.
+- Longer walkthrough: [React wallet tutorial](https://github.com/0xMiden/tutorials/blob/965739b626acf3c63a0e547d313859079ee03c18/docs/src/web-client/react_wallet_tutorial.md) — builds a complete wallet app on top of these hooks.
 - Reference: [Setup](./setup.md), [Query hooks](./query-hooks.md), [Mutation hooks](./mutation-hooks.md), [Advanced](./advanced.md), [Signers](./signers.md).

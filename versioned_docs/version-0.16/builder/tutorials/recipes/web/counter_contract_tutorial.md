@@ -399,7 +399,7 @@ pub proc increment_count()
 end
 ```
 
-The examples follow the [protocol MASM conventions](https://github.com/0xMiden/protocol/tree/next/.claude/skills): public procedures declare typed signatures and invocation style, and stack comments list the top element first. Calls return 16 stack elements, including `pad(N)` padding; storage values are four-element words.
+The examples follow the protocol's MASM conventions: public procedures declare typed signatures and invocation style, and stack comments list the top element first. Calls return 16 stack elements, including `pad(N)` padding; storage values are four-element words.
 
 ### Authentication Component
 

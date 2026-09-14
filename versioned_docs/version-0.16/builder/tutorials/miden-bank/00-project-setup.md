@@ -19,7 +19,7 @@ By the end of this section, you will have:
 
 ## Prerequisites
 
-Before starting, ensure you have completed the [Get Started installation guide](https://docs.miden.xyz/builder/get-started/setup/installation) and have:
+Before starting, ensure you have completed the [Get Started installation guide](../../get-started/setup/installation.md) and have:
 
 - **Rust toolchain** installed and configured
 - **midenup toolchain** installed with Miden CLI tools (`miden` command available)

@@ -146,4 +146,4 @@ If you only need additional public methods, compose the faucet account with an e
 - [Account components](./account-components) - composing faucets with standard auth and ownership components
 - [Standard notes](./standard-notes) - mint and burn notes
 - [Assets, Vault, and Faucet migration notes](../../migration/asset-vault-faucet) - asset and faucet changes
-- [`miden-standards` faucet source](https://github.com/0xMiden/protocol/tree/next/crates/miden-standards/src/account/faucets) - current implementation
+- [`miden-standards` faucet source](https://github.com/0xMiden/protocol/tree/fb1e40da0f7cec156963e5d815a51a18a8313f25/crates/miden-standards/src/account/faucets) - current implementation

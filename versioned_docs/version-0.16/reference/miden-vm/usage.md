@@ -113,7 +113,7 @@ If trace building would exceed the VM trace row limit, `run` returns a trace len
 
 ### Inputs
 
-As described [here](https://docs.miden.xyz/miden-vm/overview#inputs-and-outputs) the Miden VM can consume public and secret inputs.
+As described [here](./overview.md#inputs-and-outputs) the Miden VM can consume public and secret inputs.
 
 - Public inputs:
   - `operand_stack` - can be supplied to the VM to initialize the stack with the desired values before a program starts executing. If the number of provided input values is less than 16, the input stack will be padded with zeros to the length of 16. The maximum number of the stack inputs is limited by 16 values, providing more than 16 values will cause an error.

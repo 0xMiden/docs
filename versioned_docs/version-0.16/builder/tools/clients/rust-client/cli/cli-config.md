@@ -158,8 +158,8 @@ The `package_directory` field is used to configure the path to the directory whe
 In this directory you can place the packages used to create the account components. These define the interface of the account that will be created.
 
 For more information on miden packages, see:
-- [The mast-package crate](https://github.com/0xMiden/miden-vm/blob/next/crates/mast-package/README.md)
-- [The Miden package's status article on the Miden compiler](https://docs.miden.xyz/core-concepts/compiler/)
+- [The mast-package crate](https://github.com/0xMiden/miden-vm/blob/c1c2ddcb9cabc3d5c2071f8baf68c7930917cad8/crates/mast-package/README.md)
+- [The Miden package's status article on the Miden compiler](../../../../../reference/compiler/index.md)
 
 ### Block Delta
 

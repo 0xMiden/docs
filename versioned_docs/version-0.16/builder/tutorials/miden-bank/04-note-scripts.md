@@ -542,7 +542,7 @@ impl WithdrawRequestNote {
 ```
 
 :::warning Stack Limits
-Note inputs are limited. Keep your input layout compact. See [Common Pitfalls](https://docs.miden.xyz/builder/tutorials/rust-compiler/pitfalls) for stack-related constraints.
+Note inputs are limited. Keep your input layout compact. See [Common Pitfalls](../helpers/pitfalls.md) for stack-related constraints.
 :::
 
 ## Complete Code for This Part
@@ -602,8 +602,8 @@ impl DepositNote {
 :::tip View Complete Source
 See the complete note script implementations:
 
-- [Deposit Note](https://github.com/0xMiden/miden-tutorials/blob/main/examples/miden-bank/contracts/deposit-note/src/lib.rs)
-- [Withdraw Request Note](https://github.com/0xMiden/miden-tutorials/blob/main/examples/miden-bank/contracts/withdraw-request-note/src/lib.rs)
+- [Deposit Note](https://github.com/0xMiden/tutorials/blob/965739b626acf3c63a0e547d313859079ee03c18/examples/miden-bank/contracts/deposit-note/src/lib.rs)
+- [Withdraw Request Note](https://github.com/0xMiden/tutorials/blob/965739b626acf3c63a0e547d313859079ee03c18/examples/miden-bank/contracts/withdraw-request-note/src/lib.rs)
   :::
 
 ## Next Steps

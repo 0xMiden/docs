@@ -316,6 +316,6 @@ should expose that service dependency and testnet status.
 
 ### Miden implementation references
 
-- [Agglayer integration in the bridge portal](https://github.com/0xMiden/bridge-portal/tree/main/src/app/lib)
-- [Miden Agglayer protocol specification](https://github.com/0xMiden/protocol/blob/next/crates/miden-agglayer/SPEC.md)
+- [Agglayer integration in the bridge portal](https://github.com/0xMiden/bridge-portal/tree/5d8f327a8adea0e0d671b798145b6092f5e23d6a/src/app/lib)
+- [Miden Agglayer protocol specification](https://github.com/0xMiden/protocol/blob/fb1e40da0f7cec156963e5d815a51a18a8313f25/crates/miden-agglayer/SPEC.md)
 - [Gateway bridge monitor](https://gateway-fm.github.io/miden-agglayer/bridge-monitor/bali/)

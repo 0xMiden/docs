@@ -384,7 +384,7 @@ fn require_sufficient_balance(&self, depositor: AccountId, asset: Asset, amount:
 ```
 
 :::danger Critical: Always Validate Before Subtraction
-This pattern is **mandatory** for any operation that subtracts from a balance. Miden uses field element (Felt) arithmetic, which is modular. Without this check, subtracting more than the balance would NOT cause an error - instead, the value would silently wrap around to a large positive number, effectively allowing unlimited withdrawals. See [Common Pitfalls](https://docs.miden.xyz/builder/tutorials/rust-compiler/pitfalls#felt-arithmetic-underflowoverflow) for more details.
+This pattern is **mandatory** for any operation that subtracts from a balance. Miden uses field element (Felt) arithmetic, which is modular. Without this check, subtracting more than the balance would NOT cause an error - instead, the value would silently wrap around to a large positive number, effectively allowing unlimited withdrawals. See [Common Pitfalls](../helpers/pitfalls.md#felt-arithmetic-underflowoverflow) for more details.
 :::
 
 ### State Checks
@@ -522,7 +522,7 @@ impl BankStorage {
 5. **Failed assertions** mean no valid proof can be generated
 
 :::tip View Complete Source
-See the complete constraint implementation in [contracts/bank-account/src/lib.rs](https://github.com/0xMiden/miden-tutorials/blob/main/examples/miden-bank/contracts/bank-account/src/lib.rs).
+See the complete constraint implementation in [contracts/bank-account/src/lib.rs](https://github.com/0xMiden/tutorials/blob/965739b626acf3c63a0e547d313859079ee03c18/examples/miden-bank/contracts/bank-account/src/lib.rs).
 :::
 
 ## Next Steps

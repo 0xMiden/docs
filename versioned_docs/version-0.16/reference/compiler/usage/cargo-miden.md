@@ -102,4 +102,4 @@ run, use `--commands` with a debugger command file, as described in the guide. R
 
 ## Examples
 
-Check out the [examples](https://github.com/0xMiden/compiler/tree/next/examples) for some `cargo-miden` project examples.
+Check out the [examples](https://github.com/0xMiden/compiler/tree/f2e0b4274f4f13caeceb215645bd3f1f03a3c6f5/examples) for some `cargo-miden` project examples.

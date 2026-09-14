@@ -82,7 +82,7 @@ Below are representative errors you may encounter, their likely causes, and sugg
 
 ### Transaction lifecycle (CLI-oriented overview)
 
-For the full protocol-level lifecycle, see the Miden book: [Transaction lifecycle](https://docs.miden.xyz/builder/smart-contracts/transactions/introduction#transaction-lifecycle).
+For the full protocol-level lifecycle, see the Miden book: [Transaction lifecycle](../../../../smart-contracts/transactions/introduction.md#transaction-lifecycle).
 
 ```mermaid
 flowchart LR
@@ -131,4 +131,4 @@ Key states the CLI surfaces:
 ### References
 
 - Common error enums originate from the client and RPC layers.
-- Protocol lifecycle: [Miden book — Transaction lifecycle](https://docs.miden.xyz/builder/smart-contracts/transactions/introduction#transaction-lifecycle)
+- Protocol lifecycle: [Miden book — Transaction lifecycle](../../../../smart-contracts/transactions/introduction.md#transaction-lifecycle)

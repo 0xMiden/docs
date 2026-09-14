@@ -9,7 +9,7 @@ _Move assets between Miden testnet and Sepolia testnet through the Epoch protoco
 
 ## Overview
 
-This is a guided tour of the reference app under [`examples/bridging-app/`](https://github.com/0xMiden/tutorials/tree/main/examples/bridging-app), which bridges fungible tokens between Miden testnet and Sepolia through the [Epoch protocol](https://epochprotocol.xyz/) intent SDK. Clone and run the app, then read the steps below as annotations on the integration points you'd port into your own Miden frontend. Every fenced code block is a verbatim slice of the app; the file and line range above each block points to the source.
+This is a guided tour of the reference app under [`examples/bridging-app/`](https://github.com/0xMiden/tutorials/tree/965739b626acf3c63a0e547d313859079ee03c18/examples/bridging-app), which bridges fungible tokens between Miden testnet and Sepolia through the [Epoch protocol](https://epochprotocol.xyz/) intent SDK. Clone and run the app, then read the steps below as annotations on the integration points you'd port into your own Miden frontend. Every fenced code block is a verbatim slice of the app; the file and line range above each block points to the source.
 
 Live settlement requires an Epoch allocator and asset faucet deployed on the selected Miden network and compatible with v0.16. Devnet is available for explicit checks by setting `VITE_MIDEN_NETWORK`, `VITE_MIDEN_RPC_URL`, and `VITE_MIDEN_PROVER` to `devnet` with a matching allocator and faucet.
 
@@ -286,7 +286,7 @@ Check these integration details before a live round trip:
 
 ## Where to go next
 
-- The runnable [`examples/bridging-app/`](https://github.com/0xMiden/tutorials/tree/main/examples/bridging-app) is the canonical reference; every code block above is a paste-verified slice of it.
+- The runnable [`examples/bridging-app/`](https://github.com/0xMiden/tutorials/tree/965739b626acf3c63a0e547d313859079ee03c18/examples/bridging-app) is the canonical reference; every code block above is a paste-verified slice of it.
 - The [Epoch protocol integration guide](https://docs.epochprotocol.xyz/integration-guides/sdk-integration-guide) covers the SDK surface in depth, including the parts this tutorial does not exercise (multi-hop intents, custom resource locks).
 - Upstream Epoch example: [`epochprotocol/miden-integration-example`](https://github.com/epochprotocol/miden-integration-example). The reference app forks this with the adaptations documented in its README.
 - The companion [React wallet tutorial](./react_wallet_tutorial.md) walks the `@miden-sdk/react` hook surface end-to-end if you want a deeper foundation before extending the bridging app.
