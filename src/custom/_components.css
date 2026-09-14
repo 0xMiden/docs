@@ -671,13 +671,6 @@ article table td:not(:first-child):not(:last-child) {
   width: auto;
 }
 
-.theme-doc-markdown table th:last-child,
-.theme-doc-markdown table td:last-child,
-article table th:last-child,
-article table td:last-child {
-  white-space: nowrap;
-}
-
 .theme-doc-markdown thead,
 article thead {
   background: var(--color-surface);

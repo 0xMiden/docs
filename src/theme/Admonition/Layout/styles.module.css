@@ -30,6 +30,11 @@
   fill: var(--ifm-alert-foreground-color);
 }
 
+.admonitionContent {
+  /* Let the flex child shrink so text wraps and code blocks can scroll. */
+  min-width: 0;
+}
+
 .admonitionContent > :last-child {
   margin-bottom: 0;
 }
