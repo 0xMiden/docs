@@ -5,6 +5,8 @@
 :root {
   /* ---- Brand palette (LIGHT) ---- */
   --color-brand: #ff5500;
+  --color-on-brand: #23150d;
+  --color-brand-wash: #fff3e9;
   --color-brand-50: #fff4ee; /* wash for callouts / hero glow */
   --color-brand-100: #ffe1d0;
   --color-brand-600: #ff6a26;
@@ -197,6 +199,7 @@
    ========================================== */
 
 :root[data-theme="dark"] {
+  --color-brand-wash: #261b15;
   /* Re-map Infima's hardcoded dark bg (#1b1b1d) to our token, so the
      html background matches body and there's no two-tone scroll seam.
      Infima defines these under html[data-theme='dark'] — our :root
