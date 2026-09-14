@@ -367,6 +367,7 @@ const config: Config = {
       navbar: {
         logo: {
           src: "img/miden-logo-horizontal.svg",
+          srcDark: "img/miden-logo-horizontal-dark.svg",
           alt: "Miden",
           height: 22,
           width: 73,

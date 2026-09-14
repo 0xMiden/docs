@@ -4,27 +4,20 @@
 
 /* ThemeClassNames.layout.navbar.container */
 .theme-layout-navbar {
+  --navbar-control-size: 2.25rem;
   height: var(--ifm-navbar-height);
   border-bottom: 1px solid var(--ifm-border-color) !important;
-  background: color-mix(in oklab, var(--ifm-background-color) 72%, transparent);
+  background: var(--color-bg);
   box-shadow: none;
 }
 
-/* Frosted navbar on desktop (safe) */
-@media (min-width: 997px) {
-  .theme-layout-navbar {
-    backdrop-filter: saturate(1.2) blur(14px);
-    -webkit-backdrop-filter: saturate(1.2) blur(14px);
-  }
-}
-
-/* Horizontal brand mark — ember glyph + "MIDEN" wordmark in one SVG.
-   No separate .navbar__title; the wordmark is part of the asset.
-   `display: block` on the img kills the inline-baseline gap that
-   would otherwise misalign the brand vs. the nav tabs. */
+/* Keep the logo box stable before its image loads and during hydration.
+   Docusaurus controls which themed image is visible; do not override display. */
 .navbar__brand {
   display: inline-flex;
   align-items: center;
+  min-height: var(--navbar-control-size);
+  flex-shrink: 0;
   margin-right: 1.5rem;
   padding: 0;
 }
@@ -33,20 +26,35 @@
   display: inline-flex;
   align-items: center;
   height: 22px;
+  width: 73px;
   margin: 0;
 }
 
 .navbar__logo img {
-  display: block;
   height: 22px !important;
-  width: auto !important;
+  width: 73px !important;
   object-fit: contain;
+  border-radius: 0;
 }
 
-/* Dark mode: invert + hue-rotate flips the dark wordmark to white
-   while leaving the saturated orange mark essentially untouched. */
-[data-theme="dark"] .navbar__logo img {
-  filter: invert(1) hue-rotate(180deg);
+/* The search provider also renders body[data-theme], which can retain the
+   server's light mode until hydration. Only the root theme selects the logo. */
+:root[data-theme="dark"] .navbar__logo [class*="themedComponent--light"],
+:root[data-theme="light"] .navbar__logo [class*="themedComponent--dark"] {
+  display: none;
+}
+
+/* High-contrast mode replaces the page palette, including dark backgrounds. */
+@media (forced-colors: active) {
+  .navbar__logo img {
+    filter: brightness(0);
+  }
+}
+
+@media (forced-colors: active) and (prefers-color-scheme: dark) {
+  .navbar__logo img {
+    filter: brightness(0) invert(1);
+  }
 }
 
 /* The asset bakes in the wordmark — hide the default .navbar__title
@@ -77,16 +85,26 @@
 
 .navbar__link {
   position: relative;
+  min-height: var(--navbar-control-size);
   color: var(--color-text) !important;
   font-weight: 500;
+  line-height: 1.35;
 }
 
-.navbar__item:not(.dropdown) > .navbar__link::after {
+@media (min-width: 997px) {
+  .navbar__item.navbar__link {
+    display: inline-flex;
+    align-items: center;
+  }
+}
+
+/* Section links carry both classes on the same anchor. */
+.navbar__item.navbar__link::after {
   content: "";
   position: absolute;
   left: 0.75rem;
   right: 0.75rem;
-  bottom: -6px;
+  bottom: 0;
   height: 2px;
   background: var(--color-brand);
   border-radius: 2px;
@@ -100,12 +118,15 @@
   color: var(--color-text) !important;
 }
 
-.navbar__item:not(.dropdown) > .navbar__link:hover::after {
+.navbar__item.navbar__link:hover::after,
+.navbar__item.navbar__link:focus-visible::after {
   transform: scaleX(0.6);
 }
 
-.navbar__link--active {
-  font-weight: 600;
+.navbar__item.navbar__link--active::after,
+.navbar__item.navbar__link--active:hover::after,
+.navbar__item.navbar__link--active:focus-visible::after {
+  transform: scaleX(1);
 }
 
 /* Quiet dropdown trigger caret. Docusaurus renders its own ::after
@@ -114,14 +135,14 @@
   display: inline-flex;
   align-items: center;
   gap: 0.25rem;
-  padding: 3px 0.625rem 3px 0.75rem;
+  padding: 0 0.625rem 0 0.75rem;
   font-family: var(--font-mono);
   font-size: 12px;
   font-weight: 500;
   letter-spacing: 0.04em;
   color: var(--color-muted) !important;
   border: 1px solid var(--color-border);
-  border-radius: var(--radius-pill);
+  border-radius: var(--radius-sm);
   line-height: 1.4;
   transition:
     color var(--t-base) var(--ease-out-expo),
@@ -182,6 +203,9 @@
 }
 
 .dropdown__link {
+  display: flex;
+  align-items: center;
+  min-height: var(--navbar-control-size, 2.25rem);
   font-size: 13px;
   padding: 0.375rem 0.625rem;
   border-radius: var(--radius-sm);
@@ -201,10 +225,6 @@
   font-weight: 600;
 }
 
-.navbar__link--active::after {
-  transform: scaleX(1);
-}
-
 /* Search pill refinements live in _components.css §16.1 */
 
 /* ==========================================
@@ -215,12 +235,12 @@
   display: inline-flex;
   align-items: center;
   gap: 0.375rem;
-  height: 32px;
+  min-height: var(--navbar-control-size);
   padding: 0 0.875rem;
   margin-left: 0.25rem;
   border-radius: var(--radius-md);
   background: var(--color-brand);
-  color: #ffffff !important;
+  color: var(--color-on-brand) !important;
   font-family: var(--font-sans);
   font-size: 13px;
   font-weight: 600;
@@ -234,7 +254,7 @@
 .navbar-cta:hover,
 .navbar-cta:focus-visible {
   background: var(--color-brand-600);
-  color: #ffffff !important;
+  color: var(--color-on-brand) !important;
   box-shadow: 0 0 0 3px color-mix(in oklab, var(--color-brand) 22%, transparent);
 }
 
@@ -250,6 +270,26 @@
 
 /* Hide the CTA on small screens where the hamburger takes over */
 @media (max-width: 996px) {
+  .theme-layout-navbar {
+    --navbar-control-size: 2.75rem;
+  }
+
+  .navbar__brand {
+    margin-right: 1rem;
+  }
+
+  .navbar__toggle,
+  .navbar-sidebar__close,
+  .navbar-sidebar .menu__caret {
+    min-width: var(--navbar-control-size);
+    min-height: var(--navbar-control-size);
+  }
+
+  .navbar-sidebar .menu__link {
+    min-height: var(--navbar-control-size);
+    align-items: center;
+  }
+
   .navbar-cta {
     display: none;
   }
@@ -259,14 +299,31 @@
    3.5) THEME TOGGLE — outlined icon, no hover rotate
    ========================================== */
 
-.colorModeToggle_DEke,
-[class*="colorModeToggle"] button {
-  color: var(--color-muted);
+.navbar [class*="colorModeToggle"],
+.navbar-sidebar__brand > [class*="toggle"] {
+  width: var(--navbar-control-size);
+  height: var(--navbar-control-size);
+  flex-shrink: 0;
 }
 
-[class*="colorModeToggle"] button:hover {
+.navbar [class*="colorModeToggle"] button,
+.navbar-sidebar [class*="toggleButton"] {
+  min-width: var(--navbar-control-size);
+  min-height: var(--navbar-control-size);
+  color: var(--color-muted);
+  border: 1px solid transparent;
+  border-radius: var(--radius-sm);
+  transition:
+    color var(--t-fast) var(--ease-out-expo),
+    background var(--t-fast) var(--ease-out-expo),
+    border-color var(--t-fast) var(--ease-out-expo);
+}
+
+.navbar [class*="colorModeToggle"] button:hover,
+.navbar-sidebar [class*="toggleButton"]:hover {
   color: var(--color-text);
-  background: transparent !important;
+  background: var(--color-surface);
+  border-color: var(--color-border);
 }
 
 /* ==========================================
@@ -358,4 +415,19 @@
 
 .footer__sep {
   color: var(--color-border-strong);
+}
+
+@media (max-width: 760px) {
+  .footer__links {
+    display: grid;
+    grid-template-columns: repeat(2, minmax(0, 1fr));
+    gap: 2rem 1.5rem;
+    margin-inline: 0;
+  }
+
+  .footer__col {
+    width: auto;
+    margin-bottom: 0;
+    padding: 0;
+  }
 }
