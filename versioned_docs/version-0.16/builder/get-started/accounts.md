@@ -123,7 +123,7 @@ If you already created `miden-app` during [installation](./setup/installation#ty
 ```bash title=">_ Terminal"
 npm create vite@latest miden-app -- --template vanilla-ts
 cd miden-app
-npm install @miden-sdk/miden-sdk@^0.16.0
+npm install @miden-sdk/miden-sdk@0.16.1
 ```
 
 For each code example, save the TypeScript snippet as `src/demo.ts` (overwriting the previous one as you progress):

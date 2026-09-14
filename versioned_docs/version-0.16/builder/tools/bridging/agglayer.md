@@ -35,9 +35,9 @@ receiving on Miden—wallet note synchronization.
 ## Dependencies
 
 ```bash
-npm install @miden-sdk/miden-sdk \
-  @miden-sdk/miden-wallet-adapter-base \
-  @miden-sdk/miden-wallet-adapter-react \
+npm install @miden-sdk/miden-sdk@0.15.7 \
+  @miden-sdk/miden-wallet-adapter-base@0.15.1 \
+  @miden-sdk/miden-wallet-adapter-react@0.15.1 \
   viem
 ```
 
@@ -316,6 +316,6 @@ should expose that service dependency and testnet status.
 
 ### Miden implementation references
 
-- [Agglayer integration in the bridge portal](https://github.com/0xMiden/bridge-portal/tree/main/src/app/lib)
-- [Miden Agglayer protocol specification](https://github.com/0xMiden/protocol/blob/next/crates/miden-agglayer/SPEC.md)
+- [Agglayer integration in the bridge portal](https://github.com/0xMiden/bridge-portal/tree/5d8f327a8adea0e0d671b798145b6092f5e23d6a/src/app/lib)
+- [Miden Agglayer protocol specification](https://github.com/0xMiden/protocol/blob/fb1e40da0f7cec156963e5d815a51a18a8313f25/crates/miden-agglayer/SPEC.md)
 - [Gateway bridge monitor](https://gateway-fm.github.io/miden-agglayer/bridge-monitor/bali/)

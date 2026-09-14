@@ -502,7 +502,7 @@ impl BankStorage {
 5. **Trait methods** (declared in the `#[component] trait`) are callable by other contracts via generated bindings; private helpers live in a plain `impl` block
 
 :::tip View Complete Source
-See the complete bank account implementation in [contracts/bank-account/src/lib.rs](https://github.com/0xMiden/miden-tutorials/blob/main/examples/miden-bank/contracts/bank-account/src/lib.rs).
+See the complete bank account implementation in [contracts/bank-account/src/lib.rs](https://github.com/0xMiden/tutorials/blob/965739b626acf3c63a0e547d313859079ee03c18/examples/miden-bank/contracts/bank-account/src/lib.rs).
 :::
 
 ## Next Steps

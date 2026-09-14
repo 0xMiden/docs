@@ -142,7 +142,7 @@ authentication must receive a signature in its advice inputs before execution;
 the event loads that supplied signature for the verifier.
 
 :::info API Reference
-Full API docs on docs.rs: [`miden::intrinsics::advice`](https://docs.rs/miden/latest/miden/intrinsics/advice/)
+Full API docs on docs.rs: [`miden::intrinsics::advice`](https://docs.rs/miden/0.14.0/miden/intrinsics/advice/)
 :::
 
 ## Related

@@ -212,5 +212,5 @@ procedure after the increment; calling it earlier fails.
 For the full list of auto-generated methods, see [Account Operations](./account-operations). To export your own types for use in public method signatures, see [Custom Types](./custom-types).
 
 :::info API Reference
-Full API docs on docs.rs: [`miden`](https://docs.rs/miden/latest/miden/) (top-level — `#[component]` macro)
+Full API docs on docs.rs: [`miden`](https://docs.rs/miden/0.14.0/miden/index.html) (top-level — `#[component]` macro)
 :::

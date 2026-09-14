@@ -113,7 +113,7 @@ If trace building would exceed the VM trace row limit, `run` returns a trace len
 
 ### Inputs
 
-As described [here](https://docs.miden.xyz/miden-vm/overview#inputs-and-outputs) the Miden VM can consume public and secret inputs.
+As described [here](./overview.md#inputs-and-outputs) the Miden VM can consume public and secret inputs.
 
 - Public inputs:
   - `operand_stack` - can be supplied to the VM to initialize the stack with the desired values before a program starts executing. If the number of provided input values is less than 16, the input stack will be padded with zeros to the length of 16. The maximum number of the stack inputs is limited by 16 values, providing more than 16 values will cause an error.
@@ -125,7 +125,7 @@ As described [here](https://docs.miden.xyz/miden-vm/overview#inputs-and-outputs)
     - `sparse_merkle_tree` - is supplied as an array of tuples of the form (number, 64-character hex string). The number represents the leaf index and the hex string represents the leaf value (4 elements).
     - `partial_merkle_tree` - is supplied as an array of tuples of the form ((number, number), 64-character hex string). The internal tuple represents the leaf depth and index at this depth, and the hex string represents the leaf value (4 elements).
 
-_Check out the [comparison example](https://github.com/0xMiden/examples/blob/main/examples/comparison.masm) to see how secret inputs work._
+_Check out the [comparison example](https://github.com/0xMiden/examples/blob/5eed317a36f89546046618f8426f5c702362f3c9/examples/comparison.masm) to see how secret inputs work._
 
 After a program finishes executing, the elements that remain on the stack become the outputs of the program. Notice that the number of values on the operand stack at the end of the program execution can not be greater than 16, otherwise the program will return an error. The [`truncate_stack`](./user_docs/core_lib/sys.md) utility procedure from the core library could be used to conveniently truncate the stack at the end of the program.
 

@@ -327,8 +327,8 @@ error: dependency 'bank-account' not found
 :::tip View Complete Source
 See the complete `miden-project.toml` configurations:
 
-- [Deposit Note miden-project.toml](https://github.com/0xMiden/miden-tutorials/blob/main/examples/miden-bank/contracts/deposit-note/miden-project.toml)
-- [Withdraw Request Note miden-project.toml](https://github.com/0xMiden/miden-tutorials/blob/main/examples/miden-bank/contracts/withdraw-request-note/miden-project.toml)
+- [Deposit Note miden-project.toml](https://github.com/0xMiden/tutorials/blob/965739b626acf3c63a0e547d313859079ee03c18/examples/miden-bank/contracts/deposit-note/miden-project.toml)
+- [Withdraw Request Note miden-project.toml](https://github.com/0xMiden/tutorials/blob/965739b626acf3c63a0e547d313859079ee03c18/examples/miden-bank/contracts/withdraw-request-note/miden-project.toml)
   :::
 
 ## Next Steps

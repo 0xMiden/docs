@@ -152,5 +152,5 @@ impl CounterNote {
 | Multiple `#[account(...)]` wrappers | A script needs to call multiple known component interfaces |
 
 :::info API Reference
-Full API docs on docs.rs: [`miden`](https://docs.rs/miden/latest/miden/) (`#[account]`, `#[note]`, and `#[component]` macros)
+Full API docs on docs.rs: [`miden`](https://docs.rs/miden/0.14.0/miden/index.html) (`#[account]`, `#[note]`, and `#[component]` macros)
 :::

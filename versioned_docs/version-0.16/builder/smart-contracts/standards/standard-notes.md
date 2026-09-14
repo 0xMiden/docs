@@ -106,4 +106,4 @@ The Rust types live under `miden_standards::note`. The MASM scripts live under `
 - [Standard Note Types](../notes/note-types) - more detail on P2ID, P2IDE, and SWAP
 - [Output Notes](../notes/output-notes) - creating output notes from transactions
 - [Note Scripts](../notes/note-scripts) - writing custom note scripts
-- [`miden-standards` note source](https://github.com/0xMiden/protocol/tree/next/crates/miden-standards/src/note) - current implementation
+- [`miden-standards` note source](https://github.com/0xMiden/protocol/tree/fb1e40da0f7cec156963e5d815a51a18a8313f25/crates/miden-standards/src/note) - current implementation

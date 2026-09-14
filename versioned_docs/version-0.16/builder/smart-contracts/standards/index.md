@@ -60,4 +60,4 @@ You can mix both approaches. A typical application account starts with standard 
 - [Accounts](../accounts/) - components, storage, authentication, and account operations
 - [Notes](../notes/) - note model, note scripts, standard note types, and output notes
 - [Cross-component calls](../cross-component-calls) - calling component interfaces from scripts and components
-- [`miden-standards` source](https://github.com/0xMiden/protocol/tree/next/crates/miden-standards) - current standards implementation
+- [`miden-standards` source](https://github.com/0xMiden/protocol/tree/fb1e40da0f7cec156963e5d815a51a18a8313f25/crates/miden-standards) - current standards implementation

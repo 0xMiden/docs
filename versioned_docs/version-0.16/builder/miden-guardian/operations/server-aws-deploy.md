@@ -15,7 +15,7 @@ Prebuilt, versioned server images are published to the GitHub Container Registry
 instead of building from source:
 
 ```bash
-docker pull ghcr.io/openzeppelin/guardian:<version>   # e.g. v1.2.3, or latest
+docker pull ghcr.io/openzeppelin/guardian:v0.17.0
 ```
 
 Images are multi-architecture (`linux/amd64` + `linux/arm64`) and fully
@@ -25,7 +25,7 @@ baked in (see [`docs/CONFIGURATION.md`](../reference/configuration.md)):
 ```bash
 docker run --rm -p 3000:3000 -p 50051:50051 \
   --env-file ./guardian.env \
-  ghcr.io/openzeppelin/guardian:<version>
+  ghcr.io/openzeppelin/guardian:v0.17.0
 ```
 
 To run the published image with a Postgres backend locally, use the registry
@@ -33,7 +33,7 @@ compose file (no local build):
 
 ```bash
 cp .env.registry.example .env.registry          # then set POSTGRES_PASSWORD in .env.registry
-GUARDIAN_VERSION=<version> docker compose --env-file .env.registry -f docker-compose.registry.yml up
+GUARDIAN_VERSION=v0.17.0 docker compose --env-file .env.registry -f docker-compose.registry.yml up
 ```
 
 The stack is driven entirely by the gitignored `.env.registry` (see

@@ -11,7 +11,7 @@ Two different things get called the Rust SDK. This page is about the **`miden` c
 :::
 
 :::warning Breaking Change
-Component trait methods must now be marked `#[account_procedure]` to be part of the account interface, and `#[account(..)]` generates one trait per interface instead of inherent methods. Note also that the contract toolchain **lags the rest of the 0.16 line**: it builds against protocol `0.16.0-alpha.4` and VM `0.25`, not the protocol `0.16.0-rc` and VM `0.29.1` that the client and node use.
+Component trait methods must now be marked `#[account_procedure]` to be part of the account interface, and `#[account(..)]` generates one trait per interface instead of inherent methods. Note also that compiler v0.10.1 pins protocol `0.16.0-rc.4`, while the client and node use stable protocol v0.16.1. Both use the VM 0.29 line.
 :::
 
 ## Quick Fix
@@ -41,16 +41,16 @@ The contract toolchain versions independently of the rest of the stack, and in t
 
 | Component | Version |
 | --- | --- |
-| `midenc` / compiler workspace | 0.10.0 |
+| `midenc` / compiler workspace | 0.10.1 |
 | `miden` contract SDK crate (and `miden-base-sys`, `miden-stdlib-sys`, `miden-sdk-alloc`) | 0.14.0 |
-| Protocol it builds against | `0.16.0-alpha.4` |
-| VM crates it builds against | 0.25 |
-| MSRV | 1.97 (plus a nightly toolchain) |
+| Protocol it builds against | `0.16.0-rc.4` |
+| VM crates it builds against | 0.29 |
+| MSRV | 1.99 (plus a nightly toolchain) |
 
 Two consequences worth planning around:
 
-- The MSRV is **1.97**, higher than the 1.96 the rest of the stack requires. Your toolchain must satisfy the highest of the two.
-- Because the toolchain pins protocol `0.16.0-alpha.4` and VM `0.25`, contract code compiled with it sees an earlier snapshot of the 0.16 protocol surface than your client does. The MAST and package wire formats are compatible across VM 0.25 and 0.29.1, so artifacts still load; the skew is in the protocol API surface, not serialization.
+- The MSRV is **1.99**, higher than the 1.98.1 required by the client and protocol. Your toolchain must satisfy the highest requirement among the components you build.
+- Because the toolchain pins protocol `0.16.0-rc.4`, contract code compiled with it sees an earlier snapshot of the 0.16 protocol surface than a stable v0.16.1 client does. Both use VM 0.29; the skew is in the protocol API surface.
 
 ---
 
@@ -166,4 +166,4 @@ Additive in this line: typed transaction-script arguments, note constructors, an
 | Name collision between a wrapper struct and a trait | `#[account(..)]` now generates traits | Rename the wrapper. |
 | `no method named ..` at a cross-module call site | The generated trait is not in scope | Import the trait named after the interface. |
 | `missing field path` in `miden-project.toml` | Now mandatory | Add `path` to every target. |
-| Toolchain version error | MSRV is 1.97 here | Use the higher of the stack's requirements. |
+| Toolchain version error | MSRV is 1.99 here | Use the higher of the stack's requirements. |

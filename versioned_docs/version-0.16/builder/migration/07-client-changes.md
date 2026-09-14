@@ -88,7 +88,7 @@ One import detail specific to the client: in 0.15 `AccountStorageDelta` lived in
 
 `Client::chain_anchor_for_request` and `Client::execute_transaction_at` are new, and they are not optional for any flow that derives a transaction summary on one client and executes it on another. Since the summary now binds the reference block, the parties must agree on that block or the collected signatures do not apply — see [Transaction Changes](./transaction-changes#collecting-signatures-across-clients-requires-a-chainanchor) for the full flow.
 
-Two details specific to the client: `ClientError` gained a `ChainAnchorError` variant, so an exhaustive match over it no longer compiles; and both methods arrived in `0.16.0-rc.2`, one release after the version pinned in [Quick Upgrade](./#quick-upgrade).
+Two details specific to the client: `ClientError` gained a `ChainAnchorError` variant, so an exhaustive match over it no longer compiles; and both methods first appeared in `0.16.0-rc.2` and are included in the stable version pinned in [Quick Upgrade](./#quick-upgrade).
 
 ---
 
@@ -173,7 +173,7 @@ Bump `@miden-sdk/miden-sdk` and `@miden-sdk/react` together — mixing 0.15 and 
 
 Additive: `notes.list({ scriptRoots })`, `NoteScript.networkAccountConfig()`, `NoteScript.feeSponsorship()`, and `compile.component({ namespace })`.
 
-Additive in `0.16.0-rc.3`, one release later: `transactions.captureAnchor(request)`, an `anchor` option on `preview` / `executeRequest` / `submit`, the wasm-level `chainAnchorForRequest` / `executeTransactionAt` / `executeForSummaryAt`, and `TransactionSummary.blockCommitment()` / `expirationDelta()`.
+First added in `0.16.0-rc.3` and included in the stable release: `transactions.captureAnchor(request)`, an `anchor` option on `preview` / `executeRequest` / `submit`, the wasm-level `chainAnchorForRequest` / `executeTransactionAt` / `executeForSummaryAt`, and `TransactionSummary.blockCommitment()` / `expirationDelta()`.
 
 If you author MASM through the Web SDK, the language changes apply to you as well — `@account_procedure` annotations, `mod` declarations, and the new import syntax. See [MASM Changes](./masm-changes).
 
@@ -191,7 +191,7 @@ The `NetworkAccountTarget` foreign-procedure-invocation requirement is reported 
 
 ## (React) `useChainAnchor` and `usePreview`
 
-Both are new in `0.16.0-rc.3`, and `useTransaction().execute` accepts an `anchor` alongside them. `usePreview` is the first summary surface in the React SDK — before it, verifying and co-signing a multisig proposal meant dropping to the WASM client.
+Both first appeared in `0.16.0-rc.3` and are included in the stable release; `useTransaction().execute` accepts an `anchor` alongside them. `usePreview` is the first summary surface in the React SDK — before it, verifying and co-signing a multisig proposal meant dropping to the WASM client.
 
 If you build a multi-party signing flow, preview and execute against the `anchoredRequest` that `useChainAnchor` returns rather than the request you passed in. Re-resolving a request factory produces a different transaction, and any builder that creates an output note draws a fresh serial number, so the anchor would pin a request nobody executes. See [Transaction Changes](./transaction-changes#collecting-signatures-across-clients-requires-a-chainanchor).
 

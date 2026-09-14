@@ -305,8 +305,7 @@ GUARDIAN_METADATA_PATH=.guardian/metadata \
 
 Then in another shell, follow the
 [`examples/operator-smoke-web`](https://github.com/OpenZeppelin/guardian/blob/v0.17.0/examples/operator-smoke-web) README to
-point the harness at `http://localhost:3000`. The
-`smoke-test-operator-dashboard` skill drives this end-to-end.
+point the harness at `http://localhost:3000` and exercise the flow end-to-end.
 
 ## Storage-mode caveats
 

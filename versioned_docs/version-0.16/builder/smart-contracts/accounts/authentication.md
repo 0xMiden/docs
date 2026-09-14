@@ -8,7 +8,7 @@ description: "Authentication component pattern and nonce management for Miden ac
 
 Miden uses digital signatures for transaction authentication. Because transactions execute on the client rather than onchain validators, the system needs a way to prove that a transaction was authorized by the account owner. Without authentication, anyone could construct a valid proof that transfers assets out of an account. The nonce prevents replay attacks — without it, a valid proof could be resubmitted to execute the same state change twice. For details on the cryptographic primitives, see [Cryptography](./cryptography).
 
-The scheme-agnostic [`AuthSingleSig`](https://docs.rs/miden-standards/latest/miden_standards/account/auth/struct.AuthSingleSig.html) component handles single-signature accounts. It takes an `Approver`, which pairs a public-key commitment with an authentication scheme such as `Falcon512Poseidon2` or `EcdsaK256Keccak`. The native hash function is Poseidon2, and the Falcon-512 verifier MASM module is `miden::core::crypto::dsa::falcon512_poseidon2`.
+The scheme-agnostic [`AuthSingleSig`](https://docs.rs/miden-standards/0.16.1/miden_standards/account/auth/struct.AuthSingleSig.html) component handles single-signature accounts. It takes an `Approver`, which pairs a public-key commitment with an authentication scheme such as `Falcon512Poseidon2` or `EcdsaK256Keccak`. The native hash function is Poseidon2, and the Falcon-512 verifier MASM module is `miden::core::crypto::dsa::falcon512_poseidon2`.
 
 ## How authentication works
 
@@ -98,7 +98,7 @@ The nonce is committed into the transaction proof. If someone tries to replay a 
 Auth components are invoked automatically by the kernel — you do not call them directly from note scripts or [transaction scripts](../transactions/transaction-scripts). For access control and security patterns, see [Patterns](../patterns).
 
 :::info API Reference
-Full API docs on docs.rs: [`miden`](https://docs.rs/miden/latest/miden/), [`AuthSingleSig`](https://docs.rs/miden-standards/latest/miden_standards/account/auth/struct.AuthSingleSig.html), [`AuthScheme`](https://docs.rs/miden-protocol/latest/miden_protocol/account/auth/enum.AuthScheme.html)
+Full API docs on docs.rs: [`miden`](https://docs.rs/miden/0.14.0/miden/index.html), [`AuthSingleSig`](https://docs.rs/miden-standards/0.16.1/miden_standards/account/auth/struct.AuthSingleSig.html), [`AuthScheme`](https://docs.rs/miden-protocol/0.16.1/miden_protocol/account/auth/enum.AuthScheme.html)
 :::
 
 ## Related

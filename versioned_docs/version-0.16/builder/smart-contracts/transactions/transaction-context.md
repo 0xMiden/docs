@@ -62,5 +62,5 @@ Transaction scripts use the `#[tx_script]` macro to define a top-level entry poi
 For signature verification using the transaction context, see [Authentication](../accounts/authentication). For time-based patterns using `tx::get_block_number()`, see [Patterns — Rate limiting](../patterns#rate-limiting).
 
 :::info API Reference
-Full API docs on docs.rs: [`miden::tx`](https://docs.rs/miden/latest/miden/tx/)
+Full API docs on docs.rs: [`miden::tx`](https://docs.rs/miden/0.14.0/miden/tx/)
 :::

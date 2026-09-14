@@ -5,6 +5,10 @@ title: Operators
 
 # Operators
 
+:::warning v0.16 compatibility
+This snapshot documents note transport v0.5.0-rc.2. Its wire implementation still resolves protocol v0.16 release-candidate types, while this site's v0.16 client and protocol pins are stable releases. Validate `SendNote` serialization and end-to-end delivery against the exact client, server, and network versions you deploy.
+:::
+
 This page covers running a note transport node.
 
 ## Build from source

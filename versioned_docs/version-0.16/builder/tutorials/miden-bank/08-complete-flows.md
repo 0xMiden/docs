@@ -297,9 +297,9 @@ You've completed the Miden Bank tutorial! You now understand:
 
 ### Continue Learning
 
-- **[Testing with MockChain](https://docs.miden.xyz/builder/tutorials/rust-compiler/testing)** - Deep dive into testing patterns
-- **[Debugging Guide](https://docs.miden.xyz/builder/tutorials/rust-compiler/debugging)** - Troubleshoot common issues
-- **[Common Pitfalls](https://docs.miden.xyz/builder/tutorials/rust-compiler/pitfalls)** - Avoid known gotchas
+- **[Testing with MockChain](../helpers/testing.md)** - Deep dive into testing patterns
+- **[Debugging Guide](../helpers/debugging.md)** - Troubleshoot common issues
+- **[Common Pitfalls](../helpers/pitfalls.md)** - Avoid known gotchas
 
 ### Build More
 
@@ -314,9 +314,9 @@ Use these patterns to build:
 :::tip View Complete Source
 Explore the complete banking application:
 
-- [All Contracts](https://github.com/0xMiden/miden-tutorials/tree/main/examples/miden-bank/contracts)
-- [Integration Tests](https://github.com/0xMiden/miden-tutorials/tree/main/examples/miden-bank/integration/tests)
-- [Test Helpers](https://github.com/0xMiden/miden-tutorials/blob/main/examples/miden-bank/integration/src/helpers.rs)
+- [All Contracts](https://github.com/0xMiden/tutorials/tree/965739b626acf3c63a0e547d313859079ee03c18/examples/miden-bank/contracts)
+- [Integration Tests](https://github.com/0xMiden/tutorials/tree/965739b626acf3c63a0e547d313859079ee03c18/examples/miden-bank/integration/tests)
+- [Test Helpers](https://github.com/0xMiden/tutorials/blob/965739b626acf3c63a0e547d313859079ee03c18/examples/miden-bank/integration/src/helpers.rs)
   :::
 
 Happy building on Miden! 🚀

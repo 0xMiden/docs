@@ -113,5 +113,5 @@ pub mod my_types {
 | Order | Declaration order doesn't matter — forward references are resolved |
 
 :::info API Reference
-Full API docs on docs.rs: [`miden`](https://docs.rs/miden/latest/miden/) (`#[export_type]` macro)
+Full API docs on docs.rs: [`miden`](https://docs.rs/miden/0.14.0/miden/index.html) (`#[export_type]` macro)
 :::

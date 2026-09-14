@@ -31,7 +31,7 @@ reassemble MASM sources when migrating from an earlier release.
 
 Running against a local network is optional and only needed for a fully self-hosted setup. The Miden node's own documentation covers standing up a local network end to end — installing the node, bootstrapping genesis, and starting the services:
 
-- [Local network development](https://docs.miden.xyz/reference/node/local-network-development)
+- [Local network development](../../reference/node/local-network-development.md)
 
 Network transactions additionally require the **network transaction builder** (`miden-ntx-builder`), the component that executes network notes on an account's behalf. The local-network setup linked above provisions it; a node without the builder will commit network notes but never execute them.
 

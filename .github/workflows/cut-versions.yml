@@ -72,7 +72,7 @@ jobs:
         run: npm ci
 
       - name: Test snapshot workflow
-        run: node --test scripts/cut-versions.test.mjs
+        run: node --test scripts/cut-versions.test.mjs scripts/rebase-ingested-links.test.mjs
 
       - name: Parse release manifest (and merge with manual inputs)
         id: manifest

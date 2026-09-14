@@ -7,7 +7,7 @@ description: "Library becomes Package, the MAST and package wire formats change,
 # VM & Assembler Changes
 
 :::warning Breaking Change
-The VM jumps **0.23 → 0.29.1**. `Library` and `KernelLibrary` no longer exist — `Package` is the only artifact type, and the `.masl` format is gone. The MAST wire format moved `0.0.3` → `0.0.4` and the package format `4.0.0` → `6.0.0`, so **no 0.15 artifact or serialized proof loads under 0.16**. Verification now takes a single `ExecutionClaim`, and `miden-project.toml` requires an explicit `path` on every target.
+The VM jumps **0.23 → 0.29.2**. `Library` and `KernelLibrary` no longer exist — `Package` is the only artifact type, and the `.masl` format is gone. The MAST wire format moved `0.0.3` → `0.0.4` and the package format `4.0.0` → `6.0.0`, so **no 0.15 artifact or serialized proof loads under 0.16**. Verification now takes a single `ExecutionClaim`, and `miden-project.toml` requires an explicit `path` on every target.
 :::
 
 For the MASM language changes that ship with this VM version — the new `mod` declarations, the rewritten `use` syntax, and the removal of the `debug.*` decorators — see [MASM Changes](./masm-changes). For the changed commitment preimages, see [Hashing & Crypto Changes](./hashing-crypto).
@@ -232,7 +232,7 @@ let (level, unsettled) = Verifier::new()
 let root: Word = unsettled.root();
 ```
 
-In VM 0.29.1, `ExecutionProof` exposes `miden_proof() -> &StarkProof` and `deferred_proof() -> &DeferredProof`, with constructors `ExecutionProof::new(miden, deferred)` and `from_parts(bytes, hash_fn, deferred)`. The 0.15 public fields, three-argument `new`, `stark_proof()`, `hash_fn()`, `precompile_requests()`, and `into_parts()` are gone. For a non-default partial-verification budget, configure `Verifier::with_max_deferred_elements(n)` before calling `verify_partial`.
+In VM 0.29.2, `ExecutionProof` exposes `miden_proof() -> &StarkProof` and `deferred_proof() -> &DeferredProof`, with constructors `ExecutionProof::new(miden, deferred)` and `from_parts(bytes, hash_fn, deferred)`. The 0.15 public fields, three-argument `new`, `stark_proof()`, `hash_fn()`, `precompile_requests()`, and `into_parts()` are gone. For a non-default partial-verification budget, configure `Verifier::with_max_deferred_elements(n)` before calling `verify_partial`.
 
 `verify_with_precompiles` and `verify_with_max_deferred_elements` are both removed. Precompile verification is no longer wired up by the caller: the deferred wire is rehydrated under the built-in `miden_precompiles::registry()` and bound to the STARK public inputs automatically.
 

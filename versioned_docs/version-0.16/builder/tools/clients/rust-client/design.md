@@ -40,11 +40,11 @@ The store can track any number of accounts, and any number of notes that those a
 
 The RPC client communicates with the node through a defined set of gRPC methods. The provided client works both in `std` and `wasm` environments.
 
-The available gRPC methods are documented in the [Node gRPC Reference](https://docs.miden.xyz/miden-node/rpc).
+The available gRPC methods are documented in the [Node gRPC Reference](../../../../reference/node/rpc/index.md).
 
 ## Transaction executor
 
-The transaction executor uses the [Miden VM](https://docs.miden.xyz/core-concepts/miden-vm/) to execute transactions. All transactions run within the [transaction kernel](https://docs.miden.xyz/builder/smart-contracts/transactions/introduction).
+The transaction executor uses the [Miden VM](../../../../reference/miden-vm/index.md) to execute transactions. All transactions run within the [transaction kernel](../../../smart-contracts/transactions/introduction.md).
 
 When executing, the executor needs access to relevant blockchain history. The executor uses a `DataStore` interface for accessing this data. This means that there may be some coupling between the executor and the store.
 

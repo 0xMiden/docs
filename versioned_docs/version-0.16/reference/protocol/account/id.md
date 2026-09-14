@@ -33,14 +33,14 @@ Bech32 is the preferred encoding format and should be used for user-facing appli
 
 An `Account` ID can be encoded in different formats:
 
-1. [**Bech32**](https://github.com/bitcoin/bips/blob/master/bip-0173.mediawiki) (user-facing):
+1. [**Bech32**](https://github.com/bitcoin/bips/blob/bfc142f2b580a314c846dbce3c15c659c2b1d32d/bip-0173.mediawiki) (user-facing):
   - Example: `mm1ap86qhrsrs4gcy2ntrerfkwylure4ly5`
   - **Benefits**:
     - Built-in error detection via checksum algorithm
     - Human-readable prefix indicates network ID
     - Less prone to transcription errors
   - **Structure**:
-    - [Human-readable prefix](https://github.com/satoshilabs/slips/blob/master/slip-0173.md) that
+    - [Human-readable prefix](https://github.com/satoshilabs/slips/blob/570ed55b7fde158f1116be34fc2faa35dada5912/slip-0173.md) that
       determines the network:
       - `mm` (indicates **M**iden **M**ainnet)
       - `mtst` (indicates Miden Testnet)

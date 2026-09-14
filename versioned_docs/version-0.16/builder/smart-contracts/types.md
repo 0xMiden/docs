@@ -279,7 +279,7 @@ assert_eq!(current.suffix, expected.suffix);
 
 ## Other types
 
-The SDK also provides `NoteIdx`, `Tag`, `NoteType`, `Recipient`, `Digest`, and `StorageSlotId`. See the [full API docs on docs.rs](https://docs.rs/miden/latest/miden/) for their definitions.
+The SDK also provides `NoteIdx`, `Tag`, `NoteType`, `Recipient`, `Digest`, and `StorageSlotId`. See the [full API docs on docs.rs](https://docs.rs/miden/0.14.0/miden/index.html) for their definitions.
 ## Type conversion table
 
 | From | To | Method |
@@ -295,5 +295,5 @@ The SDK also provides `NoteIdx`, `Tag`, `NoteType`, `Recipient`, `Digest`, and `
 Use these types in [component definitions](./accounts/components), store and retrieve Words from [persistent storage](./accounts/storage), or define your own types for public APIs with [`#[export_type]`](./accounts/custom-types).
 
 :::info API Reference
-Full API docs on docs.rs: [`Felt`](https://docs.rs/miden/latest/miden/struct.Felt.html), [`Word`](https://docs.rs/miden/latest/miden/struct.Word.html), [`Asset`](https://docs.rs/miden/latest/miden/struct.Asset.html)
+Full API docs on docs.rs: [`Felt`](https://docs.rs/miden/0.14.0/miden/struct.Felt.html), [`Word`](https://docs.rs/miden/0.14.0/miden/struct.Word.html), [`Asset`](https://docs.rs/miden/0.14.0/miden/struct.Asset.html)
 :::

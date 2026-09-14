@@ -1084,4 +1084,4 @@ Now that you've built a React wallet, explore these related topics:
 
 - [Creating Multiple Notes in a Single Transaction](./creating_multiple_notes_tutorial.md) - Learn about batch operations
 - [Miden React SDK Reference](https://github.com/0xMiden/web-sdk/tree/v0.16.0/packages/react-sdk) - Full API documentation
-- [Miden Documentation](https://docs.miden.xyz/) - Core Miden concepts
+- [Miden Documentation](../../../index.md) - Core Miden concepts

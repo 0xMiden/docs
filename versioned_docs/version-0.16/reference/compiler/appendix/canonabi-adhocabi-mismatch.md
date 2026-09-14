@@ -53,7 +53,7 @@ happen for any type that is larger than 8 bytes (i64).
 :::tip
 
 For a complete list of the transaction kernel functions, in WIT format, see
-[miden.wit](https://github.com/0xMiden/compiler/blob/main/tests/rust-apps-wasm/wit-sdk/sdk/wit/miden.wit).
+[miden.wit](https://github.com/0xMiden/compiler/blob/f2e0b4274f4f13caeceb215645bd3f1f03a3c6f5/tests/rust-apps-wasm/wit-sdk/sdk/wit/miden.wit).
 
 :::
 

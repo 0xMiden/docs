@@ -749,7 +749,7 @@ impl BankStorage {
 6. **CRITICAL: Always validate before subtraction** - Felt arithmetic wraps silently!
 
 :::tip View Complete Source
-See the complete deposit and withdraw implementations in [contracts/bank-account/src/lib.rs](https://github.com/0xMiden/miden-tutorials/blob/main/examples/miden-bank/contracts/bank-account/src/lib.rs).
+See the complete deposit and withdraw implementations in [contracts/bank-account/src/lib.rs](https://github.com/0xMiden/tutorials/blob/965739b626acf3c63a0e547d313859079ee03c18/examples/miden-bank/contracts/bank-account/src/lib.rs).
 :::
 
 ## Next Steps

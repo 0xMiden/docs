@@ -7,7 +7,7 @@ sidebar_position: 3
 
 This chapter will walk through how to develop Miden programs in Rust using the standard library
 provided by the `miden-stdlib-sys` crate (see the
-[README](https://github.com/0xMiden/compiler/blob/main/sdk/stdlib-sys/README.md).
+[README](https://github.com/0xMiden/compiler/blob/f2e0b4274f4f13caeceb215645bd3f1f03a3c6f5/sdk/stdlib-sys/README.md).
 
 ## Getting started
 
@@ -41,5 +41,3 @@ range `0..=M` where `M` is the modulus of the field (2^64 - 2^32 + 1).
 The `Felt` type implements the standard arithmetic operations, e.g. addition, subtraction,
 multiplication, division, etc. which are accessible through the standard Rust operators `+`, `-`,
 `*`, `/`, etc. All arithmetic operations are wrapping, i.e. performed modulo `M`.
-
-TODO: Add examples of using operations on `Felt` type and available functions (`assert*`, etc.).

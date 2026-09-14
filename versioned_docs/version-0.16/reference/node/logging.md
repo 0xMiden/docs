@@ -18,7 +18,7 @@ The stdout filter is selected from the first non-empty value in this order:
 3. `info,user=debug` (default)
 
 `MIDEN_STDOUT_FILTER` uses the
-[`tracing_subscriber` filter syntax](https://docs.rs/tracing-subscriber/latest/tracing_subscriber/filter/struct.EnvFilter.html).
+[`tracing_subscriber` filter syntax](https://docs.rs/tracing-subscriber/0.3.23/tracing_subscriber/filter/struct.EnvFilter.html).
 A filter is a comma-separated list of directives. Each directive sets a level globally or for a target:
 
 ```text

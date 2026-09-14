@@ -341,7 +341,7 @@ flowchart LR
   — talks to `api/evm.rs` when the server is built with EVM support.
 
 Smoke harnesses under [`examples/`](https://github.com/OpenZeppelin/guardian/blob/v0.17.0/examples) drive each SDK
-end-to-end; see the matching `smoke-test-*` skills for how to run them.
+end-to-end; follow each example's README to run its flow.
 
 ## Authentication shape
 

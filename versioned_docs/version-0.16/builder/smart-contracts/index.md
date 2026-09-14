@@ -57,7 +57,7 @@ If you're new to Miden, the hands-on [Miden Bank Tutorial](../tutorials/miden-ba
 ## Reference
 
 <CardGrid cols={3}>
-  <Card title="API reference" href="https://docs.rs/miden/latest/miden/" eyebrow="docs.rs">
+  <Card title="API reference" href="https://docs.rs/miden/0.14.0/miden/index.html" eyebrow="docs.rs">
     Complete API documentation for the miden crate.
   </Card>
 </CardGrid>

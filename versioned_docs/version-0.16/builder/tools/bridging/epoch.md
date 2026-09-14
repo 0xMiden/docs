@@ -43,11 +43,11 @@ availability, and destination fulfillment depend on Epoch services. Treat the
 ## Dependencies
 
 ```bash
-npm install @epoch-protocol/epoch-intents-sdk \
-  @miden-sdk/miden-sdk \
-  @miden-sdk/miden-wallet-adapter-base \
-  @miden-sdk/miden-wallet-adapter-react \
-  viem
+npm install @epoch-protocol/epoch-intents-sdk@1.0.30 \
+  @miden-sdk/miden-sdk@0.15.7 \
+  @miden-sdk/miden-wallet-adapter-base@0.15.1 \
+  @miden-sdk/miden-wallet-adapter-react@0.15.1 \
+  viem@2.51.0
 ```
 
 The snippets are type-checked against
@@ -371,8 +371,8 @@ resource is locked and which recovery transaction will be signed.
 
 ### Miden implementation references
 
-- [Epoch integration in the bridge portal](https://github.com/0xMiden/bridge-portal/tree/main/src/app/lib/epoch)
+- [Epoch integration in the bridge portal](https://github.com/0xMiden/bridge-portal/tree/5d8f327a8adea0e0d671b798145b6092f5e23d6a/src/app/lib/epoch)
 - [Full Epoch bridging tutorial](../../tutorials/recipes/web/bridging_with_epoch_tutorial.md)
-- [Runnable bridging application](https://github.com/0xMiden/tutorials/tree/main/examples/bridging-app)
+- [Runnable bridging application](https://github.com/0xMiden/tutorials/tree/965739b626acf3c63a0e547d313859079ee03c18/examples/bridging-app)
 - [Epoch SDK reference](https://docs.epochprotocol.xyz/integration-guides/sdk-reference)
 - [Supported chains and tokens](https://docs.epochprotocol.xyz/supported-chains-and-tokens)

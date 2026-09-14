@@ -23,7 +23,7 @@ We'll cover installation from source here - see the `midenup` README for details
 First, clone the compiler repo:
 
 ```bash
-git clone https://github.com/0xMiden/compiler
+git clone --branch v0.10.1 --depth 1 https://github.com/0xMiden/compiler
 ```
 
 Then, run the following in your shell in the cloned repo folder:
@@ -120,6 +120,6 @@ cargo miden new my-account --account  # a single account component
 
 The available templates are `--account`, `--note`, `--tx-script`,
 `--auth-component`, and `--program`. Their sources live in this repository under
-[`extra/templates`](https://github.com/0xMiden/compiler/tree/main/extra/templates)
+[`extra/templates`](https://github.com/0xMiden/compiler/tree/f2e0b4274f4f13caeceb215645bd3f1f03a3c6f5/extra/templates)
 and are released independently of the compiler, so `cargo miden new` picks up
 template updates without you reinstalling `cargo-miden`.

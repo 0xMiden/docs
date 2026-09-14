@@ -166,7 +166,7 @@ const sectionPath = metadata.permalink.replace(/\/$/, '');
 
 Before starting this tutorial, ensure you have:
 
-- Completed the [Get Started guide](https://docs.miden.xyz/builder/get-started/) (familiarity with `midenup`, `miden new`, basic tooling)
+- Completed the [Get Started guide](../../get-started/index.md) (familiarity with `midenup`, `miden new`, basic tooling)
 - Basic understanding of Miden concepts (accounts, notes, transactions)
 - Rust programming experience
 
@@ -192,20 +192,22 @@ This tutorial covers the following Miden Rust compiler features:
 
 ## Source Code
 
-The complete source code for this tutorial is available in the [examples/miden-bank](https://github.com/0xMiden/miden-tutorials/tree/main/examples/miden-bank) directory of this repository:
+The complete source code for this tutorial is available in the [examples/miden-bank](https://github.com/0xMiden/tutorials/tree/965739b626acf3c63a0e547d313859079ee03c18/examples/miden-bank) directory of this repository:
 
 ```bash title=">_ Terminal"
-git clone https://github.com/0xMiden/miden-tutorials.git
-cd miden-tutorials/examples/miden-bank
+git clone https://github.com/0xMiden/tutorials.git
+cd tutorials
+git checkout 965739b626acf3c63a0e547d313859079ee03c18
+cd examples/miden-bank
 ```
 
 ## Supplementary Guides
 
 These standalone guides complement the tutorial:
 
-- **[Testing with MockChain](https://docs.miden.xyz/builder/tutorials/rust-compiler/testing)** - Learn to test your contracts
-- **[Debugging](https://docs.miden.xyz/builder/tutorials/rust-compiler/debugging)** - Troubleshoot common issues
-- **[Common Pitfalls](https://docs.miden.xyz/builder/tutorials/rust-compiler/pitfalls)** - Avoid known gotchas
+- **[Testing with MockChain](../helpers/testing.md)** - Learn to test your contracts
+- **[Debugging](../helpers/debugging.md)** - Troubleshoot common issues
+- **[Common Pitfalls](../helpers/pitfalls.md)** - Avoid known gotchas
 
 ## Getting Help
 
@@ -213,6 +215,6 @@ If you get stuck during this tutorial:
 
 - Check the [Miden Docs](https://docs.miden.xyz) for detailed technical references
 - Join the [Build On Miden](https://t.me/BuildOnMiden) Telegram community for support
-- Review the complete code in the [examples/miden-bank](https://github.com/0xMiden/miden-tutorials/tree/main/examples/miden-bank) directory
+- Review the complete code in the [examples/miden-bank](https://github.com/0xMiden/tutorials/tree/965739b626acf3c63a0e547d313859079ee03c18/examples/miden-bank) directory
 
 Ready to build your first Miden banking application? Let's get started with [Part 0: Project Setup](./00-project-setup.md)!

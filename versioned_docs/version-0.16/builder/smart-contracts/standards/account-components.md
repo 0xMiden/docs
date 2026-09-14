@@ -95,4 +95,4 @@ Reach for MASM directly when you are implementing low-level behavior, integratin
 
 - [Standard notes](./standard-notes) - which account interfaces each standard note expects
 - [Faucets and policies](./faucets-and-policies) - using faucet and mint policy components
-- [`miden-standards` account source](https://github.com/0xMiden/protocol/tree/next/crates/miden-standards/src/account) - current implementation
+- [`miden-standards` account source](https://github.com/0xMiden/protocol/tree/fb1e40da0f7cec156963e5d815a51a18a8313f25/crates/miden-standards/src/account) - current implementation

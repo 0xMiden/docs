@@ -28,7 +28,7 @@ grpcurl -plaintext localhost:57291 describe rpc.Api
 ```
 
 For Rust developers, we also ship a Rust crate
-[miden_node_proto_build](https://docs.rs/miden-node-proto-build/latest/miden_node_proto_build/) which exposes the gRPC
+[miden_node_proto_build](https://docs.rs/miden-node-proto-build/0.16.0/miden_node_proto_build/) which exposes the gRPC
 schemas as file descriptor sets, which can be used to generate the gRPC bindings using [tonic](https://docs.rs/tonic).
 
 The source schema files are also available in the [Miden node repository](https://github.com/0xMiden/node), in the

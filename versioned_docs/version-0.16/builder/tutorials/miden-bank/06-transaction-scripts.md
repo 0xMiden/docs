@@ -568,7 +568,7 @@ rustflags = ["--cfg", "miden"]
 6. **Loading a transaction script** - `build_tx_script_from_package` uses `TransactionScript::from_package` to load the compiled entry procedure
 
 :::tip View Complete Source
-See the complete transaction script implementation in [contracts/init-tx-script/src/lib.rs](https://github.com/0xMiden/miden-tutorials/blob/main/examples/miden-bank/contracts/init-tx-script/src/lib.rs).
+See the complete transaction script implementation in [contracts/init-tx-script/src/lib.rs](https://github.com/0xMiden/tutorials/blob/965739b626acf3c63a0e547d313859079ee03c18/examples/miden-bank/contracts/init-tx-script/src/lib.rs).
 :::
 
 ## Next Steps
