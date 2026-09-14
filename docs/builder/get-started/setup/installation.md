@@ -128,13 +128,13 @@ toolchain for the network you use. `midenup` resolves network names through the
 [published channel manifest](https://0xmiden.github.io/midenup/channel-manifest.json).
 
 :::warning Release prerequisite
-The published manifest currently maps `testnet` to the v0.15 channel. The
-explicit `0.16.0` channel is not a substitute: it still mixes prerelease client
-and protocol components. Neither channel is a verified setup for these v0.16
-testnet guides, and `devnet` is a different network.
+The stable v0.16 toolchain update is ready on midenup's `next` branch, but it
+has not yet been promoted to the published manifest. The published `testnet`
+channel still points to v0.15, while its explicit `0.16.0` channel is the older
+prerelease stack.
 
-Do not continue with the network-dependent guides until `testnet` points to a
-coherent v0.16 release channel.
+Wait for the updated manifest to be published before using these
+network-dependent v0.16 guides against testnet.
 :::
 
 After the manifest meets that requirement, install the public testnet toolchain
