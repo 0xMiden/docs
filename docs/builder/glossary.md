@@ -27,7 +27,7 @@ Key terms and definitions used throughout the Miden docs. Grouped thematically â
 
 ### Account
 
-An account is a data structure that represents an entity (user account, smart contract) on the Miden blockchain â€” analogous to smart contracts.
+An account is a data structure that represents an entity (user account or smart contract) on the Miden blockchain. It is analogous to a smart contract.
 
 ### Account builder
 
