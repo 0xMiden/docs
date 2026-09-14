@@ -23,55 +23,47 @@ Delegated provers can use optimized hardware that wouldn't be available to end-u
 
 ## What is the lifecycle of a transaction?
 
+For a client-executed transaction:
+
 ### 1. Transaction Creation
 
 - User creates a transaction specifying the operations to perform (transfers, contract interactions, etc.)
-- Client performs preliminary validation of the transaction and its structure
-- The user authorizes the specified state transitions by signing the transaction
+- Client loads the account state and input notes needed for execution
 
-### 2. Transaction Submission
+### 2. Transaction Execution
 
-- The signed transaction is submitted to Miden network nodes
-- The transaction enters the mempool (transaction pool) where it waits to be selected to be included in the state
-- Nodes perform basic validation checks on the transaction structure and signature
+- The Miden VM executes the note and transaction scripts locally
+- The resulting state transitions and execution trace are computed
+- During authentication, the account pays the protocol fee through a public `TX_FEE` note and authorizes the transaction summary
 
-### 3. Transaction Selection
+### 3. Proof Generation
 
-- A sequencer (or multiple sequencers in a decentralized setting) selects transactions from the mempool
-- The sequencer groups transactions into bundles based on state access patterns and other criteria
-- The transaction execution order is determined according to protocol mechanism
+- The client or a delegated prover generates a cryptographic proof attesting to the correctness of the execution
 
-### 4. Transaction Execution
+### 4. Transaction Submission
 
-- The current state relevant to the transaction is loaded
-- The Miden VM executes the transaction operations
-- **State Transition Computation**: The resulting state transitions are computed
-- An execution trace of the transaction is generated which captures all the computation
+- The proven transaction, sealed inputs, and public state updates are submitted to Miden network nodes
+- The node verifies the proof and admission rules before accepting the transaction into the mempool
 
-### 5. Proof Generation
+### 5. Transaction Selection
 
-- A STARK based cryptographic proof is generated attesting to the correctness of the execution
-- A proof for the aggregated transaction is created
+- Accepted transactions are selected from the mempool
+- Transactions are grouped into batches for inclusion in a block
 
 ### 6. Block Production
 
-- The aggregated bundle of transactions along with their proofs are assembled into a block
-- A recursive proof attesting to all bundle proofs is generated
-- The block data structure is finalized with the aggregated proof
+- Transaction batches and their proofs are assembled into a block
+- The client synchronizes to observe the transaction's inclusion and updated state
 
 ### 7. L1 Submission
 
-- Transaction data is posted to the data availability layer
-- The block proof and state delta commitment are submitted to the Miden contract (that is bridged to Ethereum/Agglayer)
-- The L1 contract verifies validity of the proof
-- Upon successful verification, the L1 contract updates the state root
+- Block proofs are aggregated for settlement
+- The resulting proof and state commitments are submitted for L1 verification
 
 ### 8. Finalization
 
-- Transaction receipts and events are generated
-- The global state commitment is updated to reflect the new state
-- The transaction is now considered finalized on the L1
-- Users and indexers get notified/updated about the transaction completion
+- L1 settlement establishes finality for the submitted state
+- Inclusion in a Miden block does not by itself establish L1 finality
 
 ## Do notes in Miden support recency conditions?
 
@@ -100,4 +92,4 @@ faster quote-and-solve flow for test USDC. Both integrations are testnet-only.
 
 ## What does the gas fee model of Miden look like?
 
-Miden does not yet have a fully implemented fee model, work in progress.
+Miden does not meter gas linearly. Its transaction fee grows logarithmically with the transaction's estimated VM cycles. During authentication, the account pays by creating a public `TX_FEE` note that the batch builder can collect. See [Transaction Fees](./smart-contracts/transactions/fees) for the formula, payment assets, and network-account sponsorship fees.

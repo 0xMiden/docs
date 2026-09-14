@@ -12,11 +12,10 @@ In this section, you'll learn about how to deploy and interact with your counter
 
 The `integration/` folder is a crucial part of your Miden project workspace. It serves as the command center for all interactions with your smart contracts. Let's explore its structure and purpose.
 
-Navigate to your project's integration folder:
+From the workspace root, inspect your project's integration folder:
 
 ```bash title=">_ Terminal"
-cd integration
-ls -la
+ls -la integration
 ```
 
 You'll see a structure like:
@@ -72,7 +71,7 @@ The script performs these key operations:
 
 ### Running the Script
 
-Execute the increment script to deploy your contract:
+From the workspace root, run the increment script:
 
 ```bash title=">_ Terminal"
 cd integration
@@ -107,11 +106,11 @@ The script demonstrates Miden's deployment flow:
 
 This process shows how Miden contracts are deployed through state changes rather than separate deployment transactions.
 
-**Miden's Deployment Flow**: In Miden, accounts (contracts) become visible onchain only when they undergo a state change. Simply creating an account locally doesn't deploy it - the account must participate in a transaction that modifies its state. In our case, by incrementing the counter, we're effectively "deploying" the contract and making it visible on the Miden testnet explorer. This is why the increment operation serves both as the deployment and the first interaction with the contract.
+**Miden's Deployment Flow**: Creating an account locally does not deploy it. Its first committed state-changing transaction publishes it onchain. If the account first consumes a funding note, that transaction publishes it with the counter still at zero. Consuming the increment note then changes the count to one.
 
 ## How the Scripts Work
 
-The integration scripts work by connecting to the Miden client and then building contracts from the Miden package files. These package files are generated when you run `miden build` inside each contract directory, but the scripts handle this compilation step automatically - you don't need to manually build the contracts before running the scripts.
+The integration scripts connect to the Miden client and compile each contract by invoking `miden build` as a separate process. After each build, the helper loads the generated Miden package into the native client. You don't need to build the contracts manually before running the script.
 
 Next, we look into how the scripts convert your Rust contract code into deployable Miden contracts.
 
@@ -148,10 +147,10 @@ let note_package = Arc::new(
 
 The `build_project_in_dir()` function:
 
-- Takes the path to your contract's Rust source code
-- Compiles the Rust code into a Miden package (`.masp` file)
-- Generates a package containing the compiled contract bytecode and metadata
-- This is equivalent to manually running `miden build` in each contract directory
+- Takes the path to a contract project
+- Invokes `miden build` in a separate process, using `--release` when requested
+- Resolves the generated `.masp` artifact under the project's `target/miden/` directory
+- Reads and deserializes the compiled package for the native client
 
 These packages contain all the information needed to deploy and interact with your contracts on the Miden network.
 
@@ -187,7 +186,7 @@ The `create_account_from_package()` function:
 - Combines it with the provided configuration (storage, settings, etc.)
 - Creates a deployable Miden account that can be used in transactions
 
-**Important**: Accounts that use storage must have that storage seeded when instantiating the account. In the v0.15-aligned SDK, storage slots are identified by name rather than index. The slot name follows the pattern `<package>::<interface>::<field_name>`, derived from the component's manifest namespace. We seed the storage with:
+**Important**: Accounts that use storage must have that storage seeded when instantiating the account. Storage slots are identified by name rather than index. The slot name follows the pattern `<package>::<interface>::<field_name>`, derived from the component's manifest namespace. We seed the storage with:
 
 - A named `StorageMap` slot, returned by the `counter_storage_slot()` helper (`counter_account::counter_contract::count_map`)
 - The counter key `COUNTER_STORAGE_KEY` (`[0, 0, 0, 1]`), mapped to the initial count `0`

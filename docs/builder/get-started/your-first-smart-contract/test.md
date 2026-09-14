@@ -65,7 +65,9 @@ use std::{path::Path, sync::Arc};
 use anyhow::Context;
 use integration::helpers::{build_project_in_dir, counter_storage_slot, COUNTER_STORAGE_KEY};
 use miden_client::{
-    account::{component::InitStorageData, AccountBuilder, AccountComponent, AccountType},
+    account::{
+        component::InitStorageData, AccountBuilder, AccountComponent, AccountType, StorageMapKey,
+    },
     auth::AuthSchemeId,
     crypto::RandomCoin,
     note::NoteScript,
@@ -128,13 +130,14 @@ async fn counter_test() -> anyhow::Result<()> {
     // Build the mock chain
     let mut mock_chain = builder.build()?;
 
-    // Build the transaction context
-    let tx_context = mock_chain
-        .build_tx_context(counter_account.clone(), &[counter_note.id()], &[])?
+    // Build the transaction from the committed account and input note
+    let transaction = mock_chain
+        .build_transaction(counter_account.id())
+        .authenticated_input_note(counter_note.id())
         .build()?;
 
     // Execute the transaction
-    let executed_transaction = tx_context.execute().await?;
+    let executed_transaction = transaction.execute().await?;
 
     // Add the executed transaction to the mockchain
     mock_chain.add_pending_executed_transaction(&executed_transaction)?;
@@ -144,7 +147,10 @@ async fn counter_test() -> anyhow::Result<()> {
     let count = mock_chain
         .committed_account(counter_account.id())?
         .storage()
-        .get_map_item(&counter_storage_slot, COUNTER_STORAGE_KEY)
+        .get_map_item(
+            &counter_storage_slot,
+            StorageMapKey::new(COUNTER_STORAGE_KEY),
+        )
         .expect("Failed to get counter value from storage slot");
 
     assert_eq!(
@@ -251,16 +257,17 @@ The counter account does not need a separate `add_account()` call: `add_account_
 ### 5. Creating and Executing the Transaction
 
 ```rust
-let tx_context = mock_chain
-    .build_tx_context(counter_account.clone(), &[counter_note.id()], &[])?
+let transaction = mock_chain
+    .build_transaction(counter_account.id())
+    .authenticated_input_note(counter_note.id())
     .build()?;
 
-let executed_transaction = tx_context.execute().await?;
+let executed_transaction = transaction.execute().await?;
 ```
 
 **What's happening:**
 
-- We **build the transaction context** using the counter account and counter note
+- We **build the transaction** against the committed counter account and add the counter note as an authenticated input
 - We **execute the transaction** - this runs the increment logic locally in the mockchain
 
 ### 6. Verifying the Results
@@ -274,7 +281,10 @@ mock_chain.prove_next_block()?;
 let count = mock_chain
     .committed_account(counter_account.id())?
     .storage()
-    .get_map_item(&counter_storage_slot, COUNTER_STORAGE_KEY)
+    .get_map_item(
+        &counter_storage_slot,
+        StorageMapKey::new(COUNTER_STORAGE_KEY),
+    )
     .expect("Failed to get counter value from storage slot");
 
 assert_eq!(

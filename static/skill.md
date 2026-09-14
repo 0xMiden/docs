@@ -2,28 +2,28 @@
 name: miden-architecture
 description: >
   Miden protocol, SDK, and documentation knowledge. Use when working on Miden
-  docs or source repositories, especially protocol, miden-client, node,
+  docs or source repositories, especially protocol, rust-sdk, web-sdk, node,
   miden-vm, compiler, tutorials, and application templates.
 compatibility: Designed for AI coding assistants.
 metadata:
   author: 0xMiden
-  docs_default: "0.14 (latest stable)"
-  docs_next: "0.15 (unstable)"
-  latest_stable: "0.14"
+  docs_default: "0.16 (latest stable)"
+  docs_next: "0.17 (unstable)"
+  latest_stable: "0.16"
 ---
 
 # Miden Protocol Skill
 
 ## Version Awareness
 
-- The default docs at `https://docs.miden.xyz/` are the latest stable docs, currently **0.14**.
-- The next-release docs are under `https://docs.miden.xyz/next/...` routes and are currently labeled **0.15 unstable**.
+- The default docs at `https://docs.miden.xyz/` are the latest stable docs, currently **0.16**.
+- The next-release docs are under `https://docs.miden.xyz/next/...` routes and are currently labeled **0.17 unstable**.
 - If a user asks about released behavior, check the matching versioned docs and release tag before answering.
 - If a user asks about current development, use `/next/builder/` or `/next/reference/` reference docs and the relevant source repository branch.
 
 ## What Is Miden
 
-Miden is a privacy-preserving blockchain where accounts are programmable smart contracts and users execute and prove transactions locally. Accounts communicate asynchronously through programmable notes. Private account and note data stays with the client unless a developer deliberately chooses public or network-visible state.
+Miden is a privacy-preserving blockchain where accounts are programmable smart contracts and users execute and prove transactions locally. Accounts communicate asynchronously through programmable notes. Private account and note data stays with the client unless a developer deliberately chooses public accounts or notes.
 
 ## Key Mental Model Shifts
 
@@ -36,7 +36,7 @@ Miden is a privacy-preserving blockchain where accounts are programmable smart c
 
 ## Protocol Building Blocks
 
-- **Accounts**: Smart contracts with ID, code, storage, vault, and nonce. Storage modes include private, public, and network account modes.
+- **Accounts**: Smart contracts with ID, code, storage, vault, and nonce. Account state can be private or public; network-account behavior comes from account components rather than a third storage mode.
 - **Components**: Reusable account modules for storage, methods, authentication, wallet behavior, and application-specific logic.
 - **Notes**: Programmable asset containers. They can be private or public and are consumed by account transactions.
 - **Transactions**: Single-account state transitions with note processing, optional transaction scripts, and proof generation.
@@ -78,7 +78,8 @@ Miden is a privacy-preserving blockchain where accounts are programmable smart c
 - Docs: https://github.com/0xMiden/docs
 - Protocol: https://github.com/0xMiden/protocol
 - Miden VM and assembler: https://github.com/0xMiden/miden-vm
-- Client SDKs: https://github.com/0xMiden/miden-client
+- Rust SDK and CLI: https://github.com/0xMiden/rust-sdk
+- Web and React SDKs: https://github.com/0xMiden/web-sdk
 - Node: https://github.com/0xMiden/node
 - Compiler: https://github.com/0xMiden/compiler
 - Tutorials: https://github.com/0xMiden/tutorials
@@ -93,7 +94,7 @@ Miden is a privacy-preserving blockchain where accounts are programmable smart c
 - Do not cite a GitHub blob URL unless the referenced file still exists at that branch or tag.
 - Do not assume `/next/*` behavior has been released. Use the default docs for latest stable behavior.
 - For Web SDK and React SDK code, verify names against the shipped npm types when possible.
-- For network account and network note behavior, verify against the node version being discussed; `next` RPC names may differ from v0.14.
+- For network account and network note behavior, verify against the node version being discussed; `next` RPC names may differ from v0.16.
 - For MASM import and assembler behavior, check `miden-vm` and protocol library docs together.
 
 ## Answering Guidance

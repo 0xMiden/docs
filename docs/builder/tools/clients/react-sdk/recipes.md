@@ -9,7 +9,7 @@ Short patterns covering the common cases. For longer walkthroughs — building a
 
 ## Show transaction progress
 
-Every mutation hook exposes `isLoading` and `stage`; use them for optimistic UI:
+`useSend()` exposes `isLoading` and `stage`; use them for optimistic UI:
 
 ```tsx
 import { useSend } from "@miden-sdk/react";
@@ -54,7 +54,7 @@ const amount = parseAssetAmount("0.01", 8);
 import { getNoteSummary, formatNoteSummary } from "@miden-sdk/react";
 
 const summary = getNoteSummary(note);
-const text = formatNoteSummary(summary); // "1.5 USDC"
+const text = summary ? formatNoteSummary(summary) : "Unknown note";
 ```
 
 `noteSummaries` from `useNotes()` already runs `getNoteSummary` for you — these helpers are for ad-hoc formatting elsewhere.
@@ -76,18 +76,23 @@ await waitForCommit(result.txId);
 ```tsx
 import { useMidenClient } from "@miden-sdk/react";
 
-function BlockHeaderPeek() {
+function SyncHeightPeek() {
   const client = useMidenClient();
-  const header = await client.getBlockHeaderByNumber(100);
-  // ... whatever the hooks don't expose
+
+  const showSyncHeight = async () => {
+    const height = await client.getSyncHeight();
+    console.log("Sync height:", height);
+  };
+
+  return <button onClick={showSyncHeight}>Show sync height</button>;
 }
 ```
 
-`useMidenClient()` throws if the provider isn't ready — guard with `useMiden().isReady` when you render before init.
+`useMidenClient()` throws if the provider isn't ready. Render the component only after `useMiden().isReady`, or provide `MidenProvider`'s `loadingComponent`.
 
-## Prevent race conditions
+## Serialize a custom raw-client flow
 
-Two user actions can fire in quick succession — a double-click on "Send", or a hook plus a manual button both wanting to sign. The React SDK exposes a lock:
+When several raw-client calls must run as one provider-serialized flow, use `runExclusive`. Prevent repeated calls to a mutation hook with that hook's loading state instead.
 
 ```tsx
 import { useMiden, useMidenClient } from "@miden-sdk/react";
@@ -98,38 +103,36 @@ function CompoundFlow() {
 
   const run = () =>
     runExclusive(async () => {
-      // Multiple client calls that must not interleave with other hooks'
-      // WASM work run here — the lock serialises them across the whole app.
-      await client.sync();
-      // ...
+      await client.syncState();
+      // ...other raw-client calls in the same flow
     });
 
   return <button onClick={run}>Run</button>;
 }
 ```
 
-`runExclusive<T>(fn)` takes a zero-argument async function; reach for the client via `useMidenClient()` inside it. Built-in mutations already use this lock internally; `runExclusive` is the escape hatch for your own compound flows.
+`runExclusive<T>(fn)` takes a zero-argument async function. Built-in transaction hooks coordinate their own client calls, so don't wrap a hook such as `send()` in `runExclusive`; use it only for your own raw-client flow.
 
-## Isolated clients for multi-wallet apps
+## Separate stores for multiple signers
 
 `MidenProvider`'s config does not accept a `storeName` directly. Per-user isolation flows through the active signer: each `SignerContext.Provider` supplies its own `storeName` field, and `MidenProvider` reads that when initialising the underlying client. See the [Signers](./signers.md#custom-signer-providers) guide for a custom signer that picks a unique store name per connected user (typically the wallet address or a hash of it).
 
-If you just need two wallets side-by-side in a dev environment and don't want to wire a signer, mount two separate `MidenProvider`s in isolated subtrees backed by different signer contexts.
+For apps that switch between several signers, use [`MultiSignerProvider` and `SignerSlot`](./signers.md#multisignerprovider). `MidenProvider` switches to the store associated with the active signer. Don't mount multiple `MidenProvider`s expecting independent clients: the React SDK state store is shared.
 
 ## Account IDs — hex and bech32 interchangeably
 
-Every hook accepts either:
+Account ID parameters accept either format:
 
 ```tsx
-// Both are valid
-useAccount("0x1234567890abcdef");
-useAccount("mtst1qy35...");
+import { toBech32AccountId, useAccount } from "@miden-sdk/react";
+
+// Both formats are accepted.
+const byHex = useAccount(hexAccountId);
+const byBech32 = useAccount(bech32Address);
 
 // Convert for display
-account.bech32id(); // "mtst1qy35..."
-
-import { toBech32AccountId } from "@miden-sdk/react";
-toBech32AccountId(someHexId); // "mtst1qy35..."
+byHex.account?.bech32id();
+toBech32AccountId(hexAccountId);
 ```
 
 ## Troubleshooting
@@ -141,7 +144,7 @@ toBech32AccountId(someHexId); // "mtst1qy35..."
 | Notes not appearing after mint | Call `sync()` from `useSyncState()` or verify `autoSyncInterval` isn't `0`. |
 | Bech32 address has wrong prefix | `rpcUrl` doesn't match the network you intended. `"testnet"` → `mtst1...`, `"devnet"` → `mdev1...`. |
 | WASM init fails in dev | Ensure your bundler serves `.wasm` with the `application/wasm` MIME type. Vite does this automatically; some custom setups don't. |
-| `"A send is already in progress"` | Two `useSend` mutations fired simultaneously. Either `await` the previous call before starting the next, or use `runExclusive` to coordinate. |
+| `"A send is already in progress"` | The same `useSend` instance received another call before the previous one completed. Disable the trigger with `isLoading` and `await` the previous call. |
 
 ## Next
 

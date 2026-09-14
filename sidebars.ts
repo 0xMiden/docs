@@ -87,6 +87,7 @@ const sidebars: SidebarsConfig = {
               link: { type: "generated-index", slug: "/builder/smart-contracts/transactions" },
               items: [
                 "builder/smart-contracts/transactions/introduction",
+                "builder/smart-contracts/transactions/fees",
                 "builder/smart-contracts/transactions/transaction-context",
                 "builder/smart-contracts/transactions/transaction-scripts",
                 "builder/smart-contracts/transactions/advice-provider",

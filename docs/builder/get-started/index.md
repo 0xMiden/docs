@@ -18,7 +18,7 @@ Key concepts you'll encounter:
 - **Accounts**: smart contracts that hold assets and execute code
 - **Notes**: messages that exchange data and assets between accounts — also programmable
 - **Assets**: tokens that can be fungible or non-fungible
-- **Privacy**: every transaction, note, and account in Miden is private by default — only the involved parties can view asset amounts or transfer details
+- **Privacy**: accounts and notes can be public or private. Private accounts keep their state offchain, while private notes hide their details behind commitments
 
 ## Getting started
 

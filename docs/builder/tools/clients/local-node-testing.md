@@ -14,10 +14,10 @@ Use a local node when a test needs real node state: public accounts, block commi
 | --- | --- |
 | Browser or app testing against a local network | The node repo Docker Compose stack |
 | Rust client integration tests | `TEST_MIDEN_NETWORK=localhost` against a running local node |
-| Private note delivery | A separate Miden Note Transport node |
+| Private note delivery | The node Compose stack with the `note-transport` profile enabled |
 | Future one-command local dev | Track [node#1874](https://github.com/0xMiden/node/issues/1874) and [midenup#180](https://github.com/0xMiden/midenup/issues/180) |
 
-Docker Compose is the supported default path for running the current local node stack. The miden-client repo also has a `make start-node` helper for its own integration tests, but that helper runs the test node directly with Cargo and is not the operator-facing Docker workflow.
+Docker Compose is the supported default path for running the current local node stack. The rust-sdk repo also has a `make start-node` helper for its own integration tests, but that helper runs the test node directly with Cargo and is not the operator-facing Docker workflow.
 
 ## Prerequisites
 
@@ -29,19 +29,17 @@ On Linux, make sure your user can run Docker commands without `sudo`, or prefix 
 
 ## Start a local node
 
-Clone the node repo into a directory named `miden-node`. The account export command below assumes this Compose project name, which gives the genesis volume the name `miden-node_node-data`.
+Clone the compatible node release into a directory named `miden-node`. The account export command below assumes this Compose project name, which gives the genesis volume the name `miden-node_node-data`.
 
 ```bash
-git clone https://github.com/0xMiden/node.git miden-node
+git clone --branch v0.16.0 --depth 1 https://github.com/0xMiden/node.git miden-node
 cd miden-node
 
-make docker-build-node
-make docker-build-monitor
-make compose-genesis
-make compose-up
+make local-network-build
+make local-network-up
 ```
 
-The stack starts the store, validator, block producer, RPC component, network transaction builder, telemetry, and network monitor. The RPC endpoint is:
+The stack starts the sequencer, three validators, transaction prover, network transaction builder, telemetry services, and network monitor. The RPC endpoint is:
 
 ```text
 http://localhost:57291
@@ -50,47 +48,47 @@ http://localhost:57291
 Check the containers:
 
 ```bash
-docker compose -f docker-compose.yml -f compose/telemetry.yml -f compose/monitor.yml ps
+docker compose --profile telemetry --profile monitor ps
 ```
 
 Follow node logs:
 
 ```bash
-make compose-logs
+make local-network-logs
 ```
 
 Stop the node without deleting chain data:
 
 ```bash
-make compose-down
+make local-network-down
 ```
 
 Reset the chain to a fresh genesis:
 
 ```bash
-make compose-genesis
-make compose-up
+make local-network-delete
+make local-network-up
 ```
 
 For the full node operator workflow, see the [local network development guide](../../../reference/node/local-network-development).
 
 ## Export the genesis account
 
-The local genesis process writes account files into the Compose volume. Copy the default genesis account into the repo root when you need to import it into a client:
+The local genesis process writes account files into the Compose volume. Copy the faucet operator account into the repo root when you need an existing local account in a client:
 
 ```bash
 docker run --rm \
   -v miden-node_node-data:/data:ro \
   -v "$PWD":/out \
   alpine:3.20 \
-  cp /data/accounts/account.mac /out/account.mac
+  cp /data/accounts/faucet_operator.mac /out/faucet_operator.mac
 ```
 
 Then configure the CLI for localhost and import the account:
 
 ```bash
 miden-client init --local --network localhost
-miden-client import account.mac
+miden-client import faucet_operator.mac
 miden-client sync
 miden-client account --list
 ```
@@ -114,13 +112,19 @@ const client = await MidenClient.create({
 await client.sync();
 ```
 
-For private note delivery, run a Miden Note Transport node separately and pass its raw URL. The Web SDK has `testnet` and `devnet` shorthands for note transport, but no `localhost` shorthand.
+For private note delivery, enable the optional Note Transport service included in the node Compose stack:
+
+```bash
+docker compose --profile note-transport up -d
+```
+
+Then pass its browser-facing gRPC-Web URL. The Web SDK has `testnet` and `devnet` shorthands for note transport, but no `localhost` shorthand.
 
 ```typescript
 const client = await MidenClient.create({
   rpcUrl: "localhost",
   proverUrl: "local",
-  noteTransportUrl: "http://localhost:57292",
+  noteTransportUrl: "http://ntl.localhost",
   autoSync: false,
   storeName: "miden-local-dev",
 });
@@ -140,7 +144,7 @@ export function LocalMidenApp({ children }: { children: ReactNode }) {
       config={{
         rpcUrl: "localhost",
         prover: "local",
-        noteTransportUrl: "http://localhost:57292",
+        noteTransportUrl: "http://ntl.localhost",
         autoSyncInterval: 15_000,
       }}
     >
@@ -157,8 +161,8 @@ If the frontend itself runs inside Docker, `localhost` is the frontend container
 The miden-client integration test binary uses the same local network preset:
 
 ```bash
-git clone https://github.com/0xMiden/miden-client.git
-cd miden-client
+git clone --branch v0.16.0 --depth 1 https://github.com/0xMiden/rust-sdk.git miden-rust-sdk
+cd miden-rust-sdk
 
 TEST_MIDEN_NETWORK=localhost \
   cargo run --package miden-client-integration-tests --release --locked -- \
@@ -172,7 +176,6 @@ For broader local runs, use the same `TEST_MIDEN_NETWORK=localhost` environment 
 
 - The node RPC server enables gRPC-web and CORS, so browser clients can call `http://localhost:57291` directly.
 - Do not proxy RPC as JSON. If your dev server or reverse proxy sits between the app and node, preserve gRPC-web requests and response headers.
-- Private note transport is not part of the node Compose stack. Run the note transport service separately or import private notes out of band.
 - When switching between testnet, devnet, and localhost, use a different `storeName` or clear the browser IndexedDB database used by the SDK.
 
 ## Debug local failures
@@ -180,7 +183,7 @@ For broader local runs, use the same `TEST_MIDEN_NETWORK=localhost` environment 
 Start with the local logs:
 
 ```bash
-make compose-logs
+make local-network-logs
 ```
 
 Then sync the client and inspect local transaction state:

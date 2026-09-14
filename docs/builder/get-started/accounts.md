@@ -16,7 +16,7 @@ Before diving into account creation, it's essential to understand what makes Mid
 
 - **Smart Contract Wallets**: Every account is a programmable smart contract that can hold assets and execute custom logic
 - **Modular Design**: Accounts are composed of reusable components (authentication, wallet functionality, etc.)
-- **Privacy Levels**: Choose between public or private storage modes
+- **Privacy Levels**: Choose whether the full account state is public or privately held
 
 Miden accounts differ from traditional blockchain addresses in fundamental ways.
 
@@ -27,7 +27,7 @@ Miden accounts differ from traditional blockchain addresses in fundamental ways.
 - Each account has **storage slots** for custom data
 - Accounts are composed of **modular components** for different functionalities
 
-**Storage Modes:**
+**Account-state visibility:**
 
 - **Public**: All state visible onchain (transparent operations)
 - **Private**: Only commitments onchain, full state held privately
@@ -89,17 +89,6 @@ pub enum AccountType {
 
 Wallet, faucet, and custom-contract roles come from the account's components and creation options, not from the account ID.
 
-**Storage Modes:**
-
-```rust
-pub enum StorageMode {
-    /// State stored onchain and publicly readable.
-    Public,
-    /// Only a commitment is onchain; full state is held privately by the owner.
-    Private,
-}
-```
-
 </details>
 
 ## Set Up Development Environment
@@ -134,7 +123,7 @@ If you already created `miden-app` during [installation](./setup/installation#ty
 ```bash title=">_ Terminal"
 npm create vite@latest miden-app -- --template vanilla-ts
 cd miden-app
-npm install @miden-sdk/miden-sdk@^0.15.0
+npm install @miden-sdk/miden-sdk@^0.16.0
 ```
 
 For each code example, save the TypeScript snippet as `src/demo.ts` (overwriting the previous one as you progress):
@@ -173,13 +162,13 @@ use miden_client::{
         component::{AuthScheme, AuthSingleSig, BasicWallet},
         AccountBuilder, AccountType,
     },
-    auth::AuthSecretKey,
+    auth::{Approver, AuthSecretKey},
     builder::ClientBuilder,
     keystore::{FilesystemKeyStore, Keystore},
-    rpc::{Endpoint, GrpcClient},
+    rpc::Endpoint,
 };
 use miden_client_sqlite_store::ClientBuilderSqliteExt;
-use rand::RngCore;
+use rand::Rng;
 use std::sync::Arc;
 
 #[tokio::main]
@@ -187,7 +176,6 @@ async fn main() -> anyhow::Result<()> {
     // Initialize RPC connection
     let endpoint = Endpoint::testnet();
     let timeout_ms = 10_000;
-    let rpc_client = Arc::new(GrpcClient::new(&endpoint, timeout_ms));
 
     // Initialize keystore
     let keystore_path = std::path::PathBuf::from("./keystore");
@@ -200,10 +188,9 @@ async fn main() -> anyhow::Result<()> {
     // NOTE: The client is our entry point to the Miden network.
     // All interactions with the network go through the client.
     let mut client = ClientBuilder::new()
-        .rpc(rpc_client)
+        .grpc_client(&endpoint, Some(timeout_ms))
         .sqlite_store(store_path)
         .authenticator(keystore.clone())
-        .in_debug_mode(true.into())
         .build()
         .await?;
 
@@ -216,10 +203,10 @@ async fn main() -> anyhow::Result<()> {
 
     let builder = AccountBuilder::new(init_seed)
         .account_type(AccountType::Public)
-        .with_auth_component(AuthSingleSig::new(
+        .with_component(AuthSingleSig::new(Approver::new(
             key_pair.public_key().to_commitment(),
             AuthScheme::Falcon512Poseidon2,
-        ))
+        )))
         .with_component(BasicWallet);
 
     let account = builder.build()?;
@@ -229,7 +216,7 @@ async fn main() -> anyhow::Result<()> {
     keystore.add_key(&key_pair, account.id()).await?;
 
     println!("Account ID: {}", account.id());
-    println!("No assets in Vault: {:?}", account.vault().is_empty());
+    println!("No Assets in Vault: {:?}", account.vault().is_empty());
 
     Ok(())
 }
@@ -275,21 +262,19 @@ Before we can work with tokens, we need a source of tokens. Let's create a fungi
 use miden_client::{
     account::{
         component::{
-            AccessControl, AuthScheme, BurnPolicyConfig, FungibleFaucet, MintPolicyConfig,
-            PolicyRegistration, TokenName, TokenPolicyManager, TransferPolicy,
-            create_fungible_faucet,
+            AuthScheme, AuthSingleSig, BurnPolicy, FungibleFaucet, MintPolicy, TokenName,
+            TokenPolicyManager, TransferPolicy, create_singlesig_user_fungible_faucet,
         },
         AccountType,
     },
     asset::{AssetAmount, TokenSymbol},
-    auth::AuthSecretKey,
+    auth::{Approver, AuthSecretKey},
     builder::ClientBuilder,
     keystore::{FilesystemKeyStore, Keystore},
-    rpc::{Endpoint, GrpcClient},
+    rpc::Endpoint,
 };
 use miden_client_sqlite_store::ClientBuilderSqliteExt;
-use miden_standards::AuthMethod;
-use rand::RngCore;
+use rand::Rng;
 use std::sync::Arc;
 
 #[tokio::main]
@@ -297,7 +282,6 @@ async fn main() -> anyhow::Result<()> {
     // Initialize RPC connection
     let endpoint = Endpoint::testnet();
     let timeout_ms = 10_000;
-    let rpc_client = Arc::new(GrpcClient::new(&endpoint, timeout_ms));
 
     // Initialize keystore
     let keystore_path = std::path::PathBuf::from("./keystore");
@@ -310,10 +294,9 @@ async fn main() -> anyhow::Result<()> {
     // NOTE: The client is our entry point to the Miden network.
     // All interactions with the network go through the client.
     let mut client = ClientBuilder::new()
-        .rpc(rpc_client)
+        .grpc_client(&endpoint, Some(timeout_ms))
         .sqlite_store(store_path)
         .authenticator(keystore.clone())
-        .in_debug_mode(true.into())
         .build()
         .await?;
 
@@ -338,23 +321,22 @@ async fn main() -> anyhow::Result<()> {
         .decimals(decimals)
         .max_supply(max_supply)
         .build()?;
-    let policies = TokenPolicyManager::new()
-        .with_mint_policy(MintPolicyConfig::AllowAll, PolicyRegistration::Active)?
-        .with_burn_policy(BurnPolicyConfig::AllowAll, PolicyRegistration::Active)?
-        .with_send_policy(TransferPolicy::AllowAll, PolicyRegistration::Active)?
-        .with_receive_policy(TransferPolicy::AllowAll, PolicyRegistration::Active)?;
-    let faucet_account = create_fungible_faucet(
+    let policies = TokenPolicyManager::builder()
+        .active_mint_policy(MintPolicy::allow_all())
+        .active_burn_policy(BurnPolicy::allow_all())
+        .active_send_policy(TransferPolicy::allow_all())
+        .active_receive_policy(TransferPolicy::allow_all())
+        .build();
+    let auth = AuthSingleSig::new(Approver::new(
+        key_pair.public_key().to_commitment(),
+        AuthScheme::Falcon512Poseidon2,
+    ));
+    let faucet_account = create_singlesig_user_fungible_faucet(
         init_seed,
         faucet,
-        AccountType::Public,
-        AuthMethod::SingleSig {
-            approver: (
-                key_pair.public_key().to_commitment(),
-                AuthScheme::Falcon512Poseidon2,
-            ),
-        },
-        AccessControl::AuthControlled,
+        auth,
         policies,
+        AccountType::Public,
     )?;
 
     client.add_account(&faucet_account, false).await?;
@@ -405,11 +387,6 @@ Faucet account ID: 0xde0ba31282f7522046d3d4af40722b
 
 - **Public Accounts**: Account state is fully transparent and visible onchain
 - **Private Accounts**: Only cryptographic commitments are stored onchain, with full state maintained privately
-
-**Storage Modes:**
-
-- **Public**: Account state is fully transparent and visible onchain
-- **Private**: Only cryptographic commitments are stored onchain, with full state maintained privately
 
 **Modular Components:**
 

@@ -13,7 +13,7 @@ Miden provides two modules for reading note data, each for a different execution
 
 ## `active_note` — the executing note
 
-When a note script runs, `active_note` provides access to the current note's storage, assets, and metadata:
+When a note script runs, `active_note` provides access to the current note's storage, creation-time assets, and metadata:
 
 ```rust
 use miden::active_note;
@@ -39,8 +39,14 @@ let storage: Vec<Felt> = active_note::get_storage();
 ### Assets
 
 ```rust
-let assets: Vec<Asset> = active_note::get_assets();
+let assets: Vec<Asset> = active_note::get_initial_assets();
 ```
+
+The name makes the semantics explicit: these are the assets the note carried when it was created, before any in-transaction movement. This is an inspection API; iterating over this vector does not remove assets from the note's current state.
+
+:::warning Rust SDK limitation
+The protocol exposes stateful `active_note::remove_asset` and `active_note::remove_all_assets` procedures in MASM, but the Rust SDK does not yet bind them. Do not implement asset consumption by passing values from `get_initial_assets()` directly to an account. Until the bindings land, use a standard note such as P2ID/P2IDE or write the removal flow in MASM.
+:::
 
 ### Identity and metadata
 
@@ -53,13 +59,15 @@ let serial_num: Word = active_note::get_serial_number();
 
 ### Note metadata
 
-`get_metadata()` returns note metadata:
+`get_metadata()` returns the encoded metadata header:
 
 ```rust
 let metadata: NoteMetadata = active_note::get_metadata();
 ```
 
-On the v0.15 protocol side, user-facing note metadata is `PartialNoteMetadata`:
+In the onchain Rust SDK, `NoteMetadata` contains a single `header: Word`; attachments and their commitment are queried separately.
+
+In `miden-protocol`, the user-facing metadata used to construct a note is `PartialNoteMetadata`:
 
 ```rust
 pub struct PartialNoteMetadata {
@@ -69,7 +77,7 @@ pub struct PartialNoteMetadata {
 }
 ```
 
-The full `NoteMetadata` wraps that partial metadata together with attachment headers and an attachments commitment. Its encoded metadata word has four felts: sender suffix plus type/version, sender prefix, tag, and attachment schemes.
+The protocol's full `NoteMetadata` wraps that partial metadata together with attachment headers and an attachments commitment. Its `to_metadata_word()` method produces the same four-felt header returned by the onchain SDK: sender suffix plus type/version, sender prefix, tag, and attachment schemes.
 
 ## `input_note` — querying notes by index
 
@@ -82,11 +90,11 @@ use miden::input_note;
 ### Assets
 
 ```rust
-let info: InputNoteAssetsInfo = input_note::get_assets_info(note_idx);
-let assets: Vec<Asset> = input_note::get_assets(note_idx);
+let info: input_note::InputNoteAssetsInfo = input_note::get_initial_assets_info(note_idx);
+let assets: Vec<Asset> = input_note::get_initial_assets(note_idx);
 ```
 
-`InputNoteAssetsInfo` contains `commitment: Word` and `num_assets: Felt`.
+`InputNoteAssetsInfo` contains `commitment: Word` and `num_assets: u32`.
 
 ### Identity and metadata
 
@@ -100,14 +108,14 @@ let serial_num: Word = input_note::get_serial_number(note_idx);
 ### Storage
 
 ```rust
-let storage_info: InputNoteStorageInfo = input_note::get_storage_info(note_idx);
+let storage_info: input_note::InputNoteStorageInfo = input_note::get_storage_info(note_idx);
 ```
 
 :::note
-Unlike `active_note::get_storage()` which returns the full `Vec<Felt>` of storage values, `input_note` only exposes the storage commitment and count — not the actual values. The transaction kernel only has commitments for input notes that are not currently executing. To read actual storage values, use `active_note::get_storage()` inside the note script itself.
+Unlike `active_note::get_storage()`, the `input_note` API only exposes the storage commitment and item count. To read the storage values, use `active_note::get_storage()` while that note is executing.
 :::
 
-`InputNoteStorageInfo` contains `commitment: Word` and `num_storage_items: Felt`.
+`InputNoteStorageInfo` contains `commitment: Word` and `num_storage_items: u32`.
 
 ### Note metadata
 
@@ -119,28 +127,26 @@ let metadata: NoteMetadata = input_note::get_metadata(note_idx);
 
 ## Examples
 
-### Reading storage in a note script
+### Reading storage and inspecting initial assets
 
-A note script that reads the target account ID from storage and verifies the consumer:
+A note script that reads the target account ID from storage, verifies the consumer, and inspects the creation-time asset list:
 
 ```rust
-use miden::{AccountId, Word, active_note, note};
+use miden::{AccountId, Word, active_note, native_account, note};
 
 #[note]
-struct P2idNote {
+struct InspectionNote {
     target_account_id: AccountId,
 }
 
 #[note]
-impl P2idNote {
+impl InspectionNote {
     #[note_script]
-    pub fn run(self, _arg: Word, account: &mut Account) {
-        assert_eq!(account.get_id(), self.target_account_id);
+    pub fn run(self, _arg: Word) {
+        assert_eq!(native_account::get_id(), self.target_account_id);
 
-        let assets = active_note::get_assets();
-        for asset in assets {
-            account.receive_asset(asset);
-        }
+        // Inspection only: this does not remove assets from the active note.
+        let _initial_assets = active_note::get_initial_assets();
     }
 }
 ```
@@ -153,14 +159,14 @@ A transaction script that reads data from a consumed input note:
 use miden::*;
 
 #[tx_script]
-pub fn run(arg: Word) {
+pub fn run(_arg: Word) {
     // Query the first input note (index 0)
     let idx = NoteIdx { inner: felt!(0) };
-    let assets = input_note::get_assets(idx);
-    let sender = input_note::get_sender(idx);
+    let _assets = input_note::get_initial_assets(idx);
+    let _sender = input_note::get_sender(idx);
 }
 ```
 
 :::info API Reference
-Full API docs on docs.rs: [`miden::active_note`](https://docs.rs/miden/latest/miden/active_note/), [`miden::input_note`](https://docs.rs/miden/latest/miden/input_note/)
+Full API docs on docs.rs: [`miden::active_note`](https://docs.rs/miden/0.14.0/miden/active_note/), [`miden::input_note`](https://docs.rs/miden/0.14.0/miden/input_note/)
 :::

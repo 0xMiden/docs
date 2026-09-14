@@ -9,7 +9,7 @@ Every operation the Web SDK performs reads from — or writes to — a local sto
 
 ## `client.sync()`
 
-Pulls updates from the Miden node and applies them to the local store. Returns a `SyncSummary` describing what changed.
+Fetches private notes from the Note Transport Layer, then pulls onchain updates from the Miden node and applies them to the local store. Returns a `SyncSummary` describing what changed.
 
 ```typescript
 import { MidenClient } from "@miden-sdk/miden-sdk";

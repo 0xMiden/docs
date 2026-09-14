@@ -36,7 +36,7 @@ The Miden client manages accounts, builds and executes transactions, produces ze
     Rust library compiled to WebAssembly with a typed `MidenClient` JavaScript class. Canonical TS/JS entry point for browser and Node apps.
   </Card>
   <Card title="React SDK" eyebrow="Hooks · dApps">
-    `MidenProvider` + hooks wrapping the Web SDK. Drop it into a React / Next.js / React Native app for instant Miden integration.
+    `MidenProvider` + hooks wrapping the Web SDK. Drop it into a React / Next.js browser app for instant Miden integration.
   </Card>
 </CardGrid>
 

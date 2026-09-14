@@ -17,7 +17,7 @@ The most common pattern — a note that can only be consumed by a specific accou
 Use P2ID for standard asset transfers where only the intended recipient should be able to consume the note. This is the most common note type.
 
 :::info
-P2ID notes use `P2idNote::create` from the `miden-standards` crate (`miden_standards::note::P2idNote`). The script is pre-compiled MASM — use the builder API to create P2ID notes in client code.
+P2ID notes use the typed `P2idNote` builder from `miden_standards::note`. The script is pre-compiled MASM; build the typed note and convert it into a protocol `Note` with `.into()`.
 :::
 
 ### How it works
@@ -35,16 +35,17 @@ P2ID notes use `P2idNote::create` from the `miden-standards` crate (`miden_stand
 ### Builder API
 
 ```rust
+use miden_protocol::note::Note;
 use miden_standards::note::P2idNote;
 
-P2idNote::create(
-    sender,       // AccountId: who sends the note
-    target,       // AccountId: the only account that can consume this note
-    assets,       // Vec<Asset>: assets to attach
-    note_type,    // NoteType: Public or Private
-    attachments,  // NoteAttachments: auxiliary data
-    rng,          // &mut impl FeltRng
-) -> Result<Note, NoteError>
+let note: Note = P2idNote::builder()
+    .sender(sender)
+    .target(target)
+    .assets(assets)
+    .note_type(note_type)
+    .generate_serial_number(rng)
+    .build()?
+    .into();
 ```
 
 | Parameter | Type | Description |
@@ -53,62 +54,68 @@ P2idNote::create(
 | `target` | `AccountId` | The only account that can consume this note |
 | `assets` | `Vec<Asset>` | Assets to attach to the note |
 | `note_type` | `NoteType` | `Public` or `Private` |
-| `attachments` | `NoteAttachments` | Auxiliary data for the note |
-| `rng` | `&mut impl FeltRng` | Random number generator |
+| `attachment` / `attachments` | `NoteAttachment` / iterator | Optional auxiliary data |
+| `generate_serial_number` | `&mut impl FeltRng` | Generates the required serial number |
 
 ## P2IDE (Pay to ID with Expiration)
 
-P2IDE extends P2ID with a timelock and a reclaim window. The note can't be consumed before `timelock_height`, and if the target hasn't consumed it by `reclaim_height`, the creator can reclaim the assets.
+P2IDE extends P2ID with optional timelock and reclaim conditions. A configured timelock prevents any account from consuming the note before the specified height. If reclaim is enabled, the configured reclaimer can also consume the note once `reclaim_height` has been reached and any configured timelock has expired; the target remains authorized.
 
 ### When to use
 
 Use P2IDE when the sender wants the option to reclaim assets if the recipient doesn't consume the note within a time window.
 
 :::info
-P2IDE notes use `P2ideNote::create` from the `miden-standards` crate (`miden_standards::note::P2ideNote`). The script is pre-compiled MASM — use the builder API to create P2IDE notes in client code.
+P2IDE notes use the typed `P2ideNote` builder from `miden_standards::note`. Its reclaimer and block-height constraints are optional builder fields.
 :::
 
 ### How it works
 
-1. Creator creates a P2IDE note with the target account ID, a timelock height, and a reclaim height as note storage items
-2. **Target consumes after `timelock_height`** — assets transfer to the target account
-3. **Creator reclaims after `reclaim_height`** — assets return to the creator
-4. **Before timelock or between timelock and reclaim by a non-target** — any consumption attempt fails (proof generation fails)
+1. The sender creates a P2IDE note with the target account ID and optional timelock, reclaim height, and reclaimer
+2. If a timelock is configured, no account can consume the note before it expires
+3. The target can consume the note once the timelock condition is satisfied
+4. If reclaim is enabled, the reclaimer can also consume the note once `reclaim_height` has been reached and any configured timelock has expired; the sender is the default reclaimer
+5. All other consumption attempts fail (proof generation fails)
 
 ### Note storage
 
 | Item | Type | Description |
 |------|------|-------------|
-| `target_account_id_prefix` | `Felt` | Target account ID prefix |
-| `target_account_id_suffix` | `Felt` | Target account ID suffix |
-| `reclaim_height` | `Felt` | Block height after which the creator can reclaim |
-| `timelock_height` | `Felt` | Block height before which the note can't be consumed |
+| `reclaimer` | `AccountId` | Account allowed to reclaim; defaults to the sender |
+| `target` | `AccountId` | Account allowed to receive the note |
+| `reclaim_height` | `Option<BlockNumber>` | Block height after which the reclaimer can consume the note, subject to the timelock |
+| `timelock_height` | `Option<BlockNumber>` | Block height before which no account can consume the note |
 
 ### Builder API
 
 ```rust
-use miden_standards::note::{P2ideNote, P2ideNoteStorage};
+use miden_protocol::note::Note;
+use miden_standards::note::P2ideNote;
 
-P2ideNote::create(
-    sender,                                               // AccountId: who sends the note
-    P2ideNoteStorage::new(target, reclaim_height, timelock_height),
-    assets,                                               // Vec<Asset>: assets to attach
-    note_type,                                            // NoteType: Public or Private
-    attachments,                                          // NoteAttachments: auxiliary data
-    rng,                                                  // &mut impl FeltRng
-) -> Result<Note, NoteError>
+let note: Note = P2ideNote::builder()
+    .sender(sender)
+    .target(target)
+    .reclaimer(reclaimer)
+    .reclaim_height(reclaim_height)
+    .timelock_height(timelock_height)
+    .assets(assets)
+    .note_type(note_type)
+    .generate_serial_number(rng)
+    .build()?
+    .into();
 ```
 
 | Parameter | Type | Description |
 |-----------|------|-------------|
 | `sender` | `AccountId` | Account sending the note |
-| `target` | `AccountId` | The only account that can consume this note (set on `P2ideNoteStorage`) |
-| `reclaim_height` | `Option<BlockNumber>` | Block height after which sender can reclaim; `None` = no reclaim (set on `P2ideNoteStorage`) |
-| `timelock_height` | `Option<BlockNumber>` | Block height before which note can't be consumed; `None` = no timelock (set on `P2ideNoteStorage`) |
+| `target` | `AccountId` | The account that can receive the note |
+| `reclaimer` | `AccountId` | Optional reclaiming account; defaults to `sender` |
+| `reclaim_height` | `BlockNumber` | Optional block height after which the reclaimer can consume the note, subject to the timelock |
+| `timelock_height` | `BlockNumber` | Optional block height before which no account can consume the note |
 | `assets` | `Vec<Asset>` | Assets to attach to the note |
 | `note_type` | `NoteType` | `Public` or `Private` |
-| `attachments` | `NoteAttachments` | Auxiliary data for the note |
-| `rng` | `&mut impl FeltRng` | Random number generator |
+| `attachment` / `attachments` | `NoteAttachment` / iterator | Optional auxiliary data |
+| `generate_serial_number` | `&mut impl FeltRng` | Generates the required serial number |
 
 ## SWAP (Atomic Exchange)
 
@@ -119,30 +126,33 @@ SWAP enables atomic asset exchange. The creator offers one asset; any consumer w
 Use SWAP for trustless atomic exchanges where two parties trade assets without intermediaries.
 
 :::info
-SWAP notes use `SwapNote::create` from the `miden-standards` crate (`miden_standards::note::SwapNote`). The script is pre-compiled MASM — use the builder API to create SWAP notes in client code.
+SWAP notes use the typed `SwapNote` builder from `miden_standards::note`. Read the expected payback details from the typed value before converting it into a protocol `Note`.
 :::
 
 ### How it works
 
-1. Creator creates a SWAP note containing the offered asset and metadata describing the requested asset + payback recipient
-2. Consumer's transaction processes the note — the script creates a P2ID payback note targeted at the original creator containing the requested asset
-3. Consumer receives the offered asset into their vault
-4. Both transfers happen atomically in one transaction
+1. The creator creates a SWAP note containing the offered asset and storage describing the requested asset and payback configuration
+2. The consumer's transaction moves the requested asset from their vault into a P2ID payback note targeted at the creator
+3. The transaction moves the offered asset from the SWAP note into the consumer's vault
+4. The payback note creation and offered asset transfer happen atomically in the same transaction
 
 ### Builder API
 
 ```rust
+use miden_protocol::note::Note;
 use miden_standards::note::SwapNote;
 
-SwapNote::create(
-    sender,
-    offered_asset,
-    requested_asset,
-    swap_note_type,
-    swap_note_attachments,
-    payback_note_type,
-    rng,
-) -> Result<(Note, NoteDetails), NoteError>
+let swap = SwapNote::builder()
+    .sender(sender)
+    .offered_asset(offered_asset)
+    .requested_asset(requested_asset)
+    .note_type(swap_note_type)
+    .payback_note_type(payback_note_type)
+    .generate_serial_number(rng)
+    .build()?;
+
+let payback_note_details = swap.payback_note_details();
+let note: Note = swap.into();
 ```
 
 | Parameter | Type | Description |
@@ -151,14 +161,14 @@ SwapNote::create(
 | `offered_asset` | `Asset` | Asset the note carries (what the consumer receives) |
 | `requested_asset` | `Asset` | Asset the consumer must provide in return |
 | `swap_note_type` | `NoteType` | `Public` or `Private` for the SWAP note |
-| `swap_note_attachments` | `NoteAttachments` | Auxiliary data for the SWAP note |
+| `attachment` / `attachments` | `NoteAttachment` / iterator | Optional auxiliary data for the SWAP note |
 | `payback_note_type` | `NoteType` | `Public` or `Private` for the P2ID payback note |
-| `rng` | `&mut impl FeltRng` | Random number generator |
+| `generate_serial_number` | `&mut impl FeltRng` | Generates the required serial number |
 
-Returns a tuple of `(Note, NoteDetails)` — the SWAP note to submit and the expected payback note details (for tracking).
+The builder returns a typed `SwapNote`. Call `payback_note_details()` before converting it into the `Note` to submit.
 
-`NoteAttachments` is defined in `miden-protocol`. Use `NoteAttachments::empty()` when the note does not need auxiliary data — see [note attachments](./output-notes#note-attachments) for the underlying SDK API.
+Attachments are optional. Use `.attachment(value)` or `.attachments(values)` only when needed; see [note attachments](./output-notes#note-attachments) for the underlying SDK API.
 
 ## More note types
 
-For writing custom note scripts, see [Note Scripts](./note-scripts). For the transaction context and `#[tx_script]`, see [Transaction Context](../transactions/transaction-context).
+For PSWAP, MINT, BURN, and other standard notes, see [Standard Notes](../standards/standard-notes). For writing custom note scripts, see [Note Scripts](./note-scripts). For the transaction context and `#[tx_script]`, see [Transaction Context](../transactions/transaction-context).

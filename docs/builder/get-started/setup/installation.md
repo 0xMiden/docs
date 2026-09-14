@@ -32,7 +32,7 @@ rustc --version
 <summary>Expected output</summary>
 
 ```text
-rustc 1.93.0-nightly (fa3155a64 2025-09-30)
+rustc 1.98.1 (...)  # or newer for client/protocol code
 ```
 
 </details>
@@ -43,17 +43,20 @@ For TypeScript development with the Miden Web Client, you'll need Node.js and Ya
 
 **Install Node.js:**
 
-```bash title=">_ Terminal"
-# Install Node.js using the official installer or package manager
-# For macOS with Homebrew:
-brew install node
+On macOS with Homebrew:
 
-# For Ubuntu/Debian:
+```bash title=">_ macOS"
+brew install node
+```
+
+On Ubuntu/Debian:
+
+```bash title=">_ Ubuntu/Debian"
 curl -fsSL https://deb.nodesource.com/setup_lts.x | sudo -E bash -
 sudo apt-get install -y nodejs
-
-# For Windows, download from nodejs.org
 ```
+
+On Windows, use the Node.js installer from nodejs.org.
 
 **Install Yarn:**
 
@@ -88,7 +91,7 @@ The Miden toolchain installer makes it easy to manage Miden components:
 cargo install midenup
 ```
 
-To install a specific release, pass `--version` — this guide is written against `1.0.0-alpha.1`, which as a pre-release is only installed when named explicitly: `cargo install midenup --version 1.0.0-alpha.1`.
+This guide is verified with midenup **1.0.0**. To install that exact release, use `cargo install midenup --version 1.0.0`.
 
 :::info
 To install from source instead, name the package explicitly — the repository contains more than one binary: `cargo install --git https://github.com/0xMiden/midenup.git midenup`
@@ -120,10 +123,25 @@ which miden
 
 **Install Miden Toolchain**
 
-Install the latest stable Miden components:
+These v0.16 guides require a coherent v0.16 client, compiler, and protocol
+toolchain for the network you use. `midenup` resolves network names through the
+[published channel manifest](https://0xmiden.github.io/midenup/channel-manifest.json).
+
+:::warning Release prerequisite
+The published manifest currently maps `testnet` to the v0.15 channel. The
+explicit `0.16.0` channel is not a substitute: it still mixes prerelease client
+and protocol components. Neither channel is a verified setup for these v0.16
+testnet guides, and `devnet` is a different network.
+
+Do not continue with the network-dependent guides until `testnet` points to a
+coherent v0.16 release channel.
+:::
+
+After the manifest meets that requirement, install the public testnet toolchain
+and make it the default:
 
 ```bash title=">_ Terminal"
-midenup install stable
+midenup install testnet && midenup override testnet
 ```
 
 :::note
@@ -136,13 +154,17 @@ Check that everything is working correctly:
 
 ```bash title=">_ Terminal"
 midenup show active-toolchain
+miden client --help
 ```
 
 <details>
 <summary>Expected output</summary>
 
 ```text
-stable
+testnet
+CLI actions
+Usage: miden client <COMMAND>
+...
 ```
 
 </details>
@@ -159,12 +181,36 @@ echo $PATH | tr ':' '\n' | grep cargo
 
 **"config error: missing field" when running `miden client` commands**
 
-If you have config files from a previous Miden installation, they may be incompatible with the current version. Delete the old config and database, then re-initialize:
+If a previous `miden-client.toml` is incompatible with the current client, move
+only that file aside and re-initialize the same scope and network. The CLI loads
+`./.miden/miden-client.toml` from the current directory first, then falls back to
+the global configuration (`$MIDEN_CLIENT_HOME/miden-client.toml` when that
+variable is set, otherwise `~/.miden/miden-client.toml`).
+
+For example, to regenerate a local configuration without deleting its database
+or keys, replace `<NETWORK>` with that configuration's network. Keep any existing
+backup rather than overwriting it:
 
 ```bash title=">_ Terminal"
-rm -f miden-client.toml store.sqlite3
-miden client init
+mv -i .miden/miden-client.toml .miden/miden-client.toml.previous
+miden client init --local --network <NETWORK>
 ```
+
+For a global configuration, move the corresponding global
+`miden-client.toml` aside and omit `--local`. Review the regenerated store and
+keystore paths before making transactions, especially if the previous file used
+custom paths.
+
+Regenerating this file does not migrate an older database or make state from one
+network usable on another. Keep the old files until you have confirmed the
+release's storage compatibility and recovered the accounts you need.
+
+Do not use `miden client clear-config` for migration or configuration switching.
+It recursively removes the entire local `.miden/` directory, including the
+store and private keys; when no local `.miden/` directory exists, it falls back
+to removing the global directory. Its confirmation prompt does not enumerate
+that state. Use it only for confirmed disposable client state after preserving
+anything you need.
 
 ## Set Up a Project
 
@@ -177,7 +223,10 @@ miden new my-test-project
 cd my-test-project
 ```
 
-If successful, you'll see a new directory with Miden project files. For each Rust code example in the following pages, add a new binary under `integration/src/bin/` and run it with `cargo run --bin <name> --release`.
+If successful, you'll see a new directory with Miden project files. The generated `rust-toolchain.toml` selects the Rust toolchain and components required by the project.
+
+For each Rust code example in the following pages, add a new binary under
+`integration/src/bin/` and run it with `cargo run --bin <name> --release`.
 
 ### TypeScript Project
 
@@ -186,7 +235,7 @@ The TypeScript examples use the [`@miden-sdk/miden-sdk`](https://www.npmjs.com/p
 ```bash title=">_ Terminal"
 npm create vite@latest miden-app -- --template vanilla-ts
 cd miden-app
-npm install @miden-sdk/miden-sdk@^0.15.0
+npm install @miden-sdk/miden-sdk@^0.16.0
 ```
 
 Open `src/main.ts` and replace its contents with a simple entry point that calls your demo:

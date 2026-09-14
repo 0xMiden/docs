@@ -1,9 +1,9 @@
 # Miden Documentation
 
-> Miden is a privacy-preserving blockchain where users execute and prove transactions locally. Accounts are programmable smart contracts, notes are programmable messages, and private state stays client-side unless a developer opts into public or network-visible state.
+> Miden is a privacy-preserving blockchain where users execute and prove transactions locally. Accounts are programmable smart contracts, notes are programmable messages, and private state stays client-side unless a developer opts for public accounts or notes.
 
-- [Docs home](https://docs.miden.xyz/): Latest stable docs, currently 0.14.
-- [Next / unstable builder docs](https://docs.miden.xyz/next/builder/): Current development builder docs, currently labeled 0.15 unstable.
+- [Docs home](https://docs.miden.xyz/): Latest stable docs, currently 0.16.
+- [Next / unstable builder docs](https://docs.miden.xyz/next/builder/): Current development builder docs, currently labeled 0.17 unstable.
 - [Next / unstable reference](https://docs.miden.xyz/next/reference/): Current development protocol, VM, node, and compiler docs.
 - [Agent skill](https://docs.miden.xyz/skill.md): Compact Miden context for AI coding assistants.
 - [GitHub organization](https://github.com/0xMiden): Source repositories.
@@ -13,7 +13,7 @@
 - [Get Started](https://docs.miden.xyz/builder/get-started/): Install the toolchain, create accounts, work with notes, read storage, and build a first smart contract.
 - [Installation](https://docs.miden.xyz/builder/get-started/setup/installation): Install Miden tools with `midenup`.
 - [CLI Basics](https://docs.miden.xyz/builder/get-started/setup/cli-basics): Common account, note, sync, and transaction commands.
-- [Accounts](https://docs.miden.xyz/builder/get-started/accounts): Account types, storage modes, and creation patterns.
+- [Accounts](https://docs.miden.xyz/builder/get-started/accounts): Account visibility and creation patterns.
 - [Notes](https://docs.miden.xyz/builder/get-started/notes): Note concepts and asset transfer flow.
 - [Read Storage](https://docs.miden.xyz/builder/get-started/read-storage): Query account storage and inspect on-chain state.
 - [Your First Smart Contract](https://docs.miden.xyz/builder/get-started/your-first-smart-contract/): Build, test, and deploy a Rust smart contract.
@@ -68,7 +68,8 @@
 - [docs](https://github.com/0xMiden/docs): Docusaurus documentation site.
 - [protocol](https://github.com/0xMiden/protocol): Protocol types, account model, notes, assets, transactions, and MASM protocol library.
 - [miden-vm](https://github.com/0xMiden/miden-vm): Virtual machine and assembler.
-- [miden-client](https://github.com/0xMiden/miden-client): Rust client, Web SDK, and React SDK.
+- [rust-sdk](https://github.com/0xMiden/rust-sdk): Rust client library and CLI.
+- [web-sdk](https://github.com/0xMiden/web-sdk): Web SDK, React SDK, and browser tooling.
 - [node](https://github.com/0xMiden/node): Miden node implementation.
 - [compiler](https://github.com/0xMiden/compiler): Rust-to-MASM compiler.
 - [tutorials](https://github.com/0xMiden/tutorials): Tutorial source content.

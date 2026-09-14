@@ -1,6 +1,6 @@
 ---
 title: "Account Components"
-description: "Use standard account components for wallets, authentication, access control, faucets, and metadata."
+description: "Use standard account components for wallets, authentication, access control, faucets, and account inspection."
 ---
 
 # Account Components
@@ -16,13 +16,12 @@ Use these components from Rust when you build accounts with the SDK, or import t
 | `BasicWallet` | Holding assets, receiving assets from standard notes, and moving assets into output notes. | `miden_standards::account::wallets` |
 | `FungibleFaucet` | Minting, sending, receiving, and burning fungible assets from faucet accounts. | `miden_standards::account::faucets` |
 | `AuthSingleSig` | Single-signature authentication of transactions. | `miden_standards::account::auth` |
-| `AuthSingleSigAcl` | Single-signature authentication with an access-control list. | `miden_standards::account::auth` |
 | `AuthMultisig` / `AuthMultisigSmart` | Threshold or policy-aware multisig authentication. | `miden_standards::account::auth` |
 | `AuthGuardedMultisig` | Multisig guarded by a guardian configuration. | `miden_standards::account::auth` |
-| `AuthNetworkAccount` | Authentication through note allowlists for network accounts. | `miden_standards::account::auth` |
+| `AuthNetworkAccount` | Authentication through note- and transaction-script allowlists for network accounts. | `miden_standards::account::auth` |
 | `Ownable2Step` | Access control for account owners. | `miden_standards::account::access` |
-| `RoleBasedAccessControl` | Role-based authorization for token policy management. | `miden_standards::account::access` |
-| `Authority` | Shared authority component used by policy-management standards. | `miden_standards::account::access` |
+| `RoleBasedAccessControl` | Role-based authorization for protected account procedures. | `miden_standards::account::access` |
+| `Authority` | Shared authority component for protecting administrative changes. | `miden_standards::account::access` |
 | `TokenPolicyManager` | Registering and updating mint, burn, send, and receive token policies. | `miden_standards::account::policies` |
 | `BasicBlocklist` | Blocking specific native accounts in send and receive transfer-policy checks. | `miden_standards::account::policies` |
 | `BasicAllowlist` | Allowing only specific native accounts in send and receive transfer-policy checks. | `miden_standards::account::policies` |
@@ -41,7 +40,7 @@ Most regular accounts need:
 ```rust title="Compose a regular account with standard auth and wallet components"
 use miden_client::{
     account::{AccountBuilder, AccountType, component::BasicWallet},
-    auth::{AuthSchemeId, AuthSingleSig},
+    auth::{Approver, AuthSchemeId, AuthSingleSig},
 };
 use miden_protocol::{account::auth::PublicKeyCommitment, Word};
 
@@ -50,11 +49,14 @@ fn build_wallet_account() -> Result<(), Box<dyn std::error::Error>> {
 
     let account = AccountBuilder::new([1; 32])
         .account_type(AccountType::Public)
-        .with_auth_component(AuthSingleSig::new(public_key, AuthSchemeId::Falcon512Poseidon2))
+        .with_component(AuthSingleSig::new(Approver::new(
+            public_key,
+            AuthSchemeId::Falcon512Poseidon2,
+        )))
         .with_component(BasicWallet)
         .build()?;
 
-    assert_eq!(account.account_type(), AccountType::Public);
+    assert!(account.is_public());
     Ok(())
 }
 ```
@@ -68,9 +70,9 @@ Standard notes assume the consuming account exposes the procedures they need. Fo
 At the builder level, the practical rule is:
 
 - Add `BasicWallet` to accounts that should receive standard asset-transfer notes.
-- Add `FungibleFaucet` to faucet accounts that should mint or burn fungible assets.
+- Add `FungibleFaucet` together with `TokenPolicyManager` to faucet accounts that should mint or burn fungible assets.
 - For local or user accounts, add an auth component to reject unauthorized transactions.
-- For network accounts, add an access-control component to gate the account procedures notes can call.
+- For network accounts, use `AuthNetworkAccount` to restrict the allowed note and transaction scripts.
 
 Prefer building on top of `BasicWallet`: compose it with a custom extension component for application-specific methods. If you replace the wallet interface entirely, test consumption of the relevant standard notes deliberately.
 
@@ -84,7 +86,8 @@ Rust APIs are the usual entry point for account composition. MASM modules are av
 | Authentication | `miden_standards::account::auth` | `miden::standards::auth::*` |
 | Access control | `miden_standards::account::access` | `miden::standards::access::*` |
 | Faucets | `miden_standards::account::faucets` | `miden::standards::faucets::*` |
-| Metadata | `miden_standards::account::metadata` | `miden::standards::metadata::*` |
+| Policies | `miden_standards::account::policies` | `miden::standards::faucets::policies::*` |
+| Inspection | `miden_standards::account::inspection` | `miden::standards::inspection::*` |
 
 Reach for MASM directly when you are implementing low-level behavior, integrating a custom component with a standard procedure, or verifying exact stack effects.
 

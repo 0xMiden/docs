@@ -9,24 +9,23 @@ Query hooks read from the local store (and trigger a fetch when the cache is col
 
 ## `useAccounts`
 
-Lists every account tracked by the client, pre-categorised into wallets and faucets.
+Lists every account header tracked by the client. Since protocol 0.15, an account ID/header no longer identifies whether the account is a wallet or faucet; inspect the full account's components when you need that distinction.
 
 ```tsx
 import { useAccounts } from "@miden-sdk/react";
 
 function AccountList() {
-  const { accounts, wallets, faucets, isLoading, error } = useAccounts();
+  const { accounts, isLoading, error } = useAccounts();
 
   if (isLoading) return <p>Loading…</p>;
   if (error) return <p>{error.message}</p>;
 
   return (
     <>
-      <h3>Wallets ({wallets.length})</h3>
-      {wallets.map((w) => <div key={w.id().toString()}>{w.id().toString()}</div>)}
-
-      <h3>Faucets ({faucets.length})</h3>
-      {faucets.map((f) => <div key={f.id().toString()}>{f.id().toString()}</div>)}
+      <h3>Accounts ({accounts.length})</h3>
+      {accounts.map((account) => (
+        <div key={account.id().toString()}>{account.id().toString()}</div>
+      ))}
     </>
   );
 }
@@ -37,8 +36,8 @@ Return type (`AccountsResult`):
 ```ts
 {
   accounts: AccountHeader[];  // every tracked account
-  wallets: AccountHeader[];   // regular accounts
-  faucets: AccountHeader[];   // token faucets
+  wallets: AccountHeader[];   // deprecated alias that mirrors accounts
+  faucets: AccountHeader[];   // deprecated; always empty
   isLoading: boolean;
   error: Error | null;
   refetch: () => Promise<void>;

@@ -44,7 +44,7 @@ Miden is a zero-knowledge layer 2 that rethinks blockchain architecture. Instead
 
 | Principle | How Miden achieves it |
 |-----------|----------------------|
-| **Privacy** | Accounts and notes store only cryptographic commitments onchain; full data remains with users |
+| **Privacy** | Public accounts and notes publish their full state or details; private variants keep them offchain behind commitments |
 | **Parallelism** | Single-account transactions enable concurrent execution without contention |
 | **Scalability** | Client-side proving offloads computation; proof aggregation reduces onchain verification |
 | **Programmability** | A Turing-complete VM supports arbitrary smart contract logic in accounts and notes |
@@ -71,9 +71,9 @@ The protocol layer defines Miden's data structures, state model, and transaction
 
 Accounts are programmable entities that hold assets and execute code:
 
-- **ID** — unique identifier derived from initial code and storage
+- **ID** — immutable identifier committed to a seed and the initial code and storage; it also encodes the account type and asset-callback flag
 - **Code** — smart contract logic defining the account's interface
-- **Storage** — key-value store with up to 256 slots for persistent data
+- **Storage** — key-value store with up to 255 slots for persistent data
 - **Vault** — container holding fungible and non-fungible assets
 - **Nonce** — monotonically increasing counter preventing replay attacks
 
@@ -83,12 +83,12 @@ Account code is composed from **components** — modular building blocks that ad
 
 Notes are programmable messages that transfer assets between accounts:
 
-- **Script** — code executed when the note is consumed
-- **Inputs** — public data available to the consuming transaction
-- **Assets** — tokens transferred to the recipient
-- **Metadata** — sender, tag (for discovery), and auxiliary data
+- **Assets** — up to 16 fungible or non-fungible assets carried by the note
+- **Recipient** — the serial number, script, and storage that define the consumption conditions
+- **Metadata** — sender, note type, tag, and attachment headers and commitment; always public
+- **Attachments** — optional public auxiliary data associated with the note
 
-Notes can be **public** (all data onchain) or **private** (only a commitment stored). Private notes require offchain communication between sender and recipient.
+Public notes publish their metadata, attachments, and full note details. Private notes still publish metadata and attachments, but publish only a commitment to the note details; the consumer must obtain those details separately.
 
 ### State model
 
@@ -138,7 +138,7 @@ The Miden VM is a STARK-based virtual machine optimized for zero-knowledge proof
 
 Chiplets are co-processors that accelerate common operations:
 
-- **Hash chiplet** — Rescue Prime Optimized hashing, Merkle tree operations
+- **Hash chiplet** — Poseidon2 hashing and Merkle tree operations
 - **Bitwise chiplet** — AND, XOR, and other bitwise operations on 32-bit integers
 - **Memory chiplet** — efficient random-access memory with read/write tracking
 - **Kernel ROM** — secure execution of privileged kernel procedures

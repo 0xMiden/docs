@@ -25,7 +25,7 @@ $$
 ```rust
 use miden::{felt, Felt};
 
-// Compile-time literal (validated at compile time)
+// Literal construction (validated when evaluated)
 let zero = felt!(0);
 let one = felt!(1);
 let answer = felt!(42);
@@ -42,7 +42,10 @@ let o = Felt::ONE;
 ```
 
 :::info `felt!()` range limitation
-The `felt!()` macro currently only accepts values up to `u32::MAX` (4,294,967,295). For larger values, use `Felt::new(...).unwrap()` or handle the error. This limitation may be lifted in a future release.
+The `felt!()` macro accepts integer literals representable as `u64` and
+validates them through `Felt::new(...).unwrap()`. An out-of-field literal
+panics when evaluated; it is not currently rejected by `cargo check`. For
+runtime values, use the fallible `Felt::new(...)` and handle the error.
 :::
 
 ### Arithmetic
@@ -100,6 +103,8 @@ let sum = a.saturating_add(b); // safe addition
 let diff = a.saturating_sub(b); // no underflow
 let result = Felt::new(sum).unwrap();
 ```
+
+Saturating arithmetic prevents `u64` overflow, but the result can still be outside the field. The final `unwrap()` panics if `sum >= p`; handle that conversion explicitly when the inputs are not bounded.
 :::
 
 ### Advanced operations
@@ -113,9 +118,13 @@ let inv = f.inv();      // Panics if f == felt!(0)
 // Exponentiation: base^exponent mod p
 let result = f.exp(felt!(3));  // 7^3 mod p = 343
 
-// Power of 2: computes 2^self
-let power = felt!(10).pow2();  // 2^10 = 1024 (panics if self > 63)
+// Squaring: f^2
+let square = f * f;       // 7^2 mod p = 49
 ```
+
+:::caution Squaring with SDK 0.14.0
+With `miden` 0.14.0 and `midenc` 0.10.0, `Felt::square()` is lowered to the VM's `pow2` operation, which computes `2^f`: `felt!(7).square()` returns 128. Use `f * f` to compute the square in this version.
+:::
 
 ## Word — Four field elements
 
@@ -184,7 +193,7 @@ let cooldown = config.b.as_canonical_u64();
 
 ## Asset
 
-`Asset` represents either a fungible or non-fungible asset. In v0.15 contract code it is **two words** — a `key` (an asset vault key identifying the asset class and composition) and a `value` (encoding the fungible amount or non-fungible data).
+`Asset` represents either a fungible or non-fungible asset. In contract code it is **two words** — a `key` (the asset ID used by the vault) and a `value` (encoding the fungible amount or non-fungible data).
 
 ```rust
 pub struct Asset {
@@ -216,9 +225,9 @@ pub struct Asset {
 | `key`    | `b`   | Data hash element 1 |
 | `key`    | `c`   | Faucet ID suffix plus metadata byte |
 | `key`    | `d`   | Faucet ID prefix |
-| `value`  | `a..d`| Data payload (implementation-defined) |
+| `value`  | `a..d`| Data hash elements 0–3 |
 
-The low metadata byte in `key.c` encodes `AssetComposition` in bits 0-1 and the callback flag in bit 2. Use the protocol helpers instead of hand-decoding this byte.
+The low metadata byte in `key.c` encodes `AssetComposition` in bits 0-1. Whether assets invoke callbacks is encoded in the faucet account ID when that account is built. Use protocol helpers instead of hand-decoding the metadata.
 
 ### Working with assets
 
@@ -236,16 +245,14 @@ let asset = Asset::new(
 // Read the amount (fungible): first limb of `value`.
 let amount: u64 = asset.value.a.as_canonical_u64();
 
-// Build a fungible asset from faucet ID + amount via the SDK helper.
-use miden::asset;
-let asset = asset::create_fungible_asset(faucet_id, felt!(1000), false);
-
-// Build a non-fungible asset.
-let nft = asset::create_non_fungible_asset(faucet_id, data_hash, false);
+// Assets passed into contract procedures are already constructed by the host.
+// Read the ID word when querying the active account vault.
+let asset_id: Word = asset.key;
+let is_present = miden::active_account::has_asset(asset_id);
 ```
 
 :::note Asset on the host side
-On the client / host side, `Asset` is an enum (`Asset::Fungible(_) | Asset::NonFungible(_)`) exposed from `miden-protocol`, with `to_key_word()` / `to_value_word()` / `from_key_value_words()` helpers. Inside a Rust contract the SDK exposes the two-word `Asset` struct shown above.
+On the client / host side, `Asset` is an enum (`Asset::Fungible(_) | Asset::NonFungible(_)`) exposed from `miden-protocol`, with `id()` / `to_id_word()` / `to_value_word()` / `from_id_and_value_words()` helpers. Inside a Rust contract the SDK exposes the two-word `Asset` struct shown above.
 :::
 
 ## AccountId
