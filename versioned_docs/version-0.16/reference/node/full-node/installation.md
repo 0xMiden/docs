@@ -44,13 +44,13 @@ mkdir -p full-node-data
 Pull the published image:
 
 ```bash
-docker pull ghcr.io/0xmiden/miden-node:0.16.0
+docker pull ghcr.io/0xmiden/miden-node:v0.16.0
 ```
 
 Check the image:
 
 ```bash
-docker run --rm ghcr.io/0xmiden/miden-node:0.16.0 miden-node --help
+docker run --rm ghcr.io/0xmiden/miden-node:v0.16.0 miden-node --help
 ```
 
 Create a Docker volume for node state:

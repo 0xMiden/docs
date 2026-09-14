@@ -121,7 +121,7 @@ If you only skim a few sections, skim **Transaction Changes**, **Account Changes
 | miden-standards | 0.16+ | 0.16.1 |
 | miden-client | 0.16+ | 0.16.1 |
 | Web SDK (`@miden-sdk/*`) | 0.16+ | 0.16.0 |
-| `miden` contract SDK | 0.14+ | 0.14.0-rc.1 |
+| `miden` contract SDK | 0.14+ | 0.14.0 |
 | `midenc` compiler | 0.10+ | 0.10.1 |
 | Rust (client / protocol) | 1.98.1+ | 1.98.1 |
 | Rust (VM) | 1.96.1+ | 1.96.1 |

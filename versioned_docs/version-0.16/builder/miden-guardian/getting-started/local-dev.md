@@ -180,8 +180,8 @@ GUARDIAN_EVM_ENTRYPOINT_ADDRESS=0x... \
 
 EVM routes (`/evm/auth/*`, `/evm/accounts`, `/evm/proposals*`) only register
 when the `evm` feature is on. Combine with `postgres` for prod-like local
-setups: `--features postgres,evm`. Pair with an Anvil node — the
-`smoke-test-evm-proposal-support` skill walks through the full flow.
+setups: `--features postgres,evm`. Pair it with an Anvil node and follow the
+EVM smoke-test example to exercise the full flow.
 
 ## Path D — Docker Compose
 
@@ -233,10 +233,7 @@ target group's health check
 | [`examples/evm-smoke-web`](https://github.com/OpenZeppelin/guardian/blob/v0.17.0/examples/evm-smoke-web/README.md) | EVM proposal lifecycle against Anvil + an EVM-enabled server. | `@openzeppelin/guardian-evm-client` |
 | [`examples/web`](https://github.com/OpenZeppelin/guardian/blob/v0.17.0/examples/web/README.md) | Reference web integration. | TS multisig client |
 
-Follow each example's README to drive it manually. Agents in this repo
-have matching skills (`smoke-test-rust-multisig-sdk`,
-`smoke-test-ts-multisig-sdk`, `smoke-test-operator-dashboard`,
-`smoke-test-evm-proposal-support`) that automate the same flows.
+Follow each example's README to exercise its flow.
 
 ## Running tests
 
