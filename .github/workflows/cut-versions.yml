@@ -139,14 +139,12 @@ jobs:
           }
           out.snapshot_exists = String(existing.every(Boolean));
 
-          // Emit outputs
-          for (const [k,v] of Object.entries(out)) {
-            console.log(`::set-output name=${k}::${v}`);
-          }
+          // Emit simple, single-line outputs through the supported Actions file.
+          const output = Object.entries(out).map(([key, value]) => `${key}=${value}`).join('\n');
+          fs.appendFileSync(process.env.GITHUB_OUTPUT, `${output}\n`);
           NODE
 
       - name: Validate refs exist
-        if: steps.manifest.outputs.snapshot_exists != 'true'
         env:
           GH_TOKEN: ${{ github.token }}
         run: |

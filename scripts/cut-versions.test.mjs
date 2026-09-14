@@ -18,6 +18,7 @@ function parse({ inputs = {}, present = [] } = {}) {
     const input = value.match(/inputs\.([a-z_]+)/)?.[1];
     return [key, inputs[input] || ""];
   }));
+  env.GITHUB_OUTPUT = "__outputs__";
   const files = {
     ".release/release-manifest.yml": "version: '0.16'\nrefs:\n  tutorials: pinned-tutorial-commit\n",
     "versions.json": JSON.stringify(present.includes("version-list") ? ["0.16", "0.15"] : ["0.15"]),
@@ -29,15 +30,25 @@ function parse({ inputs = {}, present = [] } = {}) {
     require: (name) => name === "fs" ? {
       existsSync: (path) => paths.has(path),
       readFileSync: (path) => { assert.ok(path in files, `unexpected read: ${path}`); return files[path]; },
+      appendFileSync: (path, contents) => {
+        assert.equal(path, env.GITHUB_OUTPUT);
+        for (const line of contents.trimEnd().split("\n")) {
+          const separator = line.indexOf("=");
+          assert.ok(separator > 0, `invalid output line: ${line}`);
+          outputs[line.slice(0, separator)] = line.slice(separator + 1);
+        }
+      },
     } : require(name),
     process: { env, exit: (code) => { throw new Error(`exit ${code}`); } },
-    console: { error() {}, log: (line) => {
-      const match = String(line).match(/^::set-output name=([^:]+)::(.*)$/);
-      if (match) outputs[match[1]] = match[2];
-    } },
+    console: { error() {}, log() {} },
   });
   return outputs;
 }
+
+test("manifest outputs use GITHUB_OUTPUT instead of the deprecated command", () => {
+  assert.match(parseCode, /GITHUB_OUTPUT/);
+  assert.doesNotMatch(parseCode, /::set-output/);
+});
 
 test("manual version and source overrides reach the parser instead of silently using the manifest", () => {
   const outputs = parse({ inputs: {
@@ -60,10 +71,12 @@ test("absent snapshot is eligible for generation and uses manifest defaults", ()
   assert.equal(outputs.snapshot_exists, "false");
 });
 
-test("complete checked-in snapshot skips all ingestion, versioning, cleanup and commit steps", () => {
+test("complete checked-in snapshot validates refs but skips generation and cleanup", () => {
   const outputs = parse({ present: ["version-list", "directory", "sidebar"] });
   assert.equal(outputs.snapshot_exists, "true");
-  for (const step of steps.slice(steps.indexOf(parser) + 1)) {
+  const validationStep = steps.find((step) => step.name === "Validate refs exist");
+  assert.equal(validationStep.if, undefined, "source refs must still be validated");
+  for (const step of steps.slice(steps.indexOf(validationStep) + 1)) {
     const condition = (step.if || "true").replace(/\$\{\{|\}\}/g, "")
       .replaceAll("steps.manifest.outputs.snapshot_exists", JSON.stringify(outputs.snapshot_exists));
     assert.equal(vm.runInNewContext(condition), false, `${step.name} would run on an existing snapshot`);
