@@ -671,13 +671,6 @@ article table td:not(:first-child):not(:last-child) {
   width: auto;
 }
 
-.theme-doc-markdown table th:last-child,
-.theme-doc-markdown table td:last-child,
-article table th:last-child,
-article table td:last-child {
-  white-space: nowrap;
-}
-
 .theme-doc-markdown thead,
 article thead {
   background: var(--color-surface);
@@ -777,16 +770,42 @@ article td code {
    result. Matches <Callout>/<Card> visual language.
    ========================================== */
 
-/* Full-screen backdrop behind the modal */
-.aa-DetachedOverlay {
-  background: color-mix(in oklab, var(--color-bg) 55%, rgba(0, 0, 0, 0.55));
-  backdrop-filter: saturate(1.2) blur(8px);
-  -webkit-backdrop-filter: saturate(1.2) blur(8px);
+/* Resolve the provider's palette from html, including its body-mounted modal.
+   Its own body[data-theme] can lag behind Docusaurus during hydration. */
+:root .aa-DetachedOverlay {
+  --aa-text-color-rgb: 26, 29, 33;
+  --aa-primary-color-rgb: 255, 85, 0;
+  --aa-muted-color-rgb: 91, 99, 109;
+  --aa-muted-color-alpha: 1;
+  --aa-icon-color-rgb: 91, 99, 109;
+  --aa-background-color-rgb: 255, 255, 255;
+  --aa-input-background-color-rgb: 255, 255, 255;
+  --aa-selected-color-rgb: 255, 85, 0;
+  --aa-selected-color-alpha: 0.06;
+  --aa-scrollbar-track-background-color-rgb: 249, 249, 249;
+  --aa-scrollbar-thumb-background-color-rgb: 91, 99, 109;
+  --aa-scrollbar-thumb-background-color-alpha: 0.3;
+  --aa-search-input-height: 44px;
+  --aa-detached-modal-max-width: 640px;
+  --aa-detached-modal-max-height: min(60dvh, 500px);
+  background: color-mix(in oklab, var(--color-ink) 36%, transparent);
+  height: 100dvh;
   animation: fade-in var(--t-base) var(--ease-out-expo) both;
 }
 
+:root[data-theme="dark"] .aa-DetachedOverlay {
+  --aa-text-color-rgb: 231, 233, 236;
+  --aa-muted-color-rgb: 138, 145, 155;
+  --aa-icon-color-rgb: 138, 145, 155;
+  --aa-background-color-rgb: 11, 13, 16;
+  --aa-input-background-color-rgb: 11, 13, 16;
+  --aa-scrollbar-track-background-color-rgb: 19, 22, 27;
+  --aa-scrollbar-thumb-background-color-rgb: 138, 145, 155;
+  background: color-mix(in oklab, var(--color-bg) 76%, transparent);
+}
+
 /* Modal container — hairline bordered card */
-.aa-DetachedContainer {
+:root .aa-DetachedContainer {
   border: 1px solid var(--color-border);
   border-radius: var(--radius-lg);
   background: var(--color-bg);
@@ -795,81 +814,115 @@ article td code {
   animation: fade-up var(--t-base) var(--ease-out-expo) both;
 }
 
+:root .aa-DetachedContainer--modal {
+  top: min(12vh, 96px);
+  max-height: calc(100dvh - 2rem);
+  width: calc(100% - 2rem);
+}
+
 /* Top form row — search input + cancel button */
-.aa-DetachedFormContainer {
+:root .aa-DetachedFormContainer {
   padding: 0.75rem 0.875rem;
   border-bottom: 1px solid var(--color-border);
   background: var(--color-surface);
   gap: 0.625rem;
+  flex: 0 0 auto;
+  order: 0;
 }
 
 /* Results panel (inside the detached modal) */
-.aa-Panel,
-.aa-DetachedContainer .aa-Panel {
+:root .aa-Panel,
+:root .aa-DetachedContainer .aa-Panel {
   border: none;
   border-radius: 0;
   box-shadow: none;
   background: var(--color-bg);
+  order: 2;
+  min-height: 0;
 }
 
 /* Search input chrome */
-.aa-Form {
+:root .aa-Form {
   border-radius: var(--radius-md);
   background: var(--color-bg);
   border: 1px solid var(--color-border);
-  min-height: 38px;
+  min-height: 44px;
+  min-width: 0;
   transition: border-color var(--t-base) var(--ease-out-expo);
 }
 
-.aa-Form:focus-within {
+:root .aa-Form:focus-within {
   border-color: var(--color-brand);
   box-shadow: var(--shadow-focus);
 }
 
-.aa-InputWrapper,
-.aa-InputWrapperPrefix,
-.aa-InputWrapperSuffix {
-  padding: 0 0.5rem;
+:root .aa-InputWrapper {
+  padding: 0;
+  min-width: 0;
 }
 
-.aa-SubmitButton,
-.aa-SubmitIcon {
+:root .aa-SubmitButton,
+:root .aa-SubmitIcon,
+:root .aa-LoadingIndicator {
   color: var(--color-muted);
 }
 
-.aa-Input {
+:root .aa-Input {
   font-family: var(--font-sans);
-  font-size: 14px;
+  font-size: 16px;
   color: var(--color-text);
   background: transparent;
   padding: 0.375rem 0.5rem;
 }
 
-.aa-Input::placeholder {
+:root .aa-Input::placeholder {
   color: var(--color-muted);
 }
 
 /* Clear-input ("x") + cancel buttons */
-.aa-ClearButton,
-.aa-DetachedCancelButton {
+:root .aa-ClearButton,
+:root .aa-DetachedCancelButton {
   font-family: var(--font-sans);
-  font-size: 13px;
+  font-size: 14px;
   color: var(--color-muted);
   background: transparent;
   border: 1px solid var(--color-border);
   border-radius: var(--radius-md);
   padding: 0.375rem 0.75rem;
+  min-height: 44px;
+  min-width: 44px;
+  margin: 0;
   transition:
     color var(--t-base) var(--ease-out-expo),
     border-color var(--t-base) var(--ease-out-expo),
     background var(--t-base) var(--ease-out-expo);
 }
 
-.aa-ClearButton:hover,
-.aa-DetachedCancelButton:hover {
+:root .aa-ClearButton:hover,
+:root .aa-DetachedCancelButton:hover {
   color: var(--color-text);
   border-color: var(--color-border-strong);
   background: var(--color-surface);
+}
+
+:root .aa-ClearButton {
+  border: none;
+  padding: 0.5rem;
+}
+
+:root .aa-DetachedCancelButton {
+  flex-shrink: 0;
+  white-space: nowrap;
+}
+
+:root .aa-DetachedContainer :focus-visible {
+  outline: 2px solid var(--color-brand);
+  outline-offset: 2px;
+}
+
+:root .aa-Input:focus-visible {
+  outline: none;
+  box-shadow: none;
 }
 
 /* Source / section headers ("Get Started", "Builder", etc.) */
@@ -895,13 +948,13 @@ article td code {
 }
 
 /* Result list rows */
-.aa-List {
+:root .aa-List {
   padding: 0.25rem 0.5rem 0.5rem;
   list-style: none;
   margin: 0;
 }
 
-.aa-Item {
+:root .aa-Item {
   display: flex;
   align-items: center;
   gap: 0.625rem;
@@ -914,38 +967,38 @@ article td code {
     border-color var(--t-fast) var(--ease-out-expo);
 }
 
-.aa-Item[aria-selected="true"],
-.aa-Item:hover {
+:root .aa-Item[aria-selected="true"],
+:root .aa-Item:hover {
   background: var(--color-surface);
   border-color: var(--color-border);
 }
 
-.aa-Item[aria-selected="true"] {
+:root .aa-Item[aria-selected="true"] {
   border-color: var(--color-brand);
   background: color-mix(in oklab, var(--color-brand) 6%, var(--color-surface));
 }
 
-.aa-ItemContentTitle,
-.aa-ItemContent mark {
+:root .aa-ItemContentTitle,
+:root .aa-ItemContent mark {
   font-family: var(--font-sans);
   font-weight: 600;
   color: var(--color-text);
   background: transparent;
 }
 
-.aa-ItemContent mark {
+:root .aa-ItemContent mark {
   color: var(--color-brand);
   font-weight: 700;
 }
 
-.aa-ItemContentDescription {
+:root .aa-ItemContentDescription {
   font-family: var(--font-sans);
-  font-size: 12.5px;
+  font-size: 14px;
   color: var(--color-muted);
   margin-top: 2px;
 }
 
-.aa-ItemContent {
+:root .aa-ItemContent {
   min-width: 0;
   flex: 1;
 }
@@ -957,50 +1010,79 @@ article td code {
   opacity: 0.9;
 }
 
-.aa-ItemLink {
+:root .aa-ItemLink {
+  display: flex;
+  align-items: center;
+  width: 100%;
+  min-width: 0;
+  gap: 0.75rem;
+  padding: 0.25rem;
   color: inherit;
   text-decoration: none !important;
 }
 
-/* Footer ("↵" to select, "esc" to close) */
-.aa-DetachedFooter,
-.aa-DetachedSearchButtonFooter {
+/* The wrapper supplies these help and loading states beside provider results. */
+.miden-search-help {
   font-family: var(--font-mono);
-  font-size: 11px;
-  letter-spacing: 0.04em;
+  font-size: 12px;
   color: var(--color-muted);
   padding: 0.5rem 0.875rem;
   border-top: 1px solid var(--color-border);
   background: var(--color-surface);
+  order: 3;
+  flex: 0 0 auto;
 }
 
-/* Empty / no-results state */
-.aa-NoResults,
-.aa-Panel--empty {
-  padding: 1.5rem 0.875rem;
+/* Empty and stalled-search states use the provider's actual markup. */
+.miden-search-hint,
+:root .aa-SourceNoResults {
+  padding: 2.5rem 1.5rem;
   text-align: center;
-  font-size: 13px;
+  font-size: 14px;
   color: var(--color-muted);
+  margin: 0;
+  order: 1;
+}
+
+:root .aa-SourceNoResults::after {
+  content: "Try a shorter phrase, or search for a tool or API name.";
+  display: block;
+  margin-top: 0.375rem;
+  font-size: 14px;
+}
+
+:root .aa-DetachedContainer[data-has-query="false"] .aa-Panel {
+  display: none;
 }
 
 /* ==========================================
-   16.1) SEARCH BUTTON - DocSearch-style pill
+   16.1) SEARCH TRIGGER — stable in server-rendered markup
    ========================================== */
 
-/* Detached mode search button — scoped to beat the plugin's late defaults */
-.navbar .aa-DetachedSearchButton {
+.miden-search {
   width: clamp(11rem, 18vw, 14rem);
+  flex: 0 0 auto;
+}
+
+.miden-search-provider .aa-DetachedSearchButton {
+  display: none;
+}
+
+.miden-search-trigger {
+  width: 100%;
   min-width: 0;
   height: 36px;
   padding: 0 0.75rem;
   border: 1px solid var(--color-border);
-  border-radius: var(--radius-lg);
+  border-radius: var(--radius-md);
   background: var(--color-surface);
   display: flex;
   align-items: center;
   gap: 0.625rem;
   cursor: pointer;
-  box-shadow: inset 0 1px 0 color-mix(in oklab, white 45%, transparent);
+  font-family: var(--font-sans);
+  font-size: 13px;
+  color: var(--color-muted);
   transition:
     border-color var(--t-base) var(--ease-out-expo),
     background var(--t-base) var(--ease-out-expo),
@@ -1008,83 +1090,106 @@ article td code {
     transform var(--t-fast) var(--ease-out-expo);
 }
 
-.navbar .aa-DetachedSearchButton:hover {
+.miden-search-trigger:hover {
   border-color: var(--color-border-strong);
   background: var(--color-surface-hover);
 }
 
-.navbar .aa-DetachedSearchButton:active {
+.miden-search-trigger:active {
   transform: translateY(1px);
 }
 
-.navbar .aa-DetachedSearchButton:focus-visible {
-  outline: none;
+.miden-search-trigger:focus-visible {
+  outline: 2px solid var(--color-brand);
+  outline-offset: 2px;
   border-color: var(--color-border-strong);
-  box-shadow:
-    inset 0 1px 0 color-mix(in oklab, white 45%, transparent),
-    var(--shadow-focus);
+  box-shadow: none;
 }
 
-/* Search icon */
-.navbar .aa-DetachedSearchButtonIcon {
+.miden-search-trigger:disabled {
+  cursor: progress;
+}
+
+.miden-search-trigger svg {
   width: 16px;
   height: 16px;
   color: var(--color-muted);
+  stroke: currentColor;
+  stroke-width: 1.5;
+  flex: 0 0 auto;
 }
 
-/* Placeholder text */
-.navbar .aa-DetachedSearchButtonPlaceholder {
-  font-size: 13px;
-  color: var(--color-muted);
-}
-
-/* Keyboard shortcut keys container */
-.navbar .aa-DetachedSearchButtonKeys {
-  display: flex;
-  gap: 2px;
-  margin-left: auto;
-}
-
-/* Individual keycap — mono, hairline border */
-.navbar .aa-DetachedSearchButtonKey {
+.miden-search-trigger kbd {
   display: inline-flex;
   align-items: center;
   justify-content: center;
-  min-width: 22px;
+  min-width: 36px;
   height: 22px;
   padding: 0 6px;
   font-size: 12px;
-  font-weight: 500;
+  font-weight: 400;
   font-family: var(--font-mono);
-  letter-spacing: 0.04em;
-  color: var(--color-text);
+  letter-spacing: 0;
+  color: var(--color-muted);
   background: var(--color-bg);
-  border: 1px solid var(--color-border-strong);
+  border: 1px solid var(--color-border);
   border-radius: var(--radius-xs);
-  box-shadow: inset 0 -1px 0 var(--color-border-strong);
-  transition:
-    color var(--t-fast) var(--ease-out-expo),
-    border-color var(--t-fast) var(--ease-out-expo);
-}
-
-.navbar .aa-DetachedSearchButton:hover .aa-DetachedSearchButtonKey {
-  color: var(--color-brand);
-  border-color: color-mix(in oklab, var(--color-brand) 35%, var(--color-border));
+  box-shadow: none;
+  margin-left: auto;
+  white-space: nowrap;
 }
 
 /* Hide shortcut keys on mobile */
 @media (max-width: 996px) {
-  .navbar .aa-DetachedSearchButton {
+  .miden-search {
     width: 10rem;
   }
 
-  .navbar .aa-DetachedSearchButtonKeys {
+  .miden-search-trigger {
+    height: 44px;
+  }
+
+  .miden-search-trigger kbd {
     display: none;
   }
 }
 
 @media (max-width: 480px) {
-  .navbar .aa-DetachedSearchButton {
-    width: 7rem;
+  .miden-search {
+    width: 44px;
+  }
+
+  .miden-search-trigger {
+    justify-content: center;
+    padding: 0;
+  }
+
+  .miden-search-trigger > span {
+    display: none;
+  }
+}
+
+@media (max-width: 679px) {
+  :root .aa-DetachedContainer {
+    border-radius: 0;
+    border: none;
+    height: 100dvh;
+    padding-top: env(safe-area-inset-top);
+    padding-bottom: env(safe-area-inset-bottom);
+  }
+
+  :root .aa-DetachedFormContainer {
+    padding: 0.75rem;
+  }
+
+  .miden-search-help {
+    display: none;
+  }
+}
+
+@media (forced-colors: active) {
+  :root .aa-Form:focus-within {
+    outline: 2px solid Highlight;
+    outline-offset: 2px;
   }
 }

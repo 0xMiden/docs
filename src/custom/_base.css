@@ -56,6 +56,7 @@ main a:hover {
 .breadcrumbs__link,
 .pagination-nav__link,
 .table-of-contents a,
+.footer__link-item,
 .card {
   text-decoration: none !important;
 }
@@ -67,6 +68,7 @@ main a:hover {
 .breadcrumbs__link:hover,
 .pagination-nav__link:hover,
 .table-of-contents a:hover,
+.footer__link-item:hover,
 .card:hover {
   text-decoration: none !important;
 }
@@ -190,10 +192,6 @@ ol ol ol {
    Uses :focus-visible so mouse clicks don't paint focus.
    ========================================== */
 
-:focus {
-  outline: none;
-}
-
 a:focus-visible,
 button:focus-visible,
 summary:focus-visible,
@@ -201,6 +199,7 @@ summary:focus-visible,
 input:focus-visible,
 select:focus-visible,
 textarea:focus-visible,
+[tabindex]:focus-visible,
 .menu__link:focus-visible,
 .pagination-nav__link:focus-visible,
 .table-of-contents__link:focus-visible,
@@ -209,9 +208,18 @@ textarea:focus-visible,
 .navbar-cta:focus-visible,
 .card:focus-visible,
 .dropdown__link:focus-visible {
-  outline: none;
+  outline: 2px solid var(--color-text);
+  outline-offset: 3px;
   box-shadow: var(--shadow-focus);
   border-radius: var(--radius-sm);
+}
+
+@media (forced-colors: active) {
+  :focus-visible {
+    outline: 2px solid Highlight !important;
+    outline-offset: 3px;
+    box-shadow: none !important;
+  }
 }
 
 /* Blockquote — match the Callout/Card aesthetic: hairline border,
