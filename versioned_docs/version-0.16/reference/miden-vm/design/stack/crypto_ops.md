@@ -217,7 +217,7 @@ At the high-level, the operation does the following:
 
 To keep the constraint degree low, the operation uses all $6$ helper registers and the first $8$ next-state stack elements as degree-reduction intermediates. Callers should treat those $8$ output elements as scratch.
 
-> TODO: add detailed constraint descriptions. See discussion [here](https://github.com/0xMiden/miden-vm/issues/567#issuecomment-1398088792).
+> For the constraint-system discussion behind this operation, see [miden-vm issue #567](https://github.com/0xMiden/miden-vm/issues/567#issuecomment-1398088792).
 
 The effect on the rest of the stack is:
 * **Left shift** starting from position $16$.

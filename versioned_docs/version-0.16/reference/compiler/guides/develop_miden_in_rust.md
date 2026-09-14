@@ -41,5 +41,3 @@ range `0..=M` where `M` is the modulus of the field (2^64 - 2^32 + 1).
 The `Felt` type implements the standard arithmetic operations, e.g. addition, subtraction,
 multiplication, division, etc. which are accessible through the standard Rust operators `+`, `-`,
 `*`, `/`, etc. All arithmetic operations are wrapping, i.e. performed modulo `M`.
-
-TODO: Add examples of using operations on `Felt` type and available functions (`assert*`, etc.).

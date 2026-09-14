@@ -117,7 +117,7 @@ When an encryption key is included in the address, it is encoded in bech32 forma
 ## Encoding
 
 The two parts of an address are encoded as follows:
-- The identifier is encoded in [**bech32**](https://github.com/bitcoin/bips/blob/master/bip-0173.mediawiki). See the [account ID encoding](id.md#encoding) section for details.
+- The identifier is encoded in [**bech32**](https://github.com/bitcoin/bips/blob/bfc142f2b580a314c846dbce3c15c659c2b1d32d/bip-0173.mediawiki). See the [account ID encoding](id.md#encoding) section for details.
 - The routing parameters are encoded in bech32 as well, but without the HRP or `1` separator.
   - This means the routing parameter string's alphabet is consistent with that of the address ID.
   - It also means the routing parameters have their own checksum, which is important so address ID and routing parameters can be separated at any time without causing validation issues.

@@ -68,7 +68,7 @@ As described in the [notes section](note), there are two types of notes:
 
 Private notes greatly reduce storage requirements and thus result in lower fees. At high throughput (e.g., 1K TPS), the note database could grow by about 1TB/year. However, only unconsumed public notes and enough information to construct membership proofs must be stored explicitly. Private notes, as well as consumed public notes, can be discarded. This solves the issue of infinitely growing note databases.
 
-Notes are recorded in an append-only accumulator, a [Merkle Mountain Range](https://github.com/opentimestamps/opentimestamps-server/blob/master/doc/merkle-mountain-range.md). 
+Notes are recorded in an append-only accumulator, a [Merkle Mountain Range](https://github.com/opentimestamps/opentimestamps-server/blob/0508e63fbd4d3a3fb716519f8fb1119fedde2c8a/doc/merkle-mountain-range.md).
 
 Using a Merkle Mountain Range (append-only accumulator) is important for two reasons:
 
