@@ -149,6 +149,7 @@ const sidebars: SidebarsConfig = {
                 "builder/tutorials/recipes/rust/counter_contract_tutorial",
                 "builder/tutorials/recipes/rust/create_deploy_tutorial",
                 "builder/tutorials/recipes/rust/mint_consume_create_tutorial",
+                "builder/tutorials/recipes/rust/nft_mint_transfer",
                 "builder/tutorials/recipes/rust/creating_notes_in_masm_tutorial",
                 "builder/tutorials/recipes/rust/custom_note_how_to",
                 "builder/tutorials/recipes/rust/unauthenticated_note_how_to",

@@ -1,0 +1,521 @@
+---
+title: "Secrets and Key Management Runbook"
+sidebar_position: 1
+---
+Operational guide for the secrets Guardian relies on in production.
+Companion to [`docs/architecture/infra.md`](../architecture/infra.md), which
+explains *which* AWS resources hold each secret;
+this doc covers *how* to bootstrap, replace, and respond to compromise.
+
+> **Audience:** operators with AWS Secrets Manager and ECS write access for
+> the target Guardian stack.
+
+## Categories at a glance
+
+| Category | Stored in | Lifecycle | Who reads it |
+|---|---|---|---|
+| `DATABASE_URL` | Secrets Manager (`<stack>/server/database-url`) | Managed by Terraform | ECS task **execution** role, at task start |
+| RDS Proxy credentials (prod) | Secrets Manager (`<stack>/server/database-credentials`) | Managed by Terraform | RDS Proxy IAM role |
+| ACK signing keys (prod) | Secrets Manager — IDs selected by `GUARDIAN_ACK_{FALCON,ECDSA}_SECRET_ID` env vars; default `guardian-prod/server/ack-{falcon,ecdsa}-secret-key`; Terraform sets per-stack `${stack_name}/server/ack-{falcon,ecdsa}-secret-key` | Bootstrapped once via `aws-deploy.sh bootstrap-ack-keys`; never rotated by deploys; replacement is incident/migration work | ECS task **runtime** role, at server startup |
+| Storage encryption key (optional) | Secrets Manager — ID from `GUARDIAN_STORAGE_ENCRYPTION_KEY_SECRET_ID` | Created once against an empty store; rotate by adding keys to the structured secret | ECS task **runtime** role, at server startup (loaded once, cached) |
+| Operator public keys | Secrets Manager (Terraform-managed or pre-existing ARN) | Updated by editing Terraform var or rotating the secret value | ECS task runtime role, on each dashboard challenge **and each authenticated `/dashboard/*` request** (hot-reloaded — no restart needed) |
+| EVM allowed chains + RPC URLs | Secrets Manager (Terraform-managed) | Updated by editing `config/evm/chains.json` and redeploying | ECS task execution role; surfaced as env to the task |
+
+The ACK secret name is one value that travels through three places. They
+have **different variable names by design** — each layer has a distinct
+job — but they always carry the same string:
+
+| Layer | Variable | Lives where | Job |
+|---|---|---|---|
+| 1. Deploy-time | `GUARDIAN_ACK_FALCON_SECRET_NAME` / `_ECDSA_SECRET_NAME` | Your shell when running `scripts/aws-deploy.sh` | Operator-facing override. The script passes it into Terraform. |
+| 2. Terraform | `guardian_ack_falcon_secret_name` / `_ecdsa_secret_name` | [`infra/variables.tf`](https://github.com/OpenZeppelin/guardian/blob/v0.17.0/infra/variables.tf), [`infra/data.tf:104-105`](https://github.com/OpenZeppelin/guardian/blob/v0.17.0/infra/data.tf#L104) | Creates / looks up the Secrets Manager entry and renders the ECS task definition. |
+| 3. Runtime | `GUARDIAN_ACK_FALCON_SECRET_ID` / `_ECDSA_SECRET_ID` | The ECS task env, read by [`secrets_manager.rs:10-13`](https://github.com/OpenZeppelin/guardian/blob/v0.17.0/crates/server/src/ack/secrets_manager.rs#L10) | What the server actually consults at startup. |
+
+Resolution order in each layer:
+
+1. **Deploy env (`_SECRET_NAME`).** If unset, the deploy script falls
+   through to `TF_VAR_guardian_ack_*_secret_name`, then to
+   `${STACK_NAME}/server/ack-{falcon,ecdsa}-secret-key`
+   ([`aws-deploy.sh:324-329`](https://github.com/OpenZeppelin/guardian/blob/v0.17.0/scripts/aws-deploy.sh#L324)).
+2. **Terraform variable.** If unset, defaults to
+   `${stack_name}/server/ack-{falcon,ecdsa}-secret-key`. Renders the ECS
+   task definition with `GUARDIAN_ACK_*_SECRET_ID` set
+   ([`infra/ecs.tf:105-110`](https://github.com/OpenZeppelin/guardian/blob/v0.17.0/infra/ecs.tf#L105)).
+3. **Server runtime env (`_SECRET_ID`).** If unset (unusual — only
+   happens in non-Terraform prod-mode launches), falls back to the
+   code-level defaults `guardian-prod/server/ack-{falcon,ecdsa}-secret-key`.
+
+There is a deliberate drift between the code default
+(`guardian-prod/...`) and the Terraform default (`${stack_name}/...`,
+no `-prod`). In the reference AWS deploy the server always reads the
+Terraform-derived name because the ECS task definition always sets the
+`_SECRET_ID` env var — the code default only matters for hand-rolled
+prod-mode launches.
+
+## ACK signing keys
+
+ACK keys (one Falcon, one ECDSA) are Guardian's own response signers.
+Clients pin Guardian's pubkey via `GetPubkey` on first contact and verify
+every response thereafter — **stable identity matters**. Treat ACK key
+replacement as a Guardian identity change, not a routine secret rotation.
+
+For Miden multisig accounts, the Guardian commitment is also stored in
+account state. Proposal execution checks the live server commitment
+against that stored account commitment before using a new ACK signature.
+If the Secrets Manager ACK values are replaced without moving accounts to
+the new Guardian commitment, normal proposal execution for existing
+accounts will fail with a Guardian commitment mismatch. A `SwitchGuardian`
+proposal is the account-level migration path for changing that stored
+commitment.
+
+### Where the ACK secrets come from
+
+`GUARDIAN_ACK_SECRET_PROVIDER` selects the source of the ACK signing keys:
+
+| Value | Source | Default for | Identity |
+|---|---|---|---|
+| `aws` | AWS Secrets Manager (IDs from `GUARDIAN_ACK_{FALCON,ECDSA}_SECRET_ID`) | `GUARDIAN_ENV=prod` | Stable |
+| `file` | Local files (paths from `GUARDIAN_ACK_{FALCON,ECDSA}_SECRET_PATH`) | — | Stable |
+| `none` | Ephemeral keys generated in the keystore on every boot | everything else | **Changes every restart** |
+
+When unset, it falls back to the historical behavior: `aws` in prod,
+`none` otherwise. The `none` path is dev-only — a fresh identity on each
+restart freezes every account that pinned the previous commitment, with
+per-account `SwitchGuardian` as the only recovery.
+
+### Self-hosted: stable identity without AWS
+
+A self-hosted, non-AWS Guardian keeps a fixed identity with the `file`
+provider. Set `GUARDIAN_ACK_SECRET_PROVIDER=file` and point
+`GUARDIAN_ACK_FALCON_SECRET_PATH` / `GUARDIAN_ACK_ECDSA_SECRET_PATH` at files
+holding the hex-encoded secret keys
+([`file_provider.rs`](https://github.com/OpenZeppelin/guardian/blob/v0.17.0/crates/server/src/ack/file_provider.rs)). The file
+format is the hex string emitted by `ack-keygen` — identical to what Secrets
+Manager stores — so the same key material is portable between the two providers.
+
+Generate the pair once and write each value to its own file:
+
+```bash
+cargo run --quiet -p guardian-server --bin ack-keygen \
+  | tee /dev/stderr \
+  | { read -r json; \
+      jq -rj '.falcon_secret_key' <<<"$json" > ack-falcon-secret-key; \
+      jq -rj '.ecdsa_secret_key'  <<<"$json" > ack-ecdsa-secret-key; }
+chmod 600 ack-falcon-secret-key ack-ecdsa-secret-key
+```
+
+Treat these files like any private key: keep them out of version control and
+image layers, and back them up — losing them is a Guardian identity change, with
+the same `SwitchGuardian` migration path described above. On Unix the server
+**enforces** owner-only permissions and refuses to start if the file is readable
+by group or others, so a bare file on disk must be `0600` and a Kubernetes secret
+mount needs `defaultMode: 0400` (the `0644` default is rejected).
+
+With `GUARDIAN_ACK_ECDSA_BACKEND=aws-kms` the ECDSA key comes from KMS and its
+file is never read, so you can omit `GUARDIAN_ACK_ECDSA_SECRET_PATH` entirely on
+that path; only the Falcon file is required.
+
+### Hosted ECDSA backend (AWS KMS)
+
+The ECDSA ACK signer can be backed by AWS KMS instead of a Secrets Manager
+secret, so the private key never enters the Guardian process. Set
+`GUARDIAN_ACK_ECDSA_BACKEND=aws-kms` and `GUARDIAN_ACK_ECDSA_KMS_KEY_ID` to a KMS
+key with spec `ECC_SECG_P256K1` and usage `SIGN_VERIFY`. Grant the ECS task role
+`kms:GetPublicKey` and `kms:Sign` on the key (Terraform variable
+`guardian_ack_ecdsa_kms_key_arn`). On this path the ECDSA secret in Secrets
+Manager is not used and need not exist; Falcon is unaffected.
+
+Provisioning, rotation, and deletion of the KMS key are performed with the
+provider's own tooling — Guardian only signs with an existing key. Because a KMS
+key is a distinct keypair, moving an existing deployment to KMS (or rotating the
+KMS key) changes Guardian's ECDSA identity and is a Guardian identity change, not
+a routine rotation: the same `SwitchGuardian` migration path described above
+applies to existing accounts.
+
+#### Create the key
+
+The key spec and usage are immutable after creation, and they must match
+exactly — the server fails its startup sign probe otherwise. Create the key
+once, out of band, and keep its lifecycle separate from the Terraform stack so a
+stack teardown never schedules the signing identity for deletion.
+
+The deploy script creates the key with the correct spec and an
+`alias/<stack>-ack-ecdsa` alias, refusing to overwrite an existing one, and
+prints the ARN to set:
+
+```bash
+STACK_NAME=<stack> ./scripts/aws-deploy.sh bootstrap-kms-ecdsa-key
+```
+
+Or do it by hand:
+
+```bash
+KEY_ID=$(aws kms create-key \
+  --key-spec ECC_SECG_P256K1 \
+  --key-usage SIGN_VERIFY \
+  --description "Guardian <stack> ACK ECDSA signer" \
+  --query KeyMetadata.KeyId --output text)
+
+aws kms create-alias \
+  --alias-name alias/<stack>-ack-ecdsa \
+  --target-key-id "$KEY_ID"
+```
+
+Then pass the key ARN (or the alias ARN) to Terraform as
+`guardian_ack_ecdsa_kms_key_arn`; the deploy grants the ECS task role
+`kms:GetPublicKey` + `kms:Sign` on it and sets `GUARDIAN_ACK_ECDSA_BACKEND` /
+`GUARDIAN_ACK_ECDSA_KMS_KEY_ID` on the server. KMS does not support automatic
+rotation for asymmetric keys, which is correct here — rotating a signing
+identity is the deliberate `SwitchGuardian` migration above, never automatic. To
+retire a key, schedule deletion only after every account has migrated off the
+old commitment.
+
+#### Prod deploy: KMS ECDSA + Secrets Manager Falcon
+
+The full sequence for a prod deploy where ECDSA is KMS-backed and Falcon stays
+in Secrets Manager. Order matters: the deploy script keys off
+`TF_VAR_guardian_ack_ecdsa_kms_key_arn` (the env var, not `terraform.tfvars`) to
+decide whether to create and require the ECDSA Secrets Manager secret, so it
+must be exported **before** `bootstrap-ack-keys` and `deploy`.
+
+```bash
+export DEPLOY_STAGE=prod STACK_NAME=<stack>
+
+# 1. Create the KMS key; copy the printed ARN.
+./scripts/aws-deploy.sh bootstrap-kms-ecdsa-key
+
+# 2. Export it so the script and Terraform both see KMS mode.
+export TF_VAR_guardian_ack_ecdsa_kms_key_arn="arn:aws:kms:...:key/<key-id>"
+
+# 3. Bootstrap ACK secrets. With the ARN exported this creates only the
+#    Falcon secret and skips ECDSA.
+./scripts/aws-deploy.sh bootstrap-ack-keys
+
+# 4. Deploy. Terraform grants the task role kms:Sign + kms:GetPublicKey and
+#    injects GUARDIAN_ACK_ECDSA_BACKEND / GUARDIAN_ACK_ECDSA_KMS_KEY_ID.
+./scripts/aws-deploy.sh deploy
+```
+
+If the ARN is set in `terraform.tfvars` but not exported, Terraform still uses
+KMS, but `bootstrap-ack-keys` would create an unused ECDSA secret and `deploy`
+would fail validation demanding it — so export it.
+
+### Bootstrap (first prod deploy)
+
+```bash
+DEPLOY_STAGE=prod STACK_NAME=<stack> ./scripts/aws-deploy.sh bootstrap-ack-keys
+```
+
+What that command does ([`scripts/aws-deploy.sh`](https://github.com/OpenZeppelin/guardian/blob/v0.17.0/scripts/aws-deploy.sh)):
+
+1. Refuses to run if a secret it would create already exists.
+2. Generates key material locally via
+   `cargo run --bin ack-keygen` (no key ever leaves the operator's host
+   except via the `aws secretsmanager create-secret` call).
+3. Creates the Falcon and ECDSA secrets in Secrets Manager with the generated
+   values. When the ECDSA signer is KMS-backed
+   (`TF_VAR_guardian_ack_ecdsa_kms_key_arn` set), it creates only the Falcon
+   secret and skips ECDSA — use `bootstrap-kms-ecdsa-key` for the KMS key.
+
+Verify. The deploy script resolves the active IDs as
+`${GUARDIAN_ACK_*_SECRET_NAME:-${TF_VAR_guardian_ack_*_secret_name:-${STACK_NAME}/server/ack-*-secret-key}}`
+([`aws-deploy.sh:324-329`](https://github.com/OpenZeppelin/guardian/blob/v0.17.0/scripts/aws-deploy.sh#L324)). Mirror that
+locally:
+
+```bash
+FALCON="${GUARDIAN_ACK_FALCON_SECRET_NAME:-${TF_VAR_guardian_ack_falcon_secret_name:-${STACK_NAME:-guardian}/server/ack-falcon-secret-key}}"
+ECDSA="${GUARDIAN_ACK_ECDSA_SECRET_NAME:-${TF_VAR_guardian_ack_ecdsa_secret_name:-${STACK_NAME:-guardian}/server/ack-ecdsa-secret-key}}"
+
+aws secretsmanager describe-secret --secret-id "$FALCON"
+aws secretsmanager describe-secret --secret-id "$ECDSA"
+```
+
+Subsequent `aws-deploy.sh deploy` runs assert these secrets exist
+([`aws-deploy.sh:331`](https://github.com/OpenZeppelin/guardian/blob/v0.17.0/scripts/aws-deploy.sh#L331)) and fail fast
+otherwise.
+
+### Replacement
+
+ACK replacement is **not** part of the regular deploy cycle and should not
+be scheduled as a routine annual rotation. Use it when no accounts are
+bound to the old Guardian commitment, when standing up a replacement
+Guardian, or as part of incident response after suspected key exposure.
+
+Before replacing ACK values for a live stack, decide how existing accounts
+will be migrated:
+
+- Prefer a `SwitchGuardian` flow that moves each account to a Guardian
+  endpoint whose `GetPubkey` already returns the new commitment.
+- For emergency compromise response, replacing the secret immediately
+  stops the old identity from signing new ACKs, but existing accounts must
+  still be moved to the new commitment before normal non-switch proposal
+  execution resumes.
+- Downstream clients that cache or pin Guardian identity must refetch
+  `GetPubkey` after the change.
+
+Procedure:
+
+1. Generate new key material on a trusted host:
+   ```bash
+   cargo run --quiet --package guardian-server --bin ack-keygen > /tmp/ack-keys.json
+   ```
+2. Put new values into Secrets Manager — `update-secret` creates a new
+   version without disturbing the secret ID. Reuse the same
+   `$FALCON` / `$ECDSA` IDs you resolved in the Verify block above so
+   multi-stack deploys hit the right secret:
+   ```bash
+   FALCON_VALUE=$(jq -r .falcon_secret_key /tmp/ack-keys.json)
+   ECDSA_VALUE=$(jq -r .ecdsa_secret_key /tmp/ack-keys.json)
+
+   aws secretsmanager update-secret \
+     --secret-id "$FALCON" \
+     --secret-string "$FALCON_VALUE"
+   aws secretsmanager update-secret \
+     --secret-id "$ECDSA" \
+     --secret-string "$ECDSA_VALUE"
+   ```
+3. Force a new ECS deployment so tasks restart and import the new keys:
+   ```bash
+   aws ecs update-service --cluster <stack>-cluster \
+     --service <stack>-server --force-new-deployment
+   ```
+4. Confirm the replacement:
+   ```bash
+   curl https://guardian.openzeppelin.com/pubkey
+   ```
+   Should return the new key material.
+5. Securely shred `/tmp/ack-keys.json`.
+
+### Compromise response
+
+If you believe an ACK secret leaked:
+
+1. **Immediately** replace the ACK values using the procedure above —
+   bypass any change window.
+2. Revoke any operator AWS credentials that could have read the secret
+   (CloudTrail `GetSecretValue` events scoped to those secret ARNs are the
+   audit trail).
+3. Force-cycle all tasks (`update-service --force-new-deployment`) so the
+   old keys are no longer resident in any task's filesystem keystore.
+4. Move affected accounts to the new Guardian commitment with the
+   account-level `SwitchGuardian` flow, or keep them paused/unavailable
+   until that migration is complete.
+5. Inform downstream clients to refetch the pubkey and invalidate cached
+   verifiers.
+6. File an incident referencing the secret ARN, the replacement timestamp,
+   and the CloudTrail evidence.
+
+## Storage encryption key
+
+Optional. Encrypts account state and delta/proposal payloads at rest (see
+[`PRODUCTION.md`](../operations/production.md#storage-encryption)). The key never leaves the
+process boundary beyond Secrets Manager; it is loaded once at startup and cached.
+
+### Bootstrap (against an empty store)
+
+On the standard AWS stack, use the deploy script. It generates the key locally,
+creates the structured secret (`{active, keys}`), and refuses to overwrite an
+existing one:
+
+```bash
+DEPLOY_STAGE=prod STACK_NAME=guardian-prod \
+  ./scripts/aws-deploy.sh bootstrap-storage-encryption-key
+```
+
+Then enable it on the next deploy by exporting the secret name (the bootstrap
+command prints it). Setting `GUARDIAN_STORAGE_ENCRYPTION_SECRET_NAME` is what turns
+encryption on: Terraform injects `GUARDIAN_STORAGE_ENCRYPTION_KEY_SECRET_ID` and
+grants the ECS **runtime** role `secretsmanager:GetSecretValue` on the secret:
+
+```bash
+GUARDIAN_STORAGE_ENCRYPTION_SECRET_NAME=guardian-prod/server/storage-encryption-key \
+  DEPLOY_STAGE=prod STACK_NAME=guardian-prod ./scripts/aws-deploy.sh deploy
+```
+
+The bootstrap command defaults the name to `<stack-name>/server/storage-encryption-key`;
+leaving `GUARDIAN_STORAGE_ENCRYPTION_SECRET_NAME` unset on deploy keeps storage in
+plaintext. The equivalent manual creation writes the document to a restricted
+temp file and passes `file://` so the key never lands in the process arg list
+(`ps` / `/proc`):
+
+```bash
+f=$(mktemp)
+jq -nc --arg k "$(openssl rand -base64 32)" '{active:"k1", keys:{k1:$k}}' >"$f"
+aws secretsmanager create-secret \
+  --name guardian-prod/server/storage-encryption-key \
+  --secret-string "file://$f"
+rm -f "$f"
+```
+
+The server writes a one-time encryption marker on the first write; it will refuse
+to start if the key is configured against a store that already holds plaintext
+records.
+
+### Rotation
+
+Add a new key and repoint `active`, keeping the previous key so existing records
+still decrypt:
+
+```bash
+f=$(mktemp)
+jq -nc --arg k1 "$OLD_B64" --arg k2 "$(openssl rand -base64 32)" \
+  '{active:"k2", keys:{k1:$k1, k2:$k2}}' >"$f"
+aws secretsmanager put-secret-value \
+  --secret-id guardian-prod/server/storage-encryption-key \
+  --secret-string "file://$f"
+rm -f "$f"
+```
+
+New records use `k2`; old `k1` records keep decrypting. Do **not** remove a key
+that any stored record still references. Bulk re-encryption tooling is not yet
+provided.
+
+### Nonce budget
+
+Records are sealed with AES-256-GCM under a random 96-bit nonce. Per NIST
+SP 800-38D, a single key must encrypt fewer than ~2³² records (about 4 billion)
+before nonce-collision probability becomes non-negligible — and a collision
+under one key is catastrophic, not graceful.
+
+Each state, delta, and proposal write is one encryption under the **active**
+key. Treat 2³² as a per-key budget: [rotate](#rotation) the active key well
+before any single `active` kid reaches ~1 billion writes (2³⁰, a ~4× margin),
+or on a calendar cadence sized to the deployment's write rate. Rotation only
+repoints `active` — old records keep decrypting under their original kid — so
+the budget resets with each rotation. If 2³² is unreachable for the
+deployment's lifetime, no cadence is required.
+
+### Compromise response
+
+Treat as a confidentiality breach of account state/history (not key material —
+Guardian is non-custodial). Rotate the key, and because old records remain
+readable with the old key, plan a re-encryption migration before retiring it.
+
+Note that the key the store was first initialized with (`init_kid`, recorded in
+the store's encryption marker) must stay resolvable in the structured secret for
+the server to start, **even after every record has been re-encrypted to a newer
+kid**. Fully retiring the initial key therefore requires rewriting the store
+marker, not just dropping the key from the secret — and there is no operator
+command for that yet. If the initial key is itself the compromised one, track
+the marker rewrite as migration work rather than assuming a key drop suffices.
+
+## Operator public keys
+
+Operators authenticate to the dashboard via Falcon-signed challenges
+against an **allowlist** of public keys. Two ways to manage the list:
+
+- **Terraform-managed** — set `guardian_operator_public_keys` in
+  Terraform (or `GUARDIAN_OPERATOR_PUBLIC_KEYS_JSON` in the deploy env);
+  Terraform creates and maintains the secret. The variable is typed
+  `list(string)`, so this path only supports the legacy bare-key
+  array form — every entry implicitly gets `dashboard:read` only.
+- **Pre-existing ARN** — set
+  `guardian_operator_public_keys_secret_arn` to an ARN you manage
+  externally. Terraform won't touch the contents. Use this path (or
+  the local `GUARDIAN_OPERATOR_PUBLIC_KEYS_FILE`) when you need the
+  object form to grant `accounts:pause` or any future permission.
+
+The secret payload is the JSON shape consumed by
+[`dashboard/allowlist.rs`](https://github.com/OpenZeppelin/guardian/blob/v0.17.0/crates/server/src/dashboard/allowlist.rs).
+See [`docs/DASHBOARD.md`](../operations/dashboard.md#enrolling-an-operator) for the
+payload schema and an enrollment walkthrough.
+
+### Adding or removing an operator
+
+The server **rereads the operator secret on every dashboard challenge and
+every authenticated `/dashboard/*` request** — no ECS restart needed for
+allowlist changes.
+
+Terraform-managed path:
+1. Edit `guardian_operator_public_keys` (or the env var the deploy script
+   reads from).
+2. `./scripts/aws-deploy.sh deploy` — Terraform updates the secret in
+   place. Effect is immediate.
+
+Externally-managed path:
+1. Update the secret with `aws secretsmanager update-secret`. That's it.
+
+### Revoking a compromised operator
+
+The hot-reload path makes this fast — no deploy window required:
+
+```bash
+aws secretsmanager update-secret \
+  --secret-id <operator-secret-id> \
+  --secret-string "$(cat new-operator-list.json)"
+```
+
+The next challenge issuance or authenticated request from any task picks
+up the new list and rejects the revoked key. Active sessions belonging
+to the revoked operator are rejected at their next call: the per-request
+reload re-validates the operator against the current allowlist on every
+authenticated `/dashboard/*` hit
+([`dashboard/state.rs:284-324`](https://github.com/OpenZeppelin/guardian/blob/v0.17.0/crates/server/src/dashboard/state.rs#L284)).
+
+Operator sessions are in-memory per task. There is no ALB session
+stickiness, so on multi-task deployments operators may be routed to a
+task that did not mint their session and prompted to re-authenticate
+— this is the normal failure mode, not a revocation signal. Use the
+audit / CloudTrail trail (below) to confirm a revocation took effect.
+
+## `DATABASE_URL` and RDS Proxy credentials
+
+Both are **created and owned by Terraform** ([`infra/rds.tf:45`](https://github.com/OpenZeppelin/guardian/blob/v0.17.0/infra/rds.tf#L45),
+[`infra/rds.tf:50`](https://github.com/OpenZeppelin/guardian/blob/v0.17.0/infra/rds.tf#L50)). Do not edit them by hand —
+the next `terraform apply` will overwrite your change.
+
+To rotate the database password:
+1. Set `postgres_password` to a new value in `terraform.tfvars` (or unset
+   it to let Terraform regenerate via `random_password`).
+2. `terraform apply` — Terraform updates the RDS master password,
+   `DATABASE_URL`, and the proxy credentials secret atomically.
+3. ECS rolls the service automatically on the next deploy; force it
+   sooner with `update-service --force-new-deployment`.
+
+There is no separate read-only credential; the server connects with the
+master user. This is a known production-hardening gap.
+
+## EVM allowed chains and RPC URLs
+
+Populated by the deploy script from
+[`config/evm/chains.json`](https://github.com/OpenZeppelin/guardian/blob/v0.17.0/config/evm/chains.json) when
+`GUARDIAN_SERVER_FEATURES=postgres,evm`.
+
+To add a chain:
+1. Edit `config/evm/chains.json` — append a new entry to `chains` with
+   `chainId`, `name`, `network`, and `rpcUrl`. The `entrypointAddress`
+   is a single top-level field shared by every chain (exposed to the
+   server as `GUARDIAN_EVM_ENTRYPOINT_ADDRESS`) — do not add it
+   per-chain.
+2. `./scripts/aws-deploy.sh deploy` — the script rebuilds the Secrets
+   Manager values from the JSON and Terraform updates the secret
+   versions.
+3. ECS rolls and the new task reads the updated lists.
+
+To rotate an RPC URL (e.g. switch provider):
+1. Edit `chains.json`, redeploy. No special handling — the server treats
+   chain config as a startup-time read.
+
+## Audit trail
+
+CloudTrail `GetSecretValue` events are scoped per-secret ARN. The
+relevant principals you should see hitting each secret:
+
+| Secret | Expected principals |
+|---|---|
+| `DATABASE_URL` | ECS task execution role only |
+| `database-credentials` (proxy) | RDS Proxy IAM role only |
+| ACK Falcon / ECDSA | ECS task runtime role (on cold start) + operators running `bootstrap-ack-keys` or emergency replacement |
+| Operator pubkeys | ECS task runtime role + operators updating the list |
+| EVM chains / RPCs | ECS task execution role only |
+
+Any other principal touching these secrets is suspicious.
+
+## What is deliberately not here
+
+- **No KMS CMK** — Secrets Manager uses the default AWS-owned key. Move
+  to a CMK before enabling cross-account access.
+- **No automated rotation lambdas** — secret changes are operator-driven.
+- **No envelope encryption of ACK secret values** — Secrets Manager
+  protects the secret at rest; the value itself is the raw key material
+  that the server imports into its filesystem keystore on startup.

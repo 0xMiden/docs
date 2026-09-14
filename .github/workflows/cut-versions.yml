@@ -71,9 +71,21 @@ jobs:
       - name: Install deps
         run: npm ci
 
+      - name: Test snapshot workflow
+        run: node --test scripts/cut-versions.test.mjs
+
       - name: Parse release manifest (and merge with manual inputs)
         id: manifest
         env:
+          INPUT_VERSION_LABEL: ${{ inputs.version_label }}
+          INPUT_MIDEN_NODE_REF: ${{ inputs.miden_node_ref }}
+          INPUT_MIDEN_VM_REF: ${{ inputs.miden_vm_ref }}
+          INPUT_MIDEN_BASE_REF: ${{ inputs.miden_base_ref }}
+          INPUT_MIDEN_CLIENT_REF: ${{ inputs.miden_client_ref }}
+          INPUT_COMPILER_REF: ${{ inputs.compiler_ref }}
+          INPUT_MIDEN_TUTORIALS_REF: ${{ inputs.miden_tutorials_ref }}
+          INPUT_GUARDIAN_REF: ${{ inputs.guardian_ref }}
+          INPUT_NOTE_TRANSPORT_REF: ${{ inputs.note_transport_ref }}
           INPUT_BRIDGE_PORTAL_REF: ${{ inputs.bridge_portal_ref }}
         run: |
           node - <<'NODE'
@@ -113,22 +125,45 @@ jobs:
             process.exit(1);
           }
 
-          // Emit outputs
-          for (const [k,v] of Object.entries(out)) {
-            console.log(`::set-output name=${k}::${v}`);
+          // A locally generated snapshot may already accompany the manifest push.
+          // Skip generation only when all three snapshot artifacts are present.
+          const versions = JSON.parse(read('versions.json') || '[]');
+          const existing = [
+            versions.includes(out.version_label),
+            fs.existsSync(`versioned_docs/version-${out.version_label}`),
+            fs.existsSync(`versioned_sidebars/version-${out.version_label}-sidebars.json`),
+          ];
+          if (existing.some(Boolean) && !existing.every(Boolean)) {
+            console.error(`Incomplete snapshot for ${out.version_label}; refusing to overwrite it.`);
+            process.exit(1);
           }
+          out.snapshot_exists = String(existing.every(Boolean));
+
+          // Emit simple, single-line outputs through the supported Actions file.
+          const output = Object.entries(out).map(([key, value]) => `${key}=${value}`).join('\n');
+          fs.appendFileSync(process.env.GITHUB_OUTPUT, `${output}\n`);
           NODE
 
       - name: Validate refs exist
+        env:
+          GH_TOKEN: ${{ github.token }}
         run: |
           set -e
           validate() {
             repo="$1"; ref="$2"
             echo "Validating $repo @ $ref"
-            git ls-remote "https://github.com/$repo" "$ref" | grep -q . || {
-              echo "ERROR: Ref '$ref' not found in $repo"
-              exit 1
-            }
+            if [[ "$ref" =~ ^[0-9a-f]{40}$ ]]; then
+              resolved=$(gh api "repos/$repo/git/commits/$ref" --jq '.sha') || exit 1
+              [[ "$resolved" == "$ref" ]] || {
+                echo "ERROR: Commit '$ref' did not resolve exactly in $repo"
+                exit 1
+              }
+            else
+              git ls-remote "https://github.com/$repo" "$ref" | grep -q . || {
+                echo "ERROR: Ref '$ref' not found in $repo"
+                exit 1
+              }
+            fi
           }
           validate "${REPO_NODE}"      "${{ steps.manifest.outputs.miden_node_ref }}"
           validate "${REPO_VM}"        "${{ steps.manifest.outputs.miden_vm_ref }}"
@@ -141,6 +176,7 @@ jobs:
           validate "${REPO_BRIDGE_PORTAL}"  "${{ steps.manifest.outputs.bridge_portal_ref }}"
 
       - name: Checkout sources at validated refs
+        if: steps.manifest.outputs.snapshot_exists != 'true'
         run: |
           set -e
           checkout_ref() {
@@ -167,6 +203,7 @@ jobs:
       # This content is cleaned up after versioning (see "Clean up" step below)
       # ============================================================
       - name: Aggregate docs into v0.4 IA structure
+        if: steps.manifest.outputs.snapshot_exists != 'true'
         run: |
           echo "Aggregating vendor docs into v0.4 IA structure..."
 
@@ -333,6 +370,7 @@ jobs:
           ls -la docs/builder/tutorials/ || true
 
       - name: Cut version snapshot
+        if: steps.manifest.outputs.snapshot_exists != 'true'
         run: |
           VERSION="${{ steps.manifest.outputs.version_label }}"
           echo "Creating Docusaurus version: $VERSION"
@@ -346,6 +384,7 @@ jobs:
       # docs/ must only contain authored content (builder/, reference/ landing pages)
       # All ingested content lives in versioned_docs/ after versioning
       - name: Clean up (delete vendor and ingested docs)
+        if: steps.manifest.outputs.snapshot_exists != 'true'
         run: |
           rm -rf vendor
           # Guardian: remove ingested subdirs (keep authored index.md); note-transport (fully ingested)
@@ -379,6 +418,7 @@ jobs:
           rm -rf docs/builder/tutorials/recipes/img
 
       - name: Commit snapshots
+        if: steps.manifest.outputs.snapshot_exists != 'true'
         run: |
           if ! git diff --quiet; then
             git config user.name  "github-actions[bot]"
