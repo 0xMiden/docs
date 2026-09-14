@@ -1,11 +1,12 @@
-version: "0.15" # the label to snapshot (used if no manual override)
-refs: # exact, immutable refs per source repo (tags or release branches)
-  protocol: "refs/tags/v0.15.3"
-  node: "refs/tags/v0.15.0"
-  miden-client: "refs/tags/v0.15.2"
-  tutorials: "refs/heads/main"
-  miden-vm: "refs/tags/v0.23.4"
-  compiler: "refs/tags/v0.8.1"
-  guardian: "refs/tags/v0.15.0"
-  note-transport: "refs/tags/v0.4.1"
-next_version: "0.16"
+version: "0.16"
+refs: # Immutable documentation source commits, resolved on 2026-09-14.
+  protocol: "fb1e40da0f7cec156963e5d815a51a18a8313f25" # v0.16.1
+  node: "d6ce8b14d4680e0187b877c1de5c1cdeea16e7e2" # v0.16.0
+  miden-client: "5f36964d2655549e600f55ab6f65caea943d1130" # rust-sdk v0.16.1
+  tutorials: "965739b626acf3c63a0e547d313859079ee03c18" # v0.16 migration + NFT recipe (#249, #250)
+  miden-vm: "c1c2ddcb9cabc3d5c2071f8baf68c7930917cad8" # v0.29.2, the protocol v0.16 VM line
+  compiler: "f2e0b4274f4f13caeceb215645bd3f1f03a3c6f5" # v0.10.1; still pins protocol v0.16.0-rc.4
+  guardian: "be66822395551c630a164f7bdafbb67771c83442" # v0.17.0, built for Miden v0.16
+  note-transport: "9736b39d64cfb4d77bb2d777a9ad1a4f2ea3f2a5" # v0.5.0-rc.2, used by rust-sdk v0.16
+  bridge-portal: "5d8f327a8adea0e0d671b798145b6092f5e23d6a" # Developer docs #117; portal still uses SDK v0.15
+next_version: "0.17"
