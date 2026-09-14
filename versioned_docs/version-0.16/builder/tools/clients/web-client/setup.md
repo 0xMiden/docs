@@ -10,11 +10,11 @@ sidebar_position: 2
 Add `@miden-sdk/miden-sdk` to your project.
 
 ```bash
-npm install @miden-sdk/miden-sdk
+npm install @miden-sdk/miden-sdk@0.16.1
 # or
-yarn add @miden-sdk/miden-sdk
+yarn add @miden-sdk/miden-sdk@0.16.1
 # or
-pnpm add @miden-sdk/miden-sdk
+pnpm add @miden-sdk/miden-sdk@0.16.1
 ```
 
 The SDK targets modern browsers (Chrome, Firefox, Safari, Edge). The browser build uses WebAssembly and a Web Worker when available. Under Node 20+, the package automatically selects its native N-API binding with SQLite-backed storage.

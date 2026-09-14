@@ -23,7 +23,7 @@ We'll cover installation from source here - see the `midenup` README for details
 First, clone the compiler repo:
 
 ```bash
-git clone https://github.com/0xMiden/compiler
+git clone --branch v0.10.1 --depth 1 https://github.com/0xMiden/compiler
 ```
 
 Then, run the following in your shell in the cloned repo folder:

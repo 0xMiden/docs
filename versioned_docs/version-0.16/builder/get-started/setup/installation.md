@@ -235,7 +235,7 @@ The TypeScript examples use the [`@miden-sdk/miden-sdk`](https://www.npmjs.com/p
 ```bash title=">_ Terminal"
 npm create vite@latest miden-app -- --template vanilla-ts
 cd miden-app
-npm install @miden-sdk/miden-sdk@^0.16.0
+npm install @miden-sdk/miden-sdk@0.16.1
 ```
 
 Open `src/main.ts` and replace its contents with a simple entry point that calls your demo:

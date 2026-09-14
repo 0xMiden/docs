@@ -23,7 +23,7 @@ Check the [Miden client documentation](../cli/index.md) for more information.
 2. Install the Miden client.
 
    ```sh
-   cargo install miden-client-cli --locked
+   cargo install miden-client-cli --version 0.16.1 --locked
    ```
 
    You can now use the `miden-client --version` command to verify the installed version.

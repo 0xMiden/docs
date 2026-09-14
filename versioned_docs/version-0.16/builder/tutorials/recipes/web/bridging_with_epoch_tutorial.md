@@ -47,7 +47,9 @@ Clone, install, and boot Vite:
 
 ```bash
 git clone https://github.com/0xMiden/tutorials.git
-cd tutorials/examples/bridging-app
+cd tutorials
+git checkout 965739b626acf3c63a0e547d313859079ee03c18
+cd examples/bridging-app
 yarn install
 yarn dev
 ```

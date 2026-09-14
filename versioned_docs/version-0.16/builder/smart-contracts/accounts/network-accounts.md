@@ -10,7 +10,7 @@ A **network account** is a public account that the network can transact against 
 
 Two sides have to line up for network execution to happen:
 
-- **The account** opts in by carrying the standardized note-allowlist storage slot, added through the [`AuthNetworkAccount`](https://docs.rs/miden-standards/latest/miden_standards/account/auth/struct.AuthNetworkAccount.html) auth component.
+- **The account** opts in by carrying the standardized note-allowlist storage slot, added through the [`AuthNetworkAccount`](https://docs.rs/miden-standards/0.16.1/miden_standards/account/auth/struct.AuthNetworkAccount.html) auth component.
 - **The note** targets the account by carrying a `NetworkAccountTarget` attachment.
 
 If a note's script root is allowlisted and its fee can be estimated by the account's active fee policy, the network can consume it automatically.
@@ -198,7 +198,7 @@ await client.transactions.submit(
 | Inspect (`NetworkAccount`) | ✅ | ✅ `isNetworkAccount()` / `networkNoteAllowlist()` |
 
 :::info API Reference
-Rust: [`AuthNetworkAccount`](https://docs.rs/miden-standards/latest/miden_standards/account/auth/struct.AuthNetworkAccount.html), [`NetworkAccount`](https://docs.rs/miden-standards/latest/miden_standards/account/auth/struct.NetworkAccount.html), [`NetworkAccountNoteAllowlist`](https://docs.rs/miden-standards/latest/miden_standards/account/auth/struct.NetworkAccountNoteAllowlist.html)
+Rust: [`AuthNetworkAccount`](https://docs.rs/miden-standards/0.16.1/miden_standards/account/auth/struct.AuthNetworkAccount.html), [`NetworkAccount`](https://docs.rs/miden-standards/0.16.1/miden_standards/account/auth/struct.NetworkAccount.html), [`NetworkAccountNoteAllowlist`](https://docs.rs/miden-standards/0.16.1/miden_standards/account/auth/struct.NetworkAccountNoteAllowlist.html)
 :::
 
 ## Related

@@ -118,5 +118,5 @@ impl NoteSender for NoteSenderStorage {
 ```
 
 :::info API Reference
-Full API docs on docs.rs: [`miden::output_note`](https://docs.rs/miden/latest/miden/output_note/)
+Full API docs on docs.rs: [`miden::output_note`](https://docs.rs/miden/0.14.0/miden/output_note/)
 :::

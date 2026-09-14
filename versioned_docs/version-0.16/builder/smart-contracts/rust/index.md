@@ -52,4 +52,4 @@ Both authoring paths share the same [Miden Standards](../standards/) library —
 - [MASM Smart Contracts](../masm/) — the path mainnet supports today.
 - [Miden Standards](../standards/) — reusable building blocks callable from Rust or MASM.
 - [Smart Contracts → Overview](../overview) — execution model and lifecycle (concepts apply to both authoring paths).
-- [API reference on docs.rs](https://docs.rs/miden/latest/miden/) — full Rust SDK API documentation.
+- [API reference on docs.rs](https://docs.rs/miden/0.14.0/miden/index.html) — full Rust SDK API documentation.

@@ -43,11 +43,11 @@ availability, and destination fulfillment depend on Epoch services. Treat the
 ## Dependencies
 
 ```bash
-npm install @epoch-protocol/epoch-intents-sdk \
-  @miden-sdk/miden-sdk \
-  @miden-sdk/miden-wallet-adapter-base \
-  @miden-sdk/miden-wallet-adapter-react \
-  viem
+npm install @epoch-protocol/epoch-intents-sdk@1.0.30 \
+  @miden-sdk/miden-sdk@0.15.7 \
+  @miden-sdk/miden-wallet-adapter-base@0.15.1 \
+  @miden-sdk/miden-wallet-adapter-react@0.15.1 \
+  viem@2.51.0
 ```
 
 The snippets are type-checked against

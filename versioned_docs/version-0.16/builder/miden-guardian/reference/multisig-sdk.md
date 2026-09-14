@@ -29,7 +29,7 @@ The multisig sdk has as peer dependency on the miden-sdk, you will need to insta
 
 **TypeScript (npm)**
 ```bash
-npm install @openzeppelin/miden-multisig-client @miden-sdk/miden-sdk@0.16.0
+npm install @openzeppelin/miden-multisig-client@0.17.0 @miden-sdk/miden-sdk@0.16.0
 ```
 
 **Rust (Cargo.toml)**

@@ -54,7 +54,7 @@ miden-crypto              = "0.29.2"
 
 ```json title="package.json (Web SDK)"
 {
-  "@miden-sdk/miden-sdk": "0.16.0",
+  "@miden-sdk/miden-sdk": "0.16.1",
   "@miden-sdk/react": "0.16.0"
 }
 ```

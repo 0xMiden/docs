@@ -35,9 +35,9 @@ receiving on Miden—wallet note synchronization.
 ## Dependencies
 
 ```bash
-npm install @miden-sdk/miden-sdk \
-  @miden-sdk/miden-wallet-adapter-base \
-  @miden-sdk/miden-wallet-adapter-react \
+npm install @miden-sdk/miden-sdk@0.15.7 \
+  @miden-sdk/miden-wallet-adapter-base@0.15.1 \
+  @miden-sdk/miden-wallet-adapter-react@0.15.1 \
   viem
 ```
 

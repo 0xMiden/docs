@@ -10,11 +10,11 @@ sidebar_position: 2
 The React SDK has a hard peer dependency on `@miden-sdk/miden-sdk` — install both:
 
 ```bash
-npm install @miden-sdk/react @miden-sdk/miden-sdk
+npm install @miden-sdk/react@0.16.0 @miden-sdk/miden-sdk@0.16.1
 # or
-yarn add @miden-sdk/react @miden-sdk/miden-sdk
+yarn add @miden-sdk/react@0.16.0 @miden-sdk/miden-sdk@0.16.1
 # or
-pnpm add @miden-sdk/react @miden-sdk/miden-sdk
+pnpm add @miden-sdk/react@0.16.0 @miden-sdk/miden-sdk@0.16.1
 ```
 
 React 18 or newer is required.

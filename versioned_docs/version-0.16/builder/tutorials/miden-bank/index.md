@@ -195,8 +195,10 @@ This tutorial covers the following Miden Rust compiler features:
 The complete source code for this tutorial is available in the [examples/miden-bank](https://github.com/0xMiden/tutorials/tree/965739b626acf3c63a0e547d313859079ee03c18/examples/miden-bank) directory of this repository:
 
 ```bash title=">_ Terminal"
-git clone https://github.com/0xMiden/miden-tutorials.git
-cd miden-tutorials/examples/miden-bank
+git clone https://github.com/0xMiden/tutorials.git
+cd tutorials
+git checkout 965739b626acf3c63a0e547d313859079ee03c18
+cd examples/miden-bank
 ```
 
 ## Supplementary Guides
