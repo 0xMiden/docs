@@ -102,15 +102,15 @@ moved in several independent ways:
   `guardianEnabled` is gone: the guardian is always present.
 - **Transaction fees became the auth component's responsibility**, and
   `AuthGuardedMultisig` now pays them. Its auth procedure calls
-  `miden::standards::fee::pay_fee` *before* building the transaction summary, so
-  the fee note and the vault withdrawal funding it fall inside what the cosigners
-  sign rather than being appended afterwards.
+  `miden::standards::auth::multisig::pay_bounded_fee` *before* building the
+  transaction summary, so the fee note and the vault withdrawal funding it fall
+  inside what the cosigners sign rather than being appended afterwards.
 
   That makes the auth arg carry double duty. `fee::load_conversion_info` reads it
   as the commitment `hash(CONVERSION_INFO || SALT)` and looks the preimage up in
   the advice map; the same word then serves as the transaction summary salt. A
   bare salt still satisfies the salt role but not the fee role: the lookup
-  misses, conversion info comes back empty, and `pay_fee` aborts with
+  misses, conversion info comes back empty, and fee payment aborts with
   `ERR_FEE_CONVERSION_INFO_MISSING` — though only once the computed fee is
   non-zero, so a zero-`verification_base_fee` chain never notices.
 
@@ -127,24 +127,24 @@ moved in several independent ways:
   TypeScript. The pinned Miden clients then derive and commit the same native
   conversion info from the reference header used for execution.
 
-  Two consequences worth knowing:
+  `pay_bounded_fee` then estimates the authentication cost and resolves the
+  payment. It only accepts the chain-native fee faucet, and caps the payment at
+  twice the computed fee so a fee increase while signatures are collected has
+  bounded headroom.
+
+  Two consequences follow:
 
   - The pinned Miden clients classify `AuthGuardedMultisig` as
     `CallerChosenSalt`. A request declares a salt, and the client commits the
     chain-native conversion info under that salt. Components that do not read
     fee conversion info still fail with
     `TransactionRequestError::FeeConversionInfoUnsupported`.
-  - `pay_fee` spends the faucet and rate the committed conversion info names, so
-    what a guarded account must hold follows from what it commits. The built-in
-    typed proposal paths always commit the chain-native asset at rate 1/1, so on
-    a fee-charging chain an account driving them needs that native asset in its
-    vault or `pay_fee` aborts before the summary exists — and guardian-assisted
-    recovery cannot route around it, since it takes the same path. A custom
-    request that commits a different fee asset must instead fund *that* asset:
-    holding only it is enough to execute through fee payment, provided the
-    request needs no other assets. Whether the resulting transaction is then
-    *included* is a separate question — the batch builder decides what fee
-    asset and rate it accepts.
+  - The built-in typed proposal paths always commit the chain-native asset at
+    rate 1/1. On a fee-charging chain the guarded account needs that native asset
+    in its vault or authentication aborts before the summary exists. Guardian-
+    assisted recovery cannot route around this because it uses the same auth
+    path. A custom request naming a different fee asset also aborts: the guarded
+    multisig component enforces the native faucet itself.
 
   The exported builders always declare the fee conversion salt. A caller
   assembling a raw custom request can omit it, but the resulting request works

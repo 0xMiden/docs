@@ -14,16 +14,10 @@ The Miden node can be installed as a native binary, or as a Docker image.
 <Tabs groupId="full-node-runtime" defaultValue="native">
   <TabItem value="native" label="Native binary">
 
-Install the latest node binary from crates.io:
+Install the node release pinned by this v0.16 snapshot:
 
 ```bash
-cargo install miden-node --locked
-```
-
-Or install a specific version:
-
-```bash
-cargo install miden-node --version <version> --locked
+cargo install miden-node --version 0.16.0 --locked
 ```
 
 Check the installed binary:
@@ -35,7 +29,7 @@ miden-node --help
 You can also install directly from a repository revision when you need an unreleased version:
 
 ```bash
-cargo install miden-node --git https://github.com/0xMiden/node.git --rev <revision> --locked
+cargo install miden-node --git https://github.com/0xMiden/node.git --rev d6ce8b14d4680e0187b877c1de5c1cdeea16e7e2 --locked
 ```
 
 Create a data directory for node state:
@@ -50,13 +44,13 @@ mkdir -p full-node-data
 Pull the published image:
 
 ```bash
-docker pull ghcr.io/0xmiden/miden-node:<release-tag>
+docker pull ghcr.io/0xmiden/miden-node:0.16.0
 ```
 
 Check the image:
 
 ```bash
-docker run --rm ghcr.io/0xmiden/miden-node:<release-tag> miden-node --help
+docker run --rm ghcr.io/0xmiden/miden-node:0.16.0 miden-node --help
 ```
 
 Create a Docker volume for node state:

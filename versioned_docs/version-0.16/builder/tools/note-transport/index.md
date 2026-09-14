@@ -11,6 +11,10 @@ The Miden note transport service is an off-chain relay for private note delivery
 
 Private note contents are not published on-chain. The chain stores note commitments, while the full note data must reach the recipient through another channel. Note transport is the standard network service for that off-chain delivery path.
 
+:::warning v0.16 compatibility
+This snapshot documents note transport v0.5.0-rc.2. Its wire implementation still resolves protocol v0.16 release-candidate types, while the v0.16 client and protocol pins on this site are stable releases. Validate `SendNote` serialization and end-to-end delivery against the exact client, server, and network versions you deploy.
+:::
+
 ## Start here
 
 <CardGrid cols={3}>

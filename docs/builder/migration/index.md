@@ -14,7 +14,7 @@ This guide covers all breaking changes you need to migrate an application to Mid
 - writing Rust smart contracts with the `miden` SDK
 - interacting with storage, auth, or RPCs
 
-this document is for you. It folds together the breaking changes from the protocol crates (`0.15.3` → `0.16.0`), the VM crates (`miden-vm`, `0.23` → `0.29.1`), `miden-client` (`0.15` → `0.16.0`), the Web SDK (`@miden-sdk/*` `0.15` → `0.16.0`), and the `miden` Rust contract SDK / compiler (`0.13` → `0.14`).
+this document is for you. It folds together the breaking changes from the protocol crates (`0.15.3` → `0.16.0`), the VM crates (`miden-vm`, `0.23` → `0.29.2`), `miden-client` (`0.15` → `0.16.0`), the Web SDK (`@miden-sdk/*` `0.15` → `0.16.0`), and the `miden` Rust contract SDK / compiler (`0.13` → `0.14`).
 
 ---
 
@@ -38,24 +38,24 @@ miden-prover              = "0.23"
 miden-crypto              = "0.25"
 
 # With these
-miden-client              = "0.16.0-rc.1"
-miden-client-sqlite-store = "0.16.0-rc.1"
-miden-protocol            = "0.16.0-rc.6"
-miden-standards           = "0.16.0-rc.6"
-miden-tx                  = "0.16.0-rc.6"
-miden-tx-batch            = "0.16.0-rc.6"   # renamed from miden-tx-batch-prover
-miden-assembly            = "0.29.1"
-miden-core                = "0.29.1"
-miden-core-lib            = "0.29.1"
-miden-processor           = "0.29.1"
-miden-prover              = "0.29.1"
-miden-crypto              = "0.29.1"
+miden-client              = "0.16.1"
+miden-client-sqlite-store = "0.16.1"
+miden-protocol            = "0.16.1"
+miden-standards           = "0.16.1"
+miden-tx                  = "0.16.1"
+miden-tx-batch            = "0.16.1"   # renamed from miden-tx-batch-prover
+miden-assembly            = "0.29.2"
+miden-core                = "0.29.2"
+miden-core-lib            = "0.29.2"
+miden-processor           = "0.29.2"
+miden-prover              = "0.29.2"
+miden-crypto              = "0.29.2"
 ```
 
 ```json title="package.json (Web SDK)"
 {
-  "@miden-sdk/miden-sdk": "0.16.0-rc.2",
-  "@miden-sdk/react": "0.16.0-rc.2"
+  "@miden-sdk/miden-sdk": "0.16.0",
+  "@miden-sdk/react": "0.16.0"
 }
 ```
 
@@ -115,24 +115,24 @@ If you only skim a few sections, skim **Transaction Changes**, **Account Changes
 
 | Component | Required | Tested With |
 |-----------|----------|-------------|
-| Miden VM crates | 0.29+ | 0.29.1 |
-| miden-crypto | 0.29+ | 0.29.1 |
-| miden-protocol | 0.16+ | 0.16.0-rc.6 |
-| miden-standards | 0.16+ | 0.16.0-rc.6 |
-| miden-client | 0.16+ | 0.16.0-rc.1 |
-| Web SDK (`@miden-sdk/*`) | 0.16+ | 0.16.0-rc.2 |
+| Miden VM crates | 0.29+ | 0.29.2 |
+| miden-crypto | 0.29+ | 0.29.2 |
+| miden-protocol | 0.16+ | 0.16.1 |
+| miden-standards | 0.16+ | 0.16.1 |
+| miden-client | 0.16+ | 0.16.1 |
+| Web SDK (`@miden-sdk/*`) | 0.16+ | 0.16.0 |
 | `miden` contract SDK | 0.14+ | 0.14.0-rc.1 |
-| `midenc` compiler | 0.10+ | 0.10.0-rc.1 |
-| Rust (client) | 1.96+ | 1.96 |
-| Rust (protocol / VM) | 1.96.1+ | 1.96.1 |
-| Rust (contract SDK / compiler) | 1.97+ | 1.97 |
+| `midenc` compiler | 0.10+ | 0.10.1 |
+| Rust (client / protocol) | 1.98.1+ | 1.98.1 |
+| Rust (VM) | 1.96.1+ | 1.96.1 |
+| Rust (contract SDK / compiler) | 1.99+ | 1.99 |
 
-:::note Pin the exact pre-release version
-The 0.16 protocol and client crates currently publish as `0.16.0-rc.N`. Cargo does not match a pre-release against a plain `"0.16"` requirement, so pin the exact string until the final release is published.
+:::note Use the stable v0.16 releases
+The protocol and client crates are now published as stable v0.16 releases. The examples above pin the patch versions used to validate this snapshot.
 :::
 
 :::note The contract toolchain lags the rest of the line
-`midenc` and the `miden` contract SDK build against protocol `0.16.0-alpha.4` and VM `0.25`, not the protocol `0.16.0-rc` and VM `0.29.1` used by the client and node. Artifacts still load — the MAST and package formats are compatible across those VM versions — but the protocol API surface the compiler sees is an earlier snapshot. Its MSRV is also higher, at 1.97.
+Compiler v0.10.1 and the `miden` contract SDK still pin protocol `0.16.0-rc.4`, while the client and node use stable protocol v0.16.1. They use the same VM 0.29 line, but the compiler sees an earlier protocol API snapshot. Its MSRV is also higher, at 1.99.
 :::
 
 ---
@@ -143,7 +143,7 @@ Work through these sections in order for a complete migration:
 
 | Section | Topics |
 |---------|--------|
-| [1. Imports & Dependencies](./imports-dependencies) | Crate bumps, VM 0.23 → 0.29.1, MSRV 1.96, artifacts that must be rebuilt |
+| [1. Imports & Dependencies](./imports-dependencies) | Crate bumps, VM 0.23 → 0.29.2, MSRV 1.98.1, artifacts that must be rebuilt |
 | [2. Hashing & Crypto Changes](./hashing-crypto) | ECDSA public-key commitments, MMR peaks binding the leaf count, empty domain-separated hashing |
 | [3. Account Changes](./account-changes) | `with_auth_component` removed, `Approver`/`ApproverSet`, component name changes, `AccountPatch` |
 | [4. Note Changes](./note-changes) | Typed note builders, `MAX_ASSETS_PER_NOTE` 64 → 16, unified mint/burn scripts |
@@ -160,9 +160,9 @@ Work through these sections in order for a complete migration:
 
 Complete these steps to verify your migration:
 
-- [ ] Bump all Miden crate versions per section 1, pinning the exact `0.16.0-rc.N` strings, and rename `miden-tx-batch-prover` to `miden-tx-batch`
+- [ ] Bump all Miden crate versions per section 1 and rename `miden-tx-batch-prover` to `miden-tx-batch`
 - [ ] Bump `@miden-sdk/miden-sdk` and `@miden-sdk/react` together; drop any `miden-idxdb-store` dependency
-- [ ] Update the toolchain to Rust 1.96 (1.97 if you also build Rust contracts)
+- [ ] Update the toolchain to Rust 1.98.1 (1.99 if you also build Rust contracts)
 - [ ] Re-assemble every `.masp` from source and delete cached `MastForest` blobs; `.masl` no longer exists
 - [ ] **Delete and recreate your local store**, then re-sync — export private note files first
 - [ ] **Upgrade your node together with your client** — sealed and plaintext submissions are mutually incompatible

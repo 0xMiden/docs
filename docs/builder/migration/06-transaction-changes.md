@@ -204,7 +204,7 @@ Code written for 0.15 compiles unchanged and fails at run time, which makes this
 `ChainAnchor` is the remedy. It pins execution to a chosen reference block, so the same summary reproduces on a client at any height: the proposer captures one, ships it alongside the summary, and every party executes against it.
 
 :::note Newer than the versions pinned in Quick Upgrade
-`ChainAnchor` landed after the versions in [Quick Upgrade](./#quick-upgrade). It needs `miden-client` `0.16.0-rc.2` and `@miden-sdk/miden-sdk` / `@miden-sdk/react` `0.16.0-rc.3` or later.
+`ChainAnchor` first appeared in the v0.16 release candidates and is included in the stable client and Web SDK versions pinned by [Quick Upgrade](./#quick-upgrade).
 :::
 
 ### Affected Code
