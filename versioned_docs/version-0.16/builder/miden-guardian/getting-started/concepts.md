@@ -1,0 +1,282 @@
+---
+title: "Guardian Concepts"
+sidebar_position: 1
+---
+A conceptual introduction to Guardian. Read this **before** the architecture
+docs if you are new to the system — it explains what Guardian is, what it is
+*not*, and the trust model that informs every other decision in the
+codebase.
+
+For formal definitions and wire shapes, see [`spec/`](https://github.com/OpenZeppelin/guardian/blob/v0.17.0/spec/index.md). For
+the module-level decomposition, see
+[`docs/architecture/services.md`](../architecture/services.md).
+
+## What Guardian is
+
+Guardian is an **off-chain coordination service** for Miden accounts. It
+stores account state snapshots and the deltas that mutate them, signs
+accepted deltas with an acknowledgement key, and helps multiple clients of
+the same account stay in sync.
+
+Guardian is:
+
+- **Non-custodial.** It never holds an account's spending key. The account
+  owner does.
+- **Not the source of truth.** The Miden network remains authoritative for
+  account commitments. Guardian's database is a *coordination cache*, not a
+  ledger.
+- **Pluggable.** Server, clients, and the multisig SDK are all in this
+  repository; operators can run Guardian themselves, and users can rotate
+  away from any operator at any time.
+
+## The custody spectrum
+
+Traditional crypto custody is binary — either a full custodian holds the
+key, or the user does. Guardian creates a third position — but **not** by
+holding a seat in the user's multisig. The account component enforces two
+independent checks on every ordinary transaction:
+
+```mermaid
+flowchart LR
+  subgraph S["User signer set"]
+    H["Hot key<br/>(daily transactions)"]
+    C["Cold key<br/>(recovery, offline)"]
+  end
+  T["M-of-N threshold<br/>(user keys only)"]
+  G["Guardian check<br/>(one ACK signature —<br/>never counted toward M)"]
+  B{"Both must pass"}
+  A["Transaction authorized"]
+  H --> T
+  C --> T
+  T --> B
+  G --> B
+  B --> A
+```
+
+- **The user threshold** counts only the user's signer set. The Guardian
+  key is stored in a separate storage slot and can never satisfy or
+  contribute to M.
+- **The Guardian check** verifies exactly one Guardian signature over the
+  same transaction summary the cosigners sign. It is a pass/fail gate:
+  the Guardian can veto a transaction by withholding its ACK, but its
+  signature alone authorizes nothing — **Guardian alone can never move
+  funds**.
+- **The rotation exception.** The one transaction the account component
+  executes without the Guardian check is `SwitchGuardian` (rotating the
+  Guardian key), which needs only the user threshold. Guardian's blocking
+  power is therefore temporary and defeasible: the user's own keys can
+  always remove it.
+
+So the Guardian participates in every ordinary transaction, but as a
+separate authentication input — not as one of the M counted signatures.
+Describing the account as "2-of-3" (user hot, user cold, Guardian)
+understates the user threshold's independence and overstates Guardian's
+authority; the accurate description is *M-of-N over user keys, plus a
+removable Guardian gate*.
+
+## State and Delta
+
+The two primitives Guardian works with:
+
+- **State** — a snapshot of an account at a point in time. Guardian
+  tracks the account ID, current commitment, nonce, and authentication
+  scheme. The full state payload is opaque to Guardian; the client
+  supplies it.
+- **Delta** — an append-only change to that state. Every delta
+  references the previous commitment (`prev_commitment`) and produces a
+  new one, forming an unbroken chain.
+
+These mirror the definitions in
+[`spec/index.md`](https://github.com/OpenZeppelin/guardian/blob/v0.17.0/spec/index.md#definitions). The supporting concepts
+are:
+
+| Term | Role |
+|---|---|
+| **Commitment** | Hash uniquely identifying a state version. Lets clients detect tampering. |
+| **Nonce** | Monotonically increasing counter — orders deltas in the chain. |
+| **Account ID** | Unique identifier; one Guardian hosts many accounts. |
+| **Delta proposal** | Multi-party coordination object — sits in `pending` until threshold cosigners have signed. |
+| **Acknowledgement (ACK)** | Guardian's signature over an accepted delta's transaction summary commitment — the same message the cosigners sign. Issued only after Guardian has validated the delta against the stored state. Clients verify the ACK to confirm a delta was actually accepted by the Guardian they expected. |
+
+## Transaction lifecycle
+
+A single transaction touches Guardian and the Miden network in five steps:
+
+```mermaid
+sequenceDiagram
+  participant U as User device
+  participant G as Guardian
+  participant M as Miden network
+
+  U->>U: 1. Execute transaction locally, compute delta
+  U->>G: 2. Submit signed delta (prev_commitment, nonce, payload)
+  G->>G: validate against stored state
+  G-->>U: 3. ACK signature over the transaction summary commitment<br/>(delta status: candidate)
+  U->>M: 4. Submit proven account update
+  M-->>U: account commitment accepted
+  G->>M: poll for canonical commitment
+  G->>G: 5. If commitments match, mark canonical — otherwise park as<br/>retained and keep reconciling until it matches or the TTL expires
+```
+
+The status transitions for a delta:
+
+| Status | Meaning |
+|---|---|
+| `candidate` | Guardian accepted and signed it, but the matching Miden update has not yet been observed. |
+| `canonical` | Guardian observed the matching commitment on Miden. The delta is now durable for other clients of the same account. |
+| `retained` | Guardian stopped actively verifying the candidate and released the account slot. The on-chain outcome remains **uncertain**; background reconciliation may still promote it to `canonical` until its retention TTL expires (default 24 h). A new submission at the same nonce supersedes it. Never read `retained` as "the transaction did not land" — it means *unlocked but unresolved*. |
+| `discarded` | Canonicalization was abandoned by the client (`client_abandoned`), or retention is disabled and verification failed terminally. The client must rebuild from the latest canonical state. |
+
+This single definition of `retained` holds across every surface —
+canonicalization, account locking, the abandon APIs (which report a
+distinct `retained` result, never `abandoned`), the SDKs, and the
+operator dashboard. At a glance:
+
+| Status | Account locked? | Outcome known? | Client action |
+|---|---|---|---|
+| `candidate` | Yes | No | Wait, or request abandonment |
+| `retained` | No | No | Sync and check the chain before replacing (a resubmission supersedes the row and forfeits automatic recovery) |
+| `discarded` (`client_abandoned`) | No | Probably not landed, but late reconciliation remains possible within the TTL | Continue cautiously |
+| `canonical` | No | Yes — landed | Sync account state |
+
+This is the **canonicalization** process. The default `candidate` mode runs
+a background worker that polls Miden and promotes or discards each
+candidate. An `optimistic` mode promotes immediately and is appropriate
+only when the client and operator trust each other absolutely (e.g.
+single-tenant dev setups). See [`spec/processes.md`](https://github.com/OpenZeppelin/guardian/blob/v0.17.0/spec/processes.md#canonicalization)
+for the formal state machine.
+
+## Trust model
+
+Guardian's trust boundaries layer up like this:
+
+```mermaid
+flowchart LR
+  subgraph L1["1. Client → Guardian"]
+    L1d["signed delta, signed request,<br/>timestamp, payload digest"]
+  end
+  subgraph L2["2. Guardian → Client"]
+    L2d["ACK-signed delta,<br/>commitment chain"]
+  end
+  subgraph L3["3. Client → Miden"]
+    L3d["ZK-proven account update"]
+  end
+  subgraph L4["4. Guardian → Miden"]
+    L4d["read-only commitment queries"]
+  end
+  subgraph L5["5. Inside Guardian"]
+    L5d["snapshots, deltas, proposals,<br/>metadata, audit log"]
+  end
+
+  Client --> L1 --> L2 --> Client
+  Client --> L3 --> Miden
+  Guardian --> L4 --> Miden
+  Guardian --> L5
+```
+
+| Boundary | Protected by |
+|---|---|
+| Client → Guardian | Per-account Falcon/ECDSA signatures, replay protection (±5 min timestamp window + monotonic per-key timestamps), rate limits, request size limits. |
+| Guardian → Client | The ACK signature on every accepted delta. Clients verify the ACK and the commitment chain before trusting returned state. |
+| Client → Miden | Miden's own ZK proof verification; Guardian is not in this path. |
+| Guardian → Miden | Read-only RPC; Miden does not trust Guardian for anything. |
+| Inside Guardian | Backend access control, IAM scoping, infrastructure hardening — see [`docs/runbooks/secrets.md`](../runbooks/secrets.md) and [`docs/architecture/infra.md`](../architecture/infra.md). |
+
+What this means in practice:
+
+- **A compromised Guardian cannot steal funds.** It can refuse service or
+  serve stale data, but it cannot produce a Miden-accepted update without
+  the user's spending key.
+- **A compromised Guardian can withhold or lie about state.** Clients are
+  expected to compare against Miden before signing anything important.
+- **An offline Guardian halts coordination.** Users can still execute
+  locally; they just cannot sync with their other devices, and other
+  cosigners cannot see their proposals.
+
+## Client verification checklist
+
+When integrating an SDK against a Guardian, clients **must**:
+
+1. **Pin Guardian's pubkey** — fetch `/pubkey` once over a trusted channel
+   and refuse to talk to any Guardian that returns a different key.
+2. **Verify the ACK signature** on every accepted delta before treating it
+   as confirmed.
+3. **Validate the commitment chain** — `delta_n.new_commitment` must match
+   `delta_{n+1}.prev_commitment`. A break means Guardian is lying or
+   corrupted.
+4. **Check freshness against Miden** before signing high-value
+   transactions — match the latest canonical commitment against the
+   account's commitment on-chain.
+5. **Treat unexpected pubkey changes as security events.** The Guardian
+   you connected to last week should be the same Guardian today. If it
+   isn't, halt operations until you can confirm intentional rotation.
+
+The Rust and TypeScript multisig SDKs perform 1–4 automatically; #5 is an
+application-level decision.
+
+## Failure and recovery
+
+```mermaid
+flowchart TB
+  F1["Guardian unavailable"] --> R1["Use local state · retry · rotate provider"]
+  F2["Candidate fails canonicalization"] --> R2["Resync from latest canonical · rebuild transaction"]
+  F3["Stale delta submission<br/>(prev_commitment mismatch)"] --> R3["Fetch /delta/since · replay canonical deltas · retry"]
+  F4["Operator withholds updates"] --> R4["Compare against Miden · rotate Guardian<br/>(user threshold)"]
+  F5["Guardian database corruption"] --> R5["Reject unverifiable data · recover from another device or operator"]
+```
+
+| Failure | What you see | Recovery |
+|---|---|---|
+| Guardian unreachable | gRPC `Unavailable` / HTTP 5xx, no ACK | Continue locally, retry; rotate operator if persistent. |
+| Stale delta (`commitment_mismatch`) | `400` with `code: commitment_mismatch` | `GET /delta/since` → replay canonical chain → retry the local transaction. |
+| Candidate parked (`retained`) | Delta status flips `candidate` → `retained`; the account is released | Usually means the Miden proof was never submitted, the on-chain commitment diverged, or the guardian's RPC view lagged. No action is strictly required: if the transaction actually landed, the guardian reconciles and promotes it automatically. To move on immediately, refetch state, rebuild and resubmit — a new submission at the same nonce supersedes the retained delta. Because superseding forfeits that automatic recovery, check the delta's status once before resubmitting: if it already flipped to `canonical`, the original transaction landed and there is nothing to redo. |
+| Transaction died after approval (stranded candidate) | New proposals answered `409 conflict_pending_delta` while the candidate waits out the grace + retry window | Call `POST /delta/candidate/abandon` (SDKs: `abandonCandidate` / `abandon_candidate`). The worker confirms over a short quarantine that the transaction did not land, flips the delta to `discarded` with reason `client_abandoned`, and releases the account — typically well under a minute. Poll via `abandonStatus` / `abandon_status`. |
+| Operator censors / withholds | Other cosigners see stale state | Rotate Guardian by meeting the applicable user threshold (the cold key can participate); the new operator inherits canonical state from Miden. |
+| Guardian database corruption (or restore from an older backup) | Accounts whose on-chain commitment advanced past the stored state fail state verification; accounts onboarded after the restore point fail with `account_not_found` because no guardian record remains | For an advanced account, a device holding the newer state re-syncs it, or rotate to another operator. For a missing account, a device holding it re-onboards via `/configure`, which re-registers the account with the state that device holds. The guardian cannot regenerate lost deltas because guarded accounts are private. |
+| Account paused by operator | State-transition, proposal, and EVM mutation paths return `409 GUARDIAN_ACCOUNT_PAUSED` with `paused_reason` (reads and `ConfigureAccount` keep working) | Operator-driven safety lever, not a fault. An operator with `accounts:pause` clears it via `POST /dashboard/accounts/{id}/unpause`. See [`DASHBOARD.md`](../operations/dashboard.md#account-pausing). |
+| Account switched to another guardian | After the `switch_guardian` delta canonicalizes on this server, mutation paths return `409 GUARDIAN_ACCOUNT_RELEASED` with `released_at` (reads and `ConfigureAccount` keep working); the dashboard shows `released_at` | Expected outcome of a guardian switch, not a fault. Terminal until the wallet re-onboards via `/configure`, which re-validates the guardian binding. An operator unpause never reactivates a released account. |
+| Pubkey changed unexpectedly | `/pubkey` returns a key your client doesn't pin | Treat as compromise. Halt, verify rotation through an out-of-band channel. |
+
+## Provider rotation
+
+Because Guardian is non-custodial and Miden is the source of truth, users
+who can meet their account's signing threshold can switch from one Guardian
+operator to another without the current operator's cooperation:
+
+1. Stand up (or contract with) a new Guardian instance.
+2. Meet the applicable user threshold to execute the `SwitchGuardian`
+   transaction, which installs the new Guardian service key in the
+   account's Guardian slot. This is the rotation exception
+   described above: the account component accepts it without the current
+   Guardian's signature.
+3. Point clients at the new endpoint and pubkey.
+
+The multisig SDK's `SwitchGuardian` flow implements this. See
+[`docs/MULTISIG_SDK.md`](../reference/multisig-sdk.md).
+
+## What Guardian is *not*
+
+To avoid confusion when reading the architecture docs:
+
+- **Not a custodian.** Cannot move funds.
+- **Not a node.** Does not validate Miden transactions. It signs *deltas*
+  (off-chain state changes); Miden verifies the on-chain proof.
+- **Not authoritative.** If Guardian and Miden disagree, Miden wins.
+  Guardian discards mismatched candidates by design.
+- **Not a TEE-only system.** Reproducible builds make TEE deployment
+  *possible* but the reference deployment runs on ECS/Fargate, not in a
+  TEE.
+- **Not a privacy layer.** Guardian operators can see metadata (account
+  IDs, timestamps, delta size, frequency). Payload privacy comes from
+  Miden's ZK execution, not from Guardian.
+
+## Where to read next
+
+- [Local development](./local-dev.md) — get a Guardian running locally.
+- [Service architecture](../architecture/services.md) — the modules that
+  implement everything above.
+- [AWS deployment](../architecture/infra.md) — the reference production
+  topology.
+- [Troubleshooting](../operations/troubleshooting.md) — error codes and recovery
+  playbooks.
+- [`spec/`](https://github.com/OpenZeppelin/guardian/blob/v0.17.0/spec/index.md) — formal specification.

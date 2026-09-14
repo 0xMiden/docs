@@ -1,0 +1,257 @@
+---
+sidebar_position: 1
+title: Installation
+description: Get started with Miden development by installing Miden tools using the `midenup` toolchain.
+---
+
+This guide walks you through installing the Miden development tools using the `midenup` toolchain manager.
+
+## Prerequisites
+
+### Install Rust
+
+Miden development requires Rust. Install it using rustup:
+
+```bash title=">_ Terminal"
+curl --proto '=https' --tlsv1.2 -sSf https://sh.rustup.rs | sh -s -- -y
+```
+
+Reload your PATH environment variable:
+
+```bash title=">_ Terminal"
+. "$HOME/.cargo/env"
+```
+
+Verify the installation:
+
+```bash title=">_ Terminal"
+rustc --version
+```
+
+<details>
+<summary>Expected output</summary>
+
+```text
+rustc 1.98.1 (...)  # or newer for client/protocol code
+```
+
+</details>
+
+### Install Node.js & Yarn
+
+For TypeScript development with the Miden Web Client, you'll need Node.js and Yarn.
+
+**Install Node.js:**
+
+On macOS with Homebrew:
+
+```bash title=">_ macOS"
+brew install node
+```
+
+On Ubuntu/Debian:
+
+```bash title=">_ Ubuntu/Debian"
+curl -fsSL https://deb.nodesource.com/setup_lts.x | sudo -E bash -
+sudo apt-get install -y nodejs
+```
+
+On Windows, use the Node.js installer from nodejs.org.
+
+**Install Yarn:**
+
+```bash title=">_ Terminal"
+# Install Yarn globally via npm
+npm install -g yarn
+```
+
+**Verify installations:**
+
+```bash title=">_ Terminal"
+node --version && yarn --version
+```
+
+<details>
+<summary>Expected output</summary>
+
+```text
+v22.x.x  # or higher
+1.22.x   # or higher
+```
+
+</details>
+
+### Install Miden CLI
+
+**Install midenup**
+
+The Miden toolchain installer makes it easy to manage Miden components:
+
+```bash title=">_ Terminal"
+cargo install midenup
+```
+
+This guide is verified with midenup **1.0.0**. To install that exact release, use `cargo install midenup --version 1.0.0`.
+
+:::info
+To install from source instead, name the package explicitly — the repository contains more than one binary: `cargo install --git https://github.com/0xMiden/midenup.git midenup`
+:::
+
+**Initialize midenup**
+
+```bash title=">_ Terminal"
+midenup init
+```
+
+This creates the `$MIDENUP_HOME` directory and sets up the `miden` command by creating a symlink in your Cargo bin directory (`$CARGO_HOME/bin/`, typically `~/.cargo/bin/`). Since Rust users already have this directory in their PATH, no additional PATH configuration is needed.
+
+Verify it works:
+
+```bash title=">_ Terminal"
+which miden
+```
+
+<details>
+<summary>Expected output</summary>
+
+```text
+/Users/<USERNAME>/.cargo/bin/miden    # macOS
+/home/<USERNAME>/.cargo/bin/miden     # Linux
+```
+
+</details>
+
+**Install Miden Toolchain**
+
+These v0.16 guides require a coherent v0.16 client, compiler, and protocol
+toolchain for the network you use. `midenup` resolves network names through the
+[published channel manifest](https://0xmiden.github.io/midenup/channel-manifest.json).
+
+:::warning Release prerequisite
+The stable v0.16 toolchain update is ready on midenup's `next` branch, but it
+has not yet been promoted to the published manifest. The published `testnet`
+channel still points to v0.15, while its explicit `0.16.0` channel is the older
+prerelease stack.
+
+Wait for the updated manifest to be published before using these
+network-dependent v0.16 guides against testnet.
+:::
+
+After the manifest meets that requirement, install the public testnet toolchain
+and make it the default:
+
+```bash title=">_ Terminal"
+midenup install testnet && midenup override testnet
+```
+
+:::note
+You may see `No artifact found. Proceeding to install from source` during installation. This is expected — it means pre-built binaries aren't available for your platform, so midenup compiles components from source. This can take 15-30 minutes.
+:::
+
+### Verify Installation
+
+Check that everything is working correctly:
+
+```bash title=">_ Terminal"
+midenup show active-toolchain
+miden client --help
+```
+
+<details>
+<summary>Expected output</summary>
+
+```text
+testnet
+CLI actions
+Usage: miden client <COMMAND>
+...
+```
+
+</details>
+
+### Troubleshooting
+
+**"miden: command not found"**
+
+Ensure `$CARGO_HOME/bin` (typically `~/.cargo/bin/`) is in your PATH. This should already be configured if you installed Rust via rustup. Verify with:
+
+```bash title=">_ Terminal"
+echo $PATH | tr ':' '\n' | grep cargo
+```
+
+**"config error: missing field" when running `miden client` commands**
+
+If a previous `miden-client.toml` is incompatible with the current client, move
+only that file aside and re-initialize the same scope and network. The CLI loads
+`./.miden/miden-client.toml` from the current directory first, then falls back to
+the global configuration (`$MIDEN_CLIENT_HOME/miden-client.toml` when that
+variable is set, otherwise `~/.miden/miden-client.toml`).
+
+For example, to regenerate a local configuration without deleting its database
+or keys, replace `<NETWORK>` with that configuration's network. Keep any existing
+backup rather than overwriting it:
+
+```bash title=">_ Terminal"
+mv -i .miden/miden-client.toml .miden/miden-client.toml.previous
+miden client init --local --network <NETWORK>
+```
+
+For a global configuration, move the corresponding global
+`miden-client.toml` aside and omit `--local`. Review the regenerated store and
+keystore paths before making transactions, especially if the previous file used
+custom paths.
+
+Regenerating this file does not migrate an older database or make state from one
+network usable on another. Keep the old files until you have confirmed the
+release's storage compatibility and recovered the accounts you need.
+
+Do not use `miden client clear-config` for migration or configuration switching.
+It recursively removes the entire local `.miden/` directory, including the
+store and private keys; when no local `.miden/` directory exists, it falls back
+to removing the global directory. Its confirmation prompt does not enumerate
+that state. Use it only for confirmed disposable client state after preserving
+anything you need.
+
+## Set Up a Project
+
+The Quick Start guides let you follow along in either Rust or TypeScript. Scaffold whichever language you prefer — the two tabs in every later code example map 1:1 to the files below.
+
+### Rust Project
+
+```bash title=">_ Terminal"
+miden new my-test-project
+cd my-test-project
+```
+
+If successful, you'll see a new directory with Miden project files. The generated `rust-toolchain.toml` selects the Rust toolchain and components required by the project.
+
+For each Rust code example in the following pages, add a new binary under
+`integration/src/bin/` and run it with `cargo run --bin <name> --release`.
+
+### TypeScript Project
+
+The TypeScript examples use the [`@miden-sdk/miden-sdk`](https://www.npmjs.com/package/@miden-sdk/miden-sdk) package and its `MidenClient` API. The SDK ships WebAssembly that runs in the browser, so the simplest runnable setup is a minimal Vite project:
+
+```bash title=">_ Terminal"
+npm create vite@latest miden-app -- --template vanilla-ts
+cd miden-app
+npm install @miden-sdk/miden-sdk@^0.16.0
+```
+
+Open `src/main.ts` and replace its contents with a simple entry point that calls your demo:
+
+```ts title="src/main.ts"
+import { demo } from "./demo";
+
+demo().catch(console.error);
+```
+
+For each TypeScript snippet in the following pages, save it as `src/demo.ts` (or another name imported from `main.ts`) and run:
+
+```bash title=">_ Terminal"
+npm run dev
+```
+
+The SDK initialises WebAssembly on first use; open the Vite dev server URL in your browser and watch the devtools console for output.
+
+---
