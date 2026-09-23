@@ -2,7 +2,7 @@
 
 ## How is privacy implemented in Miden?
 
-Miden leverages zero-knowledge proofs and client side execution and proving to provide security and privacy.
+Miden leverages zero-knowledge proofs and client-side execution and proving to provide security and privacy.
 
 ## Does Miden support encrypted notes?
 
