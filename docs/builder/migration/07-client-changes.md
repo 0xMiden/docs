@@ -417,8 +417,8 @@ let prover = LocalTransactionProver::default();
 
 ## (Rust) `ForeignAccount::Prefetched` and `get_foreign_account_inputs` are gone
 
-:::caution 0.16.1-only features, not in the 0.17 release candidates
-`ForeignAccount::Prefetched(AccountInputs)` and `Client::get_foreign_account_inputs` shipped in `miden-client` 0.16.1 only. They are not in the 0.17 release candidates, and the 0.17 changelog does not mention their removal. Code written against 0.16.0 is unaffected.
+:::caution 0.16.1-only features, replaced in 0.17
+`ForeignAccount::Prefetched(AccountInputs)` and `Client::get_foreign_account_inputs` shipped in `miden-client` 0.16.1 only and were deliberately not carried forward: 0.17 executes a multisig proposal at the chain tip, with the proposal's block added through `block_numbers`, instead of re-executing it at an old block. Code written against 0.16.0 is unaffected.
 :::
 
 ### Summary
@@ -454,16 +454,6 @@ let request = TransactionRequestBuilder::new()
 | --- | --- | --- |
 | ``error[E0599]: no variant, associated function, or constant named `Prefetched` found for enum `ForeignAccount` `` | Removed | Declare the account as public or private. |
 | ``error[E0599]: no method named `get_foreign_account_inputs` found`` | Removed | Execute at the tip. |
-
----
-
-## (Rust) `miden-web3signer-authenticator` has no 0.17 release
-
-:::caution Not in the 0.17 release candidates
-The Web3Signer authenticator crate shipped with `miden-client` 0.16.1. Apart from a `0.0.0`, its only version on crates.io is `0.16.1`; it depends on `miden-protocol` / `miden-tx` 0.16, and is not part of the 0.17 workspace, so it cannot be combined with a 0.17 client. The 0.17 changelog does not mention it.
-:::
-
-Keep ECDSA signing through a Web3Signer instance on 0.16, or implement `TransactionAuthenticator` yourself against 0.17.
 
 ---
 
@@ -980,8 +970,8 @@ const nowOnly = records.filter((r) => isConsumableNow(r, accountIdHex));
 
 ## (Web) Prefetched foreign accounts removed
 
-:::caution 0.16.x-only feature, not in the 0.17 release candidates
-Prefetched foreign accounts came with `miden-client` 0.16.1 and are exposed by Web SDK 0.16.1 through 0.16.3. They are not in the 0.17 release candidates.
+:::caution 0.16.x-only feature, replaced in 0.17
+Prefetched foreign accounts came with `miden-client` 0.16.1 and are exposed by Web SDK 0.16.1 through 0.16.3. 0.17 removes them deliberately, as the Web SDK changelog records, in favour of executing against a recent block or at the tip.
 :::
 
 ### Summary
@@ -1062,10 +1052,6 @@ await raw.createClientWithExternalKeystore(nodeUrl, noteTransportUrl, seed, stor
 ```
 
 New in 0.17, no migration needed: `client.feeFaucetId()`, `ClientOptions.feeFaucetId`, `MidenConfig.feeFaucetId`, the `feeAwareTransactionRequestBuilder` options, `TransactionRequestBuilder.withBlockNumbers()`, `TransactionRequest.blockNumbers()`, `notes.listConsumable()`, `NoteConsumptionStatus.isConsumableNow()`, the exported `isConsumableNow()`, `compile.component({ libraries })`, `accounts.register()` / `accounts.isAllowed()`, `WebClient.registerAccount` / `isAccountAllowed`, `RpcClient.registerAccount` / `isAccountAllowed`, `AccountVaultDelta.numAssets()`, `FaucetType`, `MultisigAuthOptions` and `RegisterAccountOptions`.
-
-:::caution The Web SDK 0.16.3 asset API is not in the 0.17 release candidates
-Web SDK 0.16.3 was released after the 0.17 line branched, and its asset additions are not in 0.17.0-rc.4: `VaultAsset.fungible(...)` / `VaultAsset.nonFungible({ key, value })`, `NonFungibleAsset`, `AssetVault.assets()` / `nonFungibleAssets()`, `NoteAssets.assets()` / `nonFungibleAssets()`, and `NoteAssets` accepting `VaultAsset | FungibleAsset | NonFungibleAsset`. 0.16.3 also made invalid note asset lists throw catchable errors; in 0.17.0-rc.4 `NoteAssets` takes `FungibleAsset[]` only, and a duplicate or seventeenth asset traps the WASM instance again. Code written against 0.16.3's asset API fails with `'"@miden-sdk/miden-sdk"' has no exported member named 'VaultAsset'. Did you mean 'JsVaultAsset'?` (TS2724); use `FungibleAsset`.
-:::
 
 ---
 

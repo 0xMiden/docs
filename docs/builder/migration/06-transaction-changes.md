@@ -7,7 +7,7 @@ description: "The fee asset moves into ProtocolConfig, multisig binds a caller-c
 # Transaction Changes
 
 :::warning Breaking Change
-The block header no longer names the fee faucet: it commits to a new **`ProtocolConfig`**, which every `DataStore` and every `TransactionInputs::new` call must now supply. Multisig accounts need a **`MultisigAuthArgs`** preimage on every chain, fee-free ones included, and bind a caller-chosen block, so the 0.16 `ChainAnchor` pattern for multisig is replaced by executing at the tip. Multisig code written for 0.16 compiles unchanged and fails at run time. Fees must be paid in the native fee asset at rate 1/1, and `AuthMultisigSmart` pays no fee at all.
+The block header no longer names the fee faucet: it commits to a new **`ProtocolConfig`**, which every `DataStore` and every `TransactionInputs::new` call must now supply. Multisig accounts need a **`MultisigAuthArgs`** preimage on every chain, fee-free ones included, and bind a caller-chosen block, so the 0.16 `ChainAnchor` pattern for multisig is replaced by executing at the tip. Multisig code written for 0.16 compiles unchanged and fails at run time. Fees must be paid in the native fee asset at rate 1/1.
 :::
 
 ## Quick Fix
@@ -449,7 +449,7 @@ let info = FeeConversionInfo::one_to_one(protocol_config.fee_asset_id().faucet_i
 ## Fee features from 0.16.x are not in 0.17
 
 :::caution Not in the 0.17 release candidates
-The 0.16.x release branch gained fee features after 0.17 forked from it. They are not in the 0.17 release candidates, and the 0.17 changelog does not mention their removal. A 0.16.1 user loses them on upgrade.
+The 0.16 line gained these fee features after 0.17 branched, and 0.17 deliberately did not take them over. It pins every standard fee payment to the native fee asset at 1/1 inside `fee::pay_fee`, which makes a separate estimate and bound unnecessary. A 0.16.x user loses the procedures on upgrade.
 :::
 
 | 0.16.1 feature | In 0.17 |
@@ -458,25 +458,14 @@ The 0.16.x release branch gained fee features after 0.17 forked from it. They ar
 | `fee::assert_fee_bound` | Absent. Superseded: `pay_fee` itself asserts the native fee asset at 1/1, which is tighter than any bound. |
 | `AuthMultisig` pays through `multisig::pay_bounded_fee`, capped at 2x | `pay_bounded_fee` is absent. `AuthMultisig` calls `fee::pay_fee` directly under the 1/1 rule. |
 | `AuthGuardedMultisig` pays the fee, 2x-bounded | Pays through `fee::pay_fee` under the 1/1 rule (0.17.0-rc.1 to rc.6 did not pay; rc.7 restored it). |
-| `AuthMultisigSmart` pays the fee, 2x-bounded | **Does not pay.** See below. |
+| `AuthMultisigSmart` pays the fee, 2x-bounded | Pays under the 1/1 rule, like `AuthMultisig` and `AuthGuardedMultisig`. |
 
 No Rust public item was removed by these; the break is in the MASM procedures and in runtime behaviour. The MASM replacements for each removed procedure are in [MASM Changes](./masm-changes).
-
-### `AuthMultisigSmart` pays no transaction fee
-
-`AuthMultisigSmart` decodes the conversion info from its `MultisigAuthArgs` and drops it: the component does not pay the transaction fee in 0.17. On a chain with a non-zero verification base fee, a 0.17 node rejects its transactions at submission because they carry no TX_FEE output note. Network output notes it creates get no FEE_SPONSORSHIP notes either, so a network target whose fee policy charges for them is not paid.
 
 ### Migration Steps
 
 1. Replace MASM calls to `fee::estimate_fee`, `fee::assert_fee_bound` and `multisig::pay_bounded_fee` with `fee::pay_fee`, which now also takes `serial_number_block`.
 2. Build every fee conversion info with `FeeConversionInfo::one_to_one(<chain fee faucet>)`.
-3. On a fee-charging chain, use `AuthMultisig` or `AuthGuardedMultisig` instead of `AuthMultisigSmart`. On a zero-fee chain, `AuthMultisigSmart` needs only the `MultisigAuthArgs` migration.
-
-### Common Errors
-
-| Error Message | Cause | Solution |
-| --- | --- | --- |
-| `transaction {transaction_id} does not contain a canonical TX_FEE output note` (node) | `AuthMultisigSmart` paid no fee on a fee-charging chain | Switch the auth component. |
 
 ---
 
@@ -549,7 +538,7 @@ The account delta commitment a summary signs changed as well (see [Account Chang
 
 The new MASM procedure `miden::standards::expiration::apply_default` lowers the transaction expiration delta to at most `DEFAULT_EXPIRATION_BLOCK_DELTA = 20` blocks after the reference block. It is not a universal kernel default. It runs in `fee_manager::estimate_note_fee`, and in `policy_manager::invoke_transfer_policy` whenever a transfer policy is set. As a result:
 
-- **Emitting a network note.** Every fee-paying standard auth component prices each network output note by a foreign procedure call to the target's `estimate_note_fee`. Any transaction whose auth component pays through `fee::pay_fee` and that emits a note carrying a `NetworkAccountTarget` attachment therefore expires at most 20 blocks after its reference block, on fee-free chains too: the sponsorship step runs before the fee is computed. `AuthMultisigSmart` never calls `pay_fee`, so its transactions are not capped this way. The foreign call itself is not new (0.16.1 made it too); the expiration it applies is.
+- **Emitting a network note.** Every fee-paying standard auth component prices each network output note by a foreign procedure call to the target's `estimate_note_fee`. Any transaction whose auth component pays through `fee::pay_fee` and that emits a note carrying a `NetworkAccountTarget` attachment therefore expires at most 20 blocks after its reference block, on fee-free chains too: the sponsorship step runs before the fee is computed. The foreign call itself is not new (0.16.1 made it too); the expiration it applies is.
 - **Moving a policy-gated asset.** Any transfer of an asset whose faucet has a transfer policy gets the same cap.
 
 The expiration delta only ever decreases, so the smallest delta wins, and a larger `expiration_delta` on such a transaction has no effect. The expiration block itself is still the last block the transaction may be included in. At 3-second blocks, 20 blocks is about one minute.
@@ -1107,7 +1096,6 @@ The changelog lists validating constructors for `BatchAccountUpdate`, `ProvenBat
 | `block N has been pruned` | Multisig re-executed at an old anchor | Execute at the tip. |
 | `the multisig approval expired at or before the transaction reference block` | Approval window passed | Collect fresh approvals. |
 | `the transaction fee must be paid in the native fee asset at rate 1/1` | Non-native fee asset or rate | `FeeConversionInfo::one_to_one` with the chain's fee faucet. |
-| `transaction {transaction_id} does not contain a canonical TX_FEE output note` | `AuthMultisigSmart` on a fee-charging chain | Use `AuthMultisig` or `AuthGuardedMultisig`. |
 | `error[E0061]: this function takes 7 arguments but 6 arguments were supplied` | `TransactionSummary::new` gained the bound block number | Pass it. |
 | Transaction dropped as expired shortly after submit | It emitted a network note or moved a policy-gated asset (20-block cap) | Submit promptly; sync and retry. |
 | `expected a library package, but the provided package is an executable` | `from_package` on an executable package | Build a library package. |

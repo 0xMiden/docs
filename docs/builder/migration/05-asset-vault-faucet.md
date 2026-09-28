@@ -113,10 +113,6 @@ New: `Asset::value() -> AssetValue`, `Asset::as_fungible() -> Option<FungibleAss
 
 **Web SDK:** this is a Rust-only change. The JavaScript `FungibleAsset` surface is unchanged, but its vault keys change value (see [Asset IDs carry a version](#asset-ids-carry-a-version-vault-keys-commitments-and-note-ids-change)).
 
-:::caution The Web SDK 0.16.3 asset API is not in the 0.17 release candidates
-Web SDK 0.16.3 added `VaultAsset`, `NonFungibleAsset`, `AssetVault.assets()` / `nonFungibleAssets()` and `NoteAssets.assets()` / `nonFungibleAssets()`. None of it is in `0.17.0-rc.4`, where `NoteAssets` takes `FungibleAsset[]` only. See [Client Changes](./client-changes).
-:::
-
 ### Migration Steps
 
 1. Replace every `match asset { Asset::Fungible(f) => .., Asset::NonFungible(nf) => .. }` with `if let Some(f) = asset.as_fungible() { .. } else { .. }`, or branch on `asset.is_fungible()`.

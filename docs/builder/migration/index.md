@@ -116,7 +116,7 @@ Big themes in 0.17:
 | **Verification can return `Ok` with work outstanding** | The free `verify` is gone. `Verifier::new().verify(&claim, &proof)` returns a `VerificationOutcome`, and transaction proofs defer their precompile claims, so check `is_complete()`. `ProvingOptions` became a `Prover`. |
 | **Account and note files moved to `miden-objects`** | `AccountFile` and `NoteFile` live in the new `miden-objects` crate and are Protobuf-encoded. 0.16 `.mac` / `.mno` files and Web export bytes do not load. |
 | **Network accounts and network notes are stricter** | `AuthNetworkAccount::new` installs `BasicWallet` and allowlists P2ID, a network account cannot be deployed by an empty transaction and must use the chain's fee asset, and emitting a network note caps the transaction's expiration at 20 blocks. |
-| **Some 0.16.x features are not in the 0.17 rcs** | Protocol `0.16.0` and `0.16.1`, client `0.16.1` and Web SDK `0.16.3` are not ancestors of the 0.17 release candidates. The 0.16.x fee helpers, `AuthMultisigSmart` fee payment, prefetched foreign accounts, `miden-web3signer-authenticator` and the 0.16.3 Web asset API are absent. |
+| **Two 0.16.x additions are replaced** | The 0.16.x fee helpers (`fee::estimate_fee`, `fee::assert_fee_bound`, `multisig::pay_bounded_fee`) and the 0.16.1 prefetched foreign accounts are replaced by 0.17 designs: native 1/1 fee payment inside `fee::pay_fee`, and execution at the chain tip. |
 
 If you only skim a few sections, skim **Transaction Changes**, **Client Changes**, **MASM Changes**, and **Note Changes**.
 
@@ -182,7 +182,7 @@ Complete these steps to verify your migration:
 - [ ] Recreate the CLI's `.miden/packages`
 - [ ] Supply a `ProtocolConfig` wherever you build `TransactionInputs` or implement `DataStore`; in the Web SDK read the fee faucet with `client.feeFaucetId()`
 - [ ] Pay fees in the native fee asset at rate 1/1
-- [ ] For multisig accounts, build `MultisigAuthArgs`, add the bound block with `block_numbers`, and execute at the tip rather than at a shared `ChainAnchor`; on a fee-charging chain use `AuthMultisig` or `AuthGuardedMultisig`, since `AuthMultisigSmart` pays no fee
+- [ ] For multisig accounts, build `MultisigAuthArgs`, add the bound block with `block_numbers`, and execute at the tip rather than at a shared `ChainAnchor`
 - [ ] Drop the `serde` feature of `miden-core` and `bus-debugger` of `miden-processor`, serialize `Word` and Merkle types without serde, and replace `SmtForest` with `LargeSmtForest`
 - [ ] Replace `match` arms on `Asset::Fungible` / `Asset::NonFungible` and uses of `FungibleAssetDelta` / `fungible()`
 - [ ] Recompute every hard-coded account ID, code commitment, asset ID, note ID, P2ID recipient and standard note script root

@@ -116,7 +116,6 @@ The dependency changes that fail loudly are the removed `serde` and `bus-debugge
 | Plonky3 `p3-*` (direct users only) | 0.6 | 0.7 |
 | `rand`, `rand_chacha` | 0.10 | 0.10 *(unchanged)* |
 | `miden-client-web`, `miden-idxdb-store` (Rust crates of the Web SDK) | 0.16.3 | 0.17.0-rc.4 |
-| `miden-web3signer-authenticator` | 0.16.1 | *no 0.17 release* |
 
 | npm package | v0.16 | v0.17 |
 |-------------|-------|-------|
@@ -147,11 +146,10 @@ miden-standards = { linkage = "static",  version = "0.17.0" }
 - **npm:** the `latest` dist-tag still points at `0.16.3`, so `npm install @miden-sdk/miden-sdk` installs 0.16. The rcs are on the `next` dist-tag, but `npm install <package>@next` saves `^0.17.0-rc.4`, which also accepts later rcs. Install with `npm install --save-exact <package>@0.17.0-rc.4` instead. A range such as `^0.17.0` matches no rc.
 :::
 
-:::caution 0.16.x features that are not in the 0.17 release candidates
-Protocol `v0.16.0` and `v0.16.1`, client `v0.16.1` and Web SDK `v0.16.3` are not ancestors of the 0.17 release candidates, and several features of the 0.16 line are not in the 0.17 rcs:
-- protocol: from 0.16.0, `fee::estimate_fee`, `fee::assert_fee_bound` and the related fee helpers, and fee payment by `AuthMultisigSmart`; from 0.16.1, `multisig::pay_bounded_fee` (see [Transaction Changes](./transaction-changes));
-- client (0.16.1): `ForeignAccount::Prefetched`, `Client::get_foreign_account_inputs`, and the `miden-web3signer-authenticator` crate (see [Client Changes](./client-changes));
-- Web SDK (0.16.3): the asset API (`VaultAsset`, `NonFungibleAsset`, `AssetVault.assets()` / `nonFungibleAssets()`, `NoteAssets.assets()` / `nonFungibleAssets()`; see [Client Changes](./client-changes)).
+:::caution 0.16.x features replaced in 0.17
+Two features released on the 0.16 line after 0.17 branched were deliberately replaced by a 0.17 design:
+- **Protocol 0.16.0 / 0.16.1:** `fee::estimate_fee`, `fee::assert_fee_bound`, `multisig::pay_bounded_fee` and the related fee helpers. 0.17 pins every standard fee payment to the native fee asset at 1/1 inside `fee::pay_fee`, so a separate estimate and bound are no longer needed (see [Transaction Changes](./transaction-changes)).
+- **Client 0.16.1:** `ForeignAccount::Prefetched` and `Client::get_foreign_account_inputs`, and their Web SDK counterparts. 0.17 executes multisig proposals at the chain tip instead of re-executing them at an old block (see [Client Changes](./client-changes)).
 :::
 
 ---
