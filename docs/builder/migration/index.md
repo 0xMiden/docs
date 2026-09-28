@@ -14,11 +14,7 @@ This guide covers all breaking changes you need to migrate an application to Mid
 - writing Rust smart contracts with the `miden` SDK
 - interacting with storage, auth, or RPCs
 
-this document is for you. It folds together the breaking changes from the protocol crates (`0.16.1` → `0.17.0-rc.7`), the VM crates (`miden-vm` and `miden-crypto`, `0.29.2` → `0.33.0`), `miden-client` (`0.16.1` → `0.17.0-rc.4`), the Web SDK (`@miden-sdk/*` `0.16.3` → `0.17.0-rc.4`), and the `miden` Rust contract SDK / compiler (`0.14` → `0.15.0-rc.3`, `midenc` `0.10` → `0.11.0-rc.3`).
-
-:::info Written against the 0.17 release candidates
-0.17 is published as release candidates: protocol `0.17.0-rc.7`, client and Web SDK `0.17.0-rc.4`, contract SDK `0.15.0-rc.3`. Every API, signature, flag and error string in this guide was checked against source at those tags. Changes already merged after them are marked **Queued after 0.17.0-rc.7** where they matter.
-:::
+this document is for you. It folds together the breaking changes from the protocol crates (`0.16.1` → `0.17.0`), the VM crates (`miden-vm` and `miden-crypto`, `0.29.2` → `0.33.0`), `miden-client` (`0.16.1` → `0.17.0`), the Web SDK (`@miden-sdk/*` `0.16.3` → `0.17.0`), and the `miden` Rust contract SDK / compiler (`0.14` → `0.15.0`, `midenc` `0.10` → `0.11.0`).
 
 ---
 
@@ -43,13 +39,13 @@ miden-verifier            = "0.29.2"
 miden-crypto              = "0.29.2"
 
 # With these
-miden-client              = "=0.17.0-rc.4"
-miden-client-sqlite-store = "=0.17.0-rc.4"
-miden-protocol            = "=0.17.0-rc.7"
-miden-standards           = "=0.17.0-rc.7"
-miden-tx                  = "=0.17.0-rc.7"
-miden-tx-batch            = "=0.17.0-rc.7"
-miden-objects             = "=0.17.0-rc.7"   # new: only for AccountFile / NoteFile or the Protobuf encodings
+miden-client              = "0.17.0"
+miden-client-sqlite-store = "0.17.0"
+miden-protocol            = "0.17.0"
+miden-standards           = "0.17.0"
+miden-tx                  = "0.17.0"
+miden-tx-batch            = "0.17.0"
+miden-objects             = "0.17.0"   # new: only for AccountFile / NoteFile or the Protobuf encodings
 miden-assembly            = "0.33.0"
 miden-core                = "0.33.0"
 miden-core-lib            = "0.33.0"
@@ -61,8 +57,8 @@ miden-crypto              = "0.33.0"
 
 ```json title="package.json (Web SDK)"
 {
-  "@miden-sdk/miden-sdk": "0.17.0-rc.4",
-  "@miden-sdk/react": "0.17.0-rc.4"
+  "@miden-sdk/miden-sdk": "0.17.0",
+  "@miden-sdk/react": "0.17.0"
 }
 ```
 
@@ -70,21 +66,17 @@ Then run:
 
 ```bash
 cargo update && cargo build
-npm install --save-exact @miden-sdk/miden-sdk@0.17.0-rc.4 @miden-sdk/react@0.17.0-rc.4
+npm install @miden-sdk/miden-sdk@0.17.0 @miden-sdk/react@0.17.0
 ```
 
 If you encounter errors, continue reading for detailed migration steps.
-
-:::warning Name the pre-release, and pin it exactly
-A `"0.17"` Cargo requirement does not match `0.17.0-rc.4`, and npm's `latest` dist-tag still points at `0.16.3`, so a plain `npm install` gets 0.16. The release candidates also broke APIs between each other, so pin the exact rc with `=`. See [Imports & Dependencies](./imports-dependencies).
-:::
 
 :::danger 0.16 artifacts, stores and exports do not carry over
 Packages move to format `7.0.0`, 0.16 proofs do not decode, and account and note files are now Protobuf, so **files exported by 0.16 do not import into 0.17**. A 0.16 SQLite store opens and then fails with `failed to deserialize data from the store`. The IndexedDB store deletes its whole database on first open, and **the default browser keystore keeps its secret keys in that database**, so back the keys up on 0.16.3 first (see [Client Changes](./client-changes#store-every-016-sqlite-store-must-be-recreated)). Consume private notes before you upgrade, re-assemble every package, and re-sync into a fresh store. See [0.16 artifacts do not carry over](./imports-dependencies#016-artifacts-do-not-carry-over).
 :::
 
 :::warning Upgrade the client, node, remote prover and note transport together
-A `0.17.0-rc.4` client is accepted only by a `0.17.0-rc` node. A 0.16 node rejects it at the version check, and a stable `0.17.0` node will reject rc clients too. The remote prover wire format and the note transport service changed as well: point the note transport endpoint at a 0.17 service together with the RPC endpoint, or private notes silently stop arriving while `sync` keeps succeeding. See [Client Changes](./client-changes#node-client-node-remote-prover-and-note-transport-must-all-be-017).
+A `0.17.0` client is accepted only by a 0.17 node. A 0.16 node rejects it at the version check. The remote prover wire format and the note transport service changed as well: point the note transport endpoint at a 0.17 service together with the RPC endpoint, or private notes silently stop arriving while `sync` keeps succeeding. See [Client Changes](./client-changes#node-client-node-remote-prover-and-note-transport-must-all-be-017).
 :::
 
 ---
@@ -128,23 +120,19 @@ If you only skim a few sections, skim **Transaction Changes**, **Client Changes*
 |-----------|----------|-------------|
 | Miden VM crates | 0.33 | 0.33.0 |
 | miden-crypto | 0.33 | 0.33.0 |
-| miden-protocol | 0.17.0-rc.7 | 0.17.0-rc.7 |
-| miden-standards | 0.17.0-rc.7 | 0.17.0-rc.7 |
-| miden-client | 0.17.0-rc.4 | 0.17.0-rc.4 |
-| Web SDK (`@miden-sdk/*`) | 0.17.0-rc.4 | 0.17.0-rc.4 |
-| Node | 0.17.0-rc | 0.17.0-rc.3 |
-| `miden` contract SDK | 0.15.0-rc.3 | 0.15.0-rc.3 |
-| `midenc` / `cargo-miden` | 0.11.0-rc.3 | 0.11.0-rc.3 |
+| miden-protocol | 0.17.0 | 0.17.0 |
+| miden-standards | 0.17.0 | 0.17.0 |
+| miden-client | 0.17.0 | 0.17.0 |
+| Web SDK (`@miden-sdk/*`) | 0.17.0 | 0.17.0 |
+| Node | 0.17.0 | 0.17.0 |
+| `miden` contract SDK | 0.15.0 | 0.15.0 |
+| `midenc` / `cargo-miden` | 0.11.0 | 0.11.0 |
 | Rust (client / protocol) | 1.98.1+ | 1.98.1 |
 | Rust (VM) | 1.96.1+ | 1.98.1 |
 | Rust (contract SDK / compiler) | 1.99+ | `nightly-2026-09-01` |
 
 :::note The contract toolchain no longer lags
-Compiler `0.11.0-rc.3` pins protocol `=0.17.0-rc.7` and VM `0.33.0`, the same set the client uses, so the 0.16 version skew between the contract toolchain and the client is gone at these release candidates.
-:::
-
-:::note Queued after 0.17.0-rc.7
-Protocol `next` already builds on **VM 0.34.0**. 0.33 and 0.34 proofs reject each other, so clients, remote provers and nodes will move to 0.34 together, and the protocol kernel procedure offsets shift again, so artifacts built against rc.7 must be rebuilt once more. See [Imports & Dependencies](./imports-dependencies#016-artifacts-do-not-carry-over).
+Compiler `0.11.0` pins protocol `0.17.0` and VM `0.33.0`, the same set the client uses, so the 0.16 version skew between the contract toolchain and the client is gone.
 :::
 
 ---
@@ -155,7 +143,7 @@ Work through these sections in order for a complete migration:
 
 | Section | Topics |
 |---------|--------|
-| [1. Imports & Dependencies](./imports-dependencies) | Crate bumps, VM 0.29 → 0.33, the new `miden-objects` crate, pinning release candidates, artifacts that do not carry over |
+| [1. Imports & Dependencies](./imports-dependencies) | Crate bumps, VM 0.29 → 0.33, the new `miden-objects` crate, artifacts that do not carry over |
 | [2. Hashing & Crypto Changes](./hashing-crypto) | `serde` removed from `Word` and Merkle types, `SmtForest` → `LargeSmtForest`, `PartialSmt` bytes, stricter decoders |
 | [3. Account Changes](./account-changes) | Versioned accounts, sorted procedures, network accounts, `from_package` by value, `StorageMap`, RBAC and `ApproverSet` |
 | [4. Note Changes](./note-changes) | P2ID with four storage items, new standard script roots, config notes, TX_FEE notes keeping their assets |
@@ -172,12 +160,12 @@ Work through these sections in order for a complete migration:
 
 Complete these steps to verify your migration:
 
-- [ ] Bump all Miden crates per section 1, pinning the release candidates with `=`
-- [ ] Pin every `@miden-sdk/*` package to exactly `0.17.0-rc.4` (`npm install --save-exact`) and bump them together
+- [ ] Bump all Miden crates per section 1
+- [ ] Bump every `@miden-sdk/*` package to `0.17.0` together
 - [ ] **Consume private notes on 0.16 before upgrading**: 0.16 account and note exports do not import into 0.17
 - [ ] **Back up browser-keystore secret keys on 0.16.3**: the 0.17 IndexedDB reset deletes them
 - [ ] **Delete and recreate your local SQLite store**, then re-sync (the IndexedDB store resets itself)
-- [ ] **Upgrade the client, node, remote prover and note transport service together**, switch both the RPC and the note transport endpoint, and keep rc clients on rc nodes
+- [ ] **Upgrade the client, node, remote prover and note transport service together**, and switch both the RPC and the note transport endpoint
 - [ ] Re-assemble every `.masp` package and rebuild every contract with `cargo-miden` 0.11; discard proofs and serialized requests from 0.16
 - [ ] Recreate the CLI's `.miden/packages`
 - [ ] Supply a `ProtocolConfig` wherever you build `TransactionInputs` or implement `DataStore`; in the Web SDK read the fee faucet with `client.feeFaucetId()`

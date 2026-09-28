@@ -125,7 +125,7 @@ Other `BlockHeader` accessor changes ride along: `validator_keys()` became `vali
 **Clients:** the Rust client and the Web SDK receive the config from the node when they sync. The Rust client exposes it through `Client::get_protocol_config`, and the Web SDK exposes the fee faucet through `client.feeFaucetId()`. See [Client Changes](./client-changes). **MASM:** `tx::get_fee_faucet_id` was replaced by `tx::get_fee_asset_id`, which returns the fee `AssetId`; see [MASM Changes](./masm-changes).
 
 :::caution A `ProtocolConfig` is tied to the exact protocol build
-`ProtocolConfig::current(fee_asset_id)` hashes the transaction kernel's main procedure, every kernel procedure root and the batch kernel's main procedure into the commitment the block header carries. A `DataStore` or client that builds its config with a different protocol release than the node computes a different commitment, and execution fails with a config mismatch even when the fee faucet is right. The block kernel and proof-verification entries are placeholders today, so expect the commitment to change again when they are filled in. Treat every protocol upgrade, an rc bump included, as a config change.
+`ProtocolConfig::current(fee_asset_id)` hashes the transaction kernel's main procedure, every kernel procedure root and the batch kernel's main procedure into the commitment the block header carries. A `DataStore` or client that builds its config with a different protocol release than the node computes a different commitment, and execution fails with a config mismatch even when the fee faucet is right. The block kernel and proof-verification entries are placeholders today, so expect the commitment to change again when they are filled in. Treat every protocol upgrade as a config change.
 :::
 
 ### Migration Steps
@@ -199,7 +199,7 @@ let request = TransactionRequestBuilder::new()
 ```
 
 :::note `fee_conversion_salt`, not `fee_conversion_info`
-The 0.16 guide showed `TransactionRequestBuilder::fee_conversion_info(info, salt)`. That method existed only in 0.16.0-rc.1 to rc.3: 0.16.0-rc.4 onward, 0.16.0 and 0.16.1 have `fee_conversion_salt(salt)`, and the client builds the native `FeeConversionInfo` itself. 0.17 keeps `fee_conversion_salt`; for a multisig account it now commits a preimage the component cannot read.
+The 0.16 guide showed `TransactionRequestBuilder::fee_conversion_info(info, salt)`; 0.16.0 and 0.16.1 have `fee_conversion_salt(salt)`, and the client builds the native `FeeConversionInfo` itself. 0.17 keeps `fee_conversion_salt`; for a multisig account it now commits a preimage the component cannot read.
 :::
 
 ### Affected Code (Rust, `miden-tx`)
@@ -393,7 +393,7 @@ The bound block arrives from the proposer. To check that it is a real block, com
 3. Sync each party to at least the bound block (`Math.max(...request.blockNumbers())` in the Web SDK) before preview or submit.
 4. Make sure every execution's partial blockchain tracks the bound block: `block_numbers([bound_block])` (Rust client), `withBlockNumbers([boundBlock])` (Web, hand-built requests), or a `DataStore` that includes it (`miden-tx`).
 5. If you used the transaction expiration delta to bound approvals, switch to the approval expiration delta.
-6. Re-serialize stored requests. `TransactionRequest` bytes now always carry the block numbers first, so bytes from 0.16 or from 0.17.0-rc.3 and earlier do not deserialize. A dApp and its wallet exchanging a `CustomTransaction` through the wallet adapter must both be on 0.17.0-rc.4 or later.
+6. Re-serialize stored requests. `TransactionRequest` bytes now always carry the block numbers first, so bytes from 0.16 do not deserialize. A dApp and its wallet exchanging a `CustomTransaction` through the wallet adapter must both be on 0.17.
 7. Signing flows that reconstruct the summary (co-signers, guardians) must use the same bound block, salt, approval expiration and conversion info the proposer used.
 8. If you precompute the TX_FEE note of a multisig transaction, pass the bound block to `TxFeeNote::derive_serial_number(sender, initial_nonce, serial_number_block)` (the parameter was `ref_block_num`).
 
@@ -448,7 +448,7 @@ let info = FeeConversionInfo::one_to_one(protocol_config.fee_asset_id().faucet_i
 
 ## Fee features from 0.16.x are not in 0.17
 
-:::caution Not in the 0.17 release candidates
+:::caution Not in 0.17
 The 0.16 line gained these fee features after 0.17 branched, and 0.17 deliberately did not take them over. It pins every standard fee payment to the native fee asset at 1/1 inside `fee::pay_fee`, which makes a separate estimate and bound unnecessary. A 0.16.x user loses the procedures on upgrade.
 :::
 
@@ -457,7 +457,7 @@ The 0.16 line gained these fee features after 0.17 branched, and 0.17 deliberate
 | `fee::estimate_fee`, `fee::pay_network_note_sponsorships`, `fee::resolve_payment_info`, `fee::pay_estimated_fee`, `fees::estimate_network_note_sponsorships` | Absent. `fee::pay_fee` does sponsorship, fee computation and payment in one procedure; `fee::apply_cycle_margins` takes one argument instead of two. |
 | `fee::assert_fee_bound` | Absent. Superseded: `pay_fee` itself asserts the native fee asset at 1/1, which is tighter than any bound. |
 | `AuthMultisig` pays through `multisig::pay_bounded_fee`, capped at 2x | `pay_bounded_fee` is absent. `AuthMultisig` calls `fee::pay_fee` directly under the 1/1 rule. |
-| `AuthGuardedMultisig` pays the fee, 2x-bounded | Pays through `fee::pay_fee` under the 1/1 rule (0.17.0-rc.1 to rc.6 did not pay; rc.7 restored it). |
+| `AuthGuardedMultisig` pays the fee, 2x-bounded | Pays through `fee::pay_fee` under the 1/1 rule. |
 | `AuthMultisigSmart` pays the fee, 2x-bounded | Pays under the 1/1 rule, like `AuthMultisig` and `AuthGuardedMultisig`. |
 
 No Rust public item was removed by these; the break is in the MASM procedures and in runtime behaviour. The MASM replacements for each removed procedure are in [MASM Changes](./masm-changes).
@@ -544,7 +544,7 @@ The new MASM procedure `miden::standards::expiration::apply_default` lowers the 
 The expiration delta only ever decreases, so the smallest delta wins, and a larger `expiration_delta` on such a transaction has no effect. The expiration block itself is still the last block the transaction may be included in. At 3-second blocks, 20 blocks is about one minute.
 
 :::note The changelog splits the cap across two entries
-The 0.17.0-rc.5 entry says the 20-block default applies to "the standard allowlist and blocklist transfer policies and the fee manager's `estimate_note_fee`". The cap in `policy_manager::invoke_transfer_policy`, which covers every configured transfer policy and so every transfer of a policy-gated asset, is a separate entry, "Bounded transfer policy dispatch to the reference block", filed under the `v0.16.0 (2026-08-06)` heading (see the note at the top of this page). That entry does not mention the 20-block figure.
+The 0.17.0 entry says the 20-block default applies to "the standard allowlist and blocklist transfer policies and the fee manager's `estimate_note_fee`". The cap in `policy_manager::invoke_transfer_policy`, which covers every configured transfer policy and so every transfer of a policy-gated asset, is a separate entry, "Bounded transfer policy dispatch to the reference block", filed under the `v0.16.0 (2026-08-06)` heading (see the note at the top of this page). That entry does not mention the 20-block figure.
 :::
 
 ### Web SDK and React

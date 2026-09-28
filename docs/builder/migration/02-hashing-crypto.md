@@ -444,16 +444,6 @@ The VM changelog marks "Added `Mmr::from_nodes_unchecked`" as `[BREAKING]`. Addi
 
 ---
 
-## Random helpers and Falcon RNGs (queued after 0.17.0-rc.7)
-
-:::note Queued after 0.17.0-rc.7
-These land in VM 0.34, which protocol `next` already uses. They are not in the 0.17.0-rc.7 line.
-- **Random helpers removed.** In `miden_crypto::rand`, the `Randomizable` trait, `random_felt()`, `random_word()` and `test_utils::{rand_value, rand_array, rand_vector, prng_value, prng_array, prng_vector, ContinuousRng}` are gone. `Word` implements `StandardUniform`, so use the `rand` crate's `rand::random::<T>()` (add `rand = "0.10"`) and, for seeded values, `ChaCha20Rng::from_seed(seed).random::<T>()` (add `rand_chacha = "0.10"` and import `rand::{RngExt, SeedableRng}`). `miden_crypto::rand::test_utils::seeded_rng` remains but needs the `testing` feature instead of `std`. Regenerate golden test values derived from a seed after switching: the new sampling path may not reproduce them.
-- **Falcon needs a `CryptoRng`.** `falcon512_poseidon2::SecretKey::with_rng` and `sign_with_rng` take `R: CryptoRng + Rng`, and Miden's `RandomCoin` (like any `FeltRng`) is not a `CryptoRng`. Pass `rand::rng()`, `ChaCha20Rng` or `StdRng`, or use `SecretKey::new()`. A different RNG yields a different key for the same seed, so if you re-derive Falcon keys from a `RandomCoin` seed, persist the key bytes (`sk.to_bytes()`) before upgrading. Deterministic `SecretKey::sign(message)` is unaffected. On the protocol side, `AuthSecretKey::new_falcon512_poseidon2_with_rng` gains the same bound.
-:::
-
----
-
 ## Other crypto changes
 
 - `miden-crypto/serde` now covers only the byte-digest type. Keep it only if you serialize Blake3, SHA or Keccak digests with serde.

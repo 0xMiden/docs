@@ -7,7 +7,7 @@ description: "0.16 packages and proofs no longer load, Verifier::verify returns 
 # VM & Assembler Changes
 
 :::warning Breaking Change
-The VM moves **0.29.2 → 0.33.0** (the line protocol `0.17.0-rc.7` pins). Nothing built or proven with 0.16 loads: packages move to format `7.0.0` and 0.16 proofs do not decode. The free `verify` is gone: `Verifier::new().verify(&claim, &proof)` returns a `VerificationOutcome`, and **`Ok` can still mean "precompile work outstanding"**. `ProvingOptions` and the free `execute` / `prove` functions give way to `Prover` and `FastProcessor`, and `AdviceInputs` makes its fields private.
+The VM moves **0.29.2 → 0.33.0** (the line protocol `0.17.0` pins). Nothing built or proven with 0.16 loads: packages move to format `7.0.0` and 0.16 proofs do not decode. The free `verify` is gone: `Verifier::new().verify(&claim, &proof)` returns a `VerificationOutcome`, and **`Ok` can still mean "precompile work outstanding"**. `ProvingOptions` and the free `execute` / `prove` functions give way to `Prover` and `FastProcessor`, and `AdviceInputs` makes its fields private.
 :::
 
 For the MASM side of this VM line (`miden::core::precompiles::*`, the `sys::vm::verify_proof` rename, the return of `trace`, and core-library procedures whose MAST roots moved), see [MASM Changes](./masm-changes). For the protocol types that wrap these APIs (`LocalTransactionProver`, `TransactionVerifier`, `ProgramExecutor`), see [Transaction Changes](./transaction-changes).
@@ -81,10 +81,6 @@ let pkg = Package::read_from_bytes(&old_masp)?;
 | `invalid value: unsupported debug_info version: 2, expected 3` | Standalone 0.16 debug-info bytes read with the `PackageDebugInfo` readers (a whole 0.16 package fails the package version check first) | Re-assemble the package. |
 | `procedure with root digest <root> could not be found` | A call into a core-library procedure whose root changed | Re-assemble against the current core library. |
 
-:::note Queued after 0.17.0-rc.7
-Protocol `next` pins VM 0.34.0. It reads 0.33 packages, but their dependency record names core library `0.33.0`, so package-level resolution will not match them to core library 0.34, and calls into core procedures whose roots changed in 0.34 fail at execution. Rebuild packages again on that upgrade.
-:::
-
 ---
 
 ## 0.16 proofs do not decode
@@ -112,10 +108,6 @@ let proof = ExecutionProof::read_from_bytes(&old_proof_bytes)?;
 | Error Message | Cause | Solution |
 | --- | --- | --- |
 | `invalid value: unsupported execution proof format {format}` | Proof bytes from VM 0.29 to 0.32 (0.16 included) | Regenerate the proof with the current VM. |
-
-:::note Queued after 0.17.0-rc.7
-VM 0.34 (protocol `next`) keeps format `2` but changes the verifier roots and the AIR relation digest. A 0.33 proof decodes under 0.34, and `Verifier::verify` rejects it with `execution proof does not name a compatible VM verifier` before any STARK work (the VM roots are checked first, and both root sets change); a 0.34 proof at a 0.33 verifier fails the same way. A client on protocol `0.17.0-rc.7` cannot submit proven transactions to a node built from `next`. Treat 0.33 → 0.34 as a coordinated upgrade of clients, remote provers and nodes.
-:::
 
 ---
 
@@ -371,10 +363,6 @@ miden-vm prove program.masm --max-prover-memory 32Gi
 
 :::note Changelog correction
 The changelog says the prover's trace-row cap was "replaced" with a memory budget. The shipped code keeps the 2^29 cap and adds the budget, which derives further row caps of its own. Some upstream descriptions of this change also name `ExecutionOptions::max_prover_memory_bytes`. No such method exists in any release: the budget is `Prover::with_max_prover_memory_bytes` (CLI `--max-prover-memory`), plus an explicit `max_prover_memory_bytes: u64` argument on `execute_and_build_trace_sync` and `build_trace_with_budget`.
-:::
-
-:::note Queued after 0.17.0-rc.7
-VM 0.34 adds a separate budget for the precompile STARK: `Prover::with_max_precompile_prover_memory_bytes` (default 64 GiB). `PrecompileProvingError` gains `MemoryEstimateOverflow` and `MemoryBudgetExceeded { estimated_bytes, budget_bytes }`, and it is not `#[non_exhaustive]`, so exhaustive matches stop compiling. An oversized batch fails with `estimated precompile prover memory of {estimated_bytes} bytes exceeds the budget of {budget_bytes} bytes`.
 :::
 
 ---
@@ -1240,13 +1228,6 @@ miden-vm bundle --version 1.2.0 --release ./src/mod.masm
 - **Merkle depth must be 1 to 64 for MPVERIFY / MRUPDATE (`mtree_verify`, `mtree_get`, `mtree_set`).** Both operations now reject a depth of 0 or above 64 before they fetch a Merkle path from the advice provider, with `OperationError::MerkleDepthOutOfRange` (`Merkle tree depth must be in the range 1..=64, but was {depth}`). Because the check runs first, a rejected MRUPDATE no longer mutates the advice Merkle store. `mtree_verify` is a bare MPVERIFY, so it rejects any out-of-range depth this way. `mtree_get` and `mtree_set` first fetch the node from the advice provider: a depth of 0 on a root in the store reaches the depth check, but a depth above 64 fails that lookup first with `provided node index {index} is out of bounds for a merkle tree node at depth {depth}`. The path the advice provider returns must also have exactly `depth` nodes, or execution fails with `invalid crypto operation: Merkle path length {path_len} does not match expected depth {depth}`. MASM authors are affected too; see [MASM Changes](./masm-changes#instruction-and-core-library-behaviour-changes).
 - **`FastProcessor` caches loaded MAST forests.** Within one execution, the first time an external call loads a MAST forest from the host, `FastProcessor` caches it under every procedure digest local to that forest and merges its advice map once. `MastForestStore::get` / `get_mast_forest` is therefore called less often: hosts that count or log lookups, or return a different forest for the same digest during one execution, see different behaviour. If two forests both contain a digest, the forest loaded first wins for the rest of the execution, including its package debug info.
 - **Execution witnesses serialize for remote proving.** `ExecutionWitness` implements `Serializable`. `ExecutionWitness::read_from_bytes` treats input as untrusted: it applies a budget proportional to the input size and rejects trailing bytes (`invalid value: extra bytes after execution witness payload`), but it does not check the sparse MAST replay against a source forest. `read_from_bytes_trusted` is permissive and meant only for bytes you produced. Only wire version `2` is accepted.
-
-:::note Queued after 0.17.0-rc.7
-Two more VM 0.34 breaks for protocol `next`:
-
-- **`AdviceMap` deserialization rejects repeated keys.** Reading an `AdviceMap` (and therefore `AdviceInputs`, and anything that embeds them) from bytes fails with `invalid value: duplicate advice map key in serialized payload` if the same key appears twice; before, the last value silently won. `write_into` never produces duplicates, so only hand-built or tampered payloads are affected.
-- **Low-level STARK prover APIs.** `ProverInstance::new` takes the `ProverStatement` by value, and `ProverInstance::prove` consumes the instance and returns `(StarkOutput, Statement)`; `prover_statement()` was removed and `into_statement()` added. `LmcsTree::prove_batch` and `prove_lifted_batch` take the `Lmcs` configuration as a new first argument. In `miden-air`, `MainTrace::is_call_flag` and `is_syscall_flag` were replaced by `restores_caller_frame_flag`. Only code that drives `miden_crypto::stark` / `miden-lifted-stark` directly, or reads `MainTrace` columns, is affected.
-:::
 
 ---
 

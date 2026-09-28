@@ -1,13 +1,13 @@
 ---
 sidebar_position: 1
 title: "Imports & Dependencies"
-description: "Protocol 0.17.0-rc.7, client and Web SDK 0.17.0-rc.4, the VM 0.29 to 0.33 jump, the new miden-objects crate, and the 0.16 artifacts that do not carry over"
+description: "Protocol, client and Web SDK 0.17.0, the VM 0.29 to 0.33 jump, the new miden-objects crate, and the 0.16 artifacts that do not carry over"
 ---
 
 # Imports & Dependencies
 
 :::warning Breaking Change
-The protocol crates move from 0.16.1 to **0.17.0-rc.7**, `miden-client` and the Web SDK to **0.17.0-rc.4**, and the VM crates, `miden-crypto` included, jump **0.29.2 → 0.33.0**. These are release candidates: Cargo and npm select them only when you name the pre-release, and the rcs of this line broke APIs between each other, so pin them exactly. Packages, proofs, local stores, and account and note files written by 0.16 do not load in 0.17, and a 0.17 client talks only to a 0.17 node.
+The protocol crates, `miden-client` and the Web SDK move to **0.17.0**, and the VM crates, `miden-crypto` included, jump **0.29.2 → 0.33.0**. Packages, proofs, local stores, and account and note files written by 0.16 do not load in 0.17, and a 0.17 client talks only to a 0.17 node.
 :::
 
 ## Quick Fix
@@ -30,14 +30,14 @@ miden-verifier            = "0.29.2"
 miden-crypto              = "0.29.2"
 
 # With these (0.17)
-miden-client              = "=0.17.0-rc.4"
-miden-client-sqlite-store = "=0.17.0-rc.4"
-miden-protocol            = "=0.17.0-rc.7"
-miden-standards           = "=0.17.0-rc.7"
-miden-tx                  = "=0.17.0-rc.7"
-miden-tx-batch            = "=0.17.0-rc.7"
-miden-testing             = "=0.17.0-rc.7"   # dev-dependency
-miden-objects             = "=0.17.0-rc.7"   # new: only for AccountFile / NoteFile or the Protobuf encodings
+miden-client              = "0.17.0"
+miden-client-sqlite-store = "0.17.0"
+miden-protocol            = "0.17.0"
+miden-standards           = "0.17.0"
+miden-tx                  = "0.17.0"
+miden-tx-batch            = "0.17.0"
+miden-testing             = "0.17.0"   # dev-dependency
+miden-objects             = "0.17.0"   # new: only for AccountFile / NoteFile or the Protobuf encodings
 miden-assembly            = "0.33.0"
 miden-core                = "0.33.0"
 miden-core-lib            = "0.33.0"
@@ -49,8 +49,8 @@ miden-crypto              = "0.33.0"
 
 ```json title="package.json (Web SDK)"
 {
-  "@miden-sdk/miden-sdk": "0.17.0-rc.4",
-  "@miden-sdk/react": "0.17.0-rc.4"
+  "@miden-sdk/miden-sdk": "0.17.0",
+  "@miden-sdk/react": "0.17.0"
 }
 ```
 
@@ -58,24 +58,11 @@ Then run:
 
 ```bash
 cargo update && cargo build
-cargo install miden-client-cli --version 0.17.0-rc.4 --locked   # the CLI binary is still `miden-client`
-npm install --save-exact @miden-sdk/miden-sdk@0.17.0-rc.4 @miden-sdk/react@0.17.0-rc.4
+cargo install miden-client-cli --version 0.17.0 --locked   # the CLI binary is still `miden-client`
+npm install @miden-sdk/miden-sdk@0.17.0 @miden-sdk/react@0.17.0
 ```
 
 If you encounter errors, continue reading for detailed migration steps.
-
-:::tip Pin the release candidates exactly
-The protocol crates require their siblings with caret pre-release requirements (`version = "0.17.0-rc.7"`), which Cargo also satisfies with a later `0.17.0-rc.N`, and the rcs broke APIs between each other: `AccountFile` / `NoteFile` moved to `miden-objects` in rc.6, and `AuthGuardedMultisig` started paying the fee in rc.7. The client rcs changed between each other as well: `TransactionRequest` bytes from rc.3 do not deserialize in rc.4. For a reproducible set, pin with `=`:
-
-```toml title="Cargo.toml"
-miden-protocol  = "=0.17.0-rc.7"
-miden-standards = "=0.17.0-rc.7"
-miden-tx        = "=0.17.0-rc.7"
-miden-client    = "=0.17.0-rc.4"
-```
-
-The contract project scaffold's host-side integration crate pins `miden-standards` and `miden-testing` the same way. On npm, use `npm install --save-exact <package>@0.17.0-rc.4`.
-:::
 
 :::danger 0.16 artifacts do not carry over
 Re-assemble every `.masp` package (format `6.0.0` → `7.0.0`), discard stored proofs, and recreate your local store. Do not count on exporting accounts or notes first: files exported by 0.16 do not import into 0.17, so consume private notes before you upgrade. In the browser, back up the default keystore's secret keys on 0.16.3: the IndexedDB reset deletes them. See [0.16 artifacts do not carry over](#016-artifacts-do-not-carry-over).
@@ -85,13 +72,13 @@ Re-assemble every `.masp` package (format `6.0.0` → `7.0.0`), discard stored p
 
 ## Summary
 
-Every layer of the stack moves, and none of it is a stable release yet:
+Every layer of the stack moves:
 
-- The **protocol crates** (`miden-protocol`, `miden-standards`, `miden-tx`, `miden-tx-batch`, `miden-testing`, `miden-block-prover`, `miden-agglayer`) go `0.16.1` → `0.17.0-rc.7`. None was renamed. Three crates are new: `miden-objects`, `miden-protobuf` and `miden-protobuf-derive`.
+- The **protocol crates** (`miden-protocol`, `miden-standards`, `miden-tx`, `miden-tx-batch`, `miden-testing`, `miden-block-prover`, `miden-agglayer`) go `0.16.1` → `0.17.0`. None was renamed. Three crates are new: `miden-objects`, `miden-protobuf` and `miden-protobuf-derive`.
 - The **VM crates** go `0.29.2` → `0.33.0`, four minor releases of breaking changes: see [VM & Assembler Changes](./vm-assembler) and [MASM Changes](./masm-changes). **`miden-crypto`** shares the VM version; its API changes are on [Hashing & Crypto Changes](./hashing-crypto).
-- **`miden-client`**, `miden-client-sqlite-store` and `miden-client-cli` go `0.16.1` → `0.17.0-rc.4`.
-- The **Web SDK** packages go `0.16.3` → `0.17.0-rc.4`, published under the npm `next` dist-tag.
-- The **contract toolchain** goes to `miden` `0.15.0-rc.3` and `midenc` / `cargo-miden` `0.11.0-rc.3`. It now builds against the same protocol and VM as the client, so the 0.16 version skew is gone.
+- **`miden-client`**, `miden-client-sqlite-store` and `miden-client-cli` go `0.16.1` → `0.17.0`.
+- The **Web SDK** packages go `0.16.3` → `0.17.0`.
+- The **contract toolchain** goes to `miden` `0.15.0` and `midenc` / `cargo-miden` `0.11.0`. It now builds against the same protocol and VM as the client, so the 0.16 version skew is gone.
 - The **Rust toolchains** do not change.
 
 The dependency changes that fail loudly are the removed `serde` and `bus-debugger` Cargo features, the move of `AccountFile` / `NoteFile`, and a mismatched direct `p3-*` dependency. The ones that fail at run time are every 0.16 artifact (packages, proofs, stores, exported files) and every client, prover and node pairing that mixes 0.16 and 0.17.
@@ -102,12 +89,12 @@ The dependency changes that fail loudly are the removed `serde` and `bus-debugge
 
 | Crate | v0.16 | v0.17 |
 |-------|-------|-------|
-| `miden-client`, `miden-client-sqlite-store`, `miden-client-cli` | 0.16.1 | 0.17.0-rc.4 |
-| `miden-protocol`, `miden-standards`, `miden-tx`, `miden-tx-batch` | 0.16.1 | 0.17.0-rc.7 |
-| `miden-testing` (dev-dependency) | 0.16.1 | 0.17.0-rc.7 |
-| `miden-block-prover` (nodes and block producers) | 0.16.1 | 0.17.0-rc.7 |
-| `miden-agglayer` (Agglayer components; `miden-client` depends on it) | 0.16.1 | 0.17.0-rc.7 |
-| `miden-objects` | - | 0.17.0-rc.7 *(new)* |
+| `miden-client`, `miden-client-sqlite-store`, `miden-client-cli` | 0.16.1 | 0.17.0 |
+| `miden-protocol`, `miden-standards`, `miden-tx`, `miden-tx-batch` | 0.16.1 | 0.17.0 |
+| `miden-testing` (dev-dependency) | 0.16.1 | 0.17.0 |
+| `miden-block-prover` (nodes and block producers) | 0.16.1 | 0.17.0 |
+| `miden-agglayer` (Agglayer components; `miden-client` depends on it) | 0.16.1 | 0.17.0 |
+| `miden-objects` | - | 0.17.0 *(new)* |
 | `miden-protobuf`, `miden-protobuf-derive` | - | *(new, used by `miden-objects`)* |
 | `miden-vm`, `miden-assembly`, `miden-assembly-syntax`, `miden-core`, `miden-core-lib`, `miden-processor`, `miden-prover`, `miden-verifier`, `miden-mast-package`, `miden-project`, `miden-package-registry`, `miden-air`, `miden-field`, `miden-serde-utils`, `miden-precompiles`, `miden-precompiles-prover` | 0.29.2 | 0.33.0 |
 | `miden-crypto`, `miden-crypto-derive` | 0.29.2 | 0.33.0 |
@@ -115,13 +102,13 @@ The dependency changes that fail loudly are the removed `serde` and `bus-debugge
 | `midenc-hir-type` (compiler authors) | 0.10.1 | 0.15.0 |
 | Plonky3 `p3-*` (direct users only) | 0.6 | 0.7 |
 | `rand`, `rand_chacha` | 0.10 | 0.10 *(unchanged)* |
-| `miden-client-web`, `miden-idxdb-store` (Rust crates of the Web SDK) | 0.16.3 | 0.17.0-rc.4 |
+| `miden-client-web`, `miden-idxdb-store` (Rust crates of the Web SDK) | 0.16.3 | 0.17.0 |
 
 | npm package | v0.16 | v0.17 |
 |-------------|-------|-------|
-| `@miden-sdk/miden-sdk` | 0.16.3 | 0.17.0-rc.4 |
-| `@miden-sdk/react` | 0.16.3 | 0.17.0-rc.4 |
-| `@miden-sdk/vite-plugin`, wallet adapter, `para`, `turnkey`, telemetry and `create` packages | 0.16.3 | 0.17.0-rc.4 |
+| `@miden-sdk/miden-sdk` | 0.16.3 | 0.17.0 |
+| `@miden-sdk/react` | 0.16.3 | 0.17.0 |
+| `@miden-sdk/vite-plugin`, wallet adapter, `para`, `turnkey`, telemetry and `create` packages | 0.16.3 | 0.17.0 |
 
 Protocol 0.16.1 required VM `0.29.1` and its lockfile resolved `0.29.4`; 0.29.3 and 0.29.4 only fixed `bundle` and wasm32, so `0.29.2` stands for the whole 0.29 line here. The changelog's cumulative VM entry reads "from v0.29.4 to v0.32.0"; for a 0.16.1 user the move is 0.29.x to **0.33.0**.
 
@@ -140,11 +127,6 @@ miden-core      = { linkage = "dynamic", version = "0.33" }
 miden-protocol  = { linkage = "dynamic", version = "0.17.0" }
 miden-standards = { linkage = "static",  version = "0.17.0" }
 ```
-
-:::warning Request the pre-releases by name
-- **Cargo:** a `"0.17"` requirement does not match `0.17.0-rc.4`, and `miden = "0.15"` does not match `0.15.0-rc.3`. Write the full pre-release version.
-- **npm:** the `latest` dist-tag still points at `0.16.3`, so `npm install @miden-sdk/miden-sdk` installs 0.16. The rcs are on the `next` dist-tag, but `npm install <package>@next` saves `^0.17.0-rc.4`, which also accepts later rcs. Install with `npm install --save-exact <package>@0.17.0-rc.4` instead. A range such as `^0.17.0` matches no rc.
-:::
 
 :::caution 0.16.x features replaced in 0.17
 Two features released on the 0.16 line after 0.17 branched were deliberately replaced by a 0.17 design:
@@ -169,7 +151,7 @@ crates.io already has `miden-objects` `0.12.x`. That was the **old name of the p
 
 ### Migration Steps
 
-1. Depend on `miden-objects = "0.17.0-rc.7"` only where you use `AccountFile`, `NoteFile` or the Protobuf types directly.
+1. Depend on `miden-objects = "0.17.0"` only where you use `AccountFile`, `NoteFile` or the Protobuf types directly.
 2. Keep importing `Account`, `Note`, `TransactionInputs` and every other protocol type from `miden-protocol`.
 
 ---
@@ -178,7 +160,7 @@ crates.io already has `miden-objects` `0.12.x`. That was the **old name of the p
 
 ### Summary
 
-All 20 published `@miden-sdk/*` packages share one version and move `0.16.3` → `0.17.0-rc.4` together. Every first-party peer range is now `^0.17.0-rc.4`, so a 0.16 package's peer range does not accept 0.17 and vice versa. Pre-releases publish to the `next` dist-tag. Since 0.16.2, `@miden-sdk/miden-sdk` and `@miden-sdk/react` ship in lockstep at the same version (the 0.16 guide pinned `0.16.1` / `0.16.0`).
+All 20 published `@miden-sdk/*` packages share one version and move `0.16.3` → `0.17.0` together. Every first-party peer range is now `^0.17.0`, so a 0.16 package's peer range does not accept 0.17 and vice versa. Since 0.16.2, `@miden-sdk/miden-sdk` and `@miden-sdk/react` ship in lockstep at the same version (the 0.16 guide pinned `0.16.1` / `0.16.0`).
 
 ### Affected Code
 
@@ -186,20 +168,20 @@ All 20 published `@miden-sdk/*` packages share one version and move `0.16.3` →
 - "@miden-sdk/miden-sdk": "0.16.3",
 - "@miden-sdk/react": "0.16.3",
 - "@miden-sdk/vite-plugin": "0.16.3"
-+ "@miden-sdk/miden-sdk": "0.17.0-rc.4",
-+ "@miden-sdk/react": "0.17.0-rc.4",
-+ "@miden-sdk/vite-plugin": "0.17.0-rc.4"
++ "@miden-sdk/miden-sdk": "0.17.0",
++ "@miden-sdk/react": "0.17.0",
++ "@miden-sdk/vite-plugin": "0.17.0"
 ```
 
 ```bash
-npm install --save-exact @miden-sdk/miden-sdk@0.17.0-rc.4 @miden-sdk/react@0.17.0-rc.4
+npm install @miden-sdk/miden-sdk@0.17.0 @miden-sdk/react@0.17.0
 ```
 
 ### Migration Steps
 
-1. Bump every `@miden-sdk/*` package you use in one change: `miden-sdk`, `react`, `vite-plugin`, the `miden-wallet-adapter` packages, `para` / `para-react`, `turnkey` / `turnkey-react`, and the telemetry packages. Pin each to exactly `0.17.0-rc.4` with `npm install --save-exact`.
+1. Bump every `@miden-sdk/*` package you use in one change: `miden-sdk`, `react`, `vite-plugin`, the `miden-wallet-adapter` packages, `para` / `para-react`, `turnkey` / `turnkey-react`, and the telemetry packages. Move each to `0.17.0`.
 2. Do not add `@miden-sdk/node-darwin-arm64`, `node-darwin-x64` or `node-linux-x64-gnu` yourself. On Node, `@miden-sdk/miden-sdk` pulls the matching native package through `optionalDependencies` pinned to its own exact version.
-3. If you consume the Web SDK's Rust crates (`miden-client-web`, `miden-idxdb-store`), move them to `0.17.0-rc.4`. `miden-client-web` requires `miden-client` `0.17.0-rc.4` and `miden-protocol` `0.17.0-rc.7`; `miden-idxdb-store` requires `miden-client` `0.17.0-rc.4`.
+3. If you consume the Web SDK's Rust crates (`miden-client-web`, `miden-idxdb-store`), move them to `0.17.0`. `miden-client-web` requires `miden-client` `0.17.0` and `miden-protocol` `0.17.0`; `miden-idxdb-store` requires `miden-client` `0.17.0`.
 
 ---
 
@@ -207,7 +189,7 @@ npm install --save-exact @miden-sdk/miden-sdk@0.17.0-rc.4 @miden-sdk/react@0.17.
 
 ### Summary
 
-Contract crates move to `miden` **`0.15.0-rc.3`** and the tools to `midenc` / `cargo-miden` **`0.11.0-rc.3`**. Every SDK crate moves with `miden` (`miden-base`, `miden-base-macros`, `miden-base-sys`, `miden-stdlib-sys`, `miden-sdk-alloc`, `miden-field-repr` and its derive crate, `miden-tx-script-args`, `miden-sdk-build-script-support`, `midenc-frontend-wasm-metadata`). The compiler pins protocol `=0.17.0-rc.7` and VM `0.33.0`, the same set the client uses, so the 0.16 version skew between the contract toolchain and the client is gone. Packages it writes use format `7.0.0`, so every contract must be rebuilt. The details are in [Rust Contract SDK & Compiler](./rust-sdk-compiler).
+Contract crates move to `miden` **`0.15.0`** and the tools to `midenc` / `cargo-miden` **`0.11.0`**. Every SDK crate moves with `miden` (`miden-base`, `miden-base-macros`, `miden-base-sys`, `miden-stdlib-sys`, `miden-sdk-alloc`, `miden-field-repr` and its derive crate, `miden-tx-script-args`, `miden-sdk-build-script-support`, `midenc-frontend-wasm-metadata`). The compiler pins protocol `0.17.0` and VM `0.33.0`, the same set the client uses, so the 0.16 version skew between the contract toolchain and the client is gone. Packages it writes use format `7.0.0`, so every contract must be rebuilt. The details are in [Rust Contract SDK & Compiler](./rust-sdk-compiler).
 
 ### Affected Code
 
@@ -221,10 +203,10 @@ miden-sdk-build-script-support = "0.14"
 
 # After (0.17)
 [dependencies]
-miden = "0.15.0-rc.3"
+miden = "0.15.0"
 
 [build-dependencies]
-miden-sdk-build-script-support = "0.15.0-rc.3"
+miden-sdk-build-script-support = "0.15.0"
 ```
 
 ```toml title="miden-toolchain.toml"
@@ -241,10 +223,10 @@ cargo miden build
 
 ### Migration Steps
 
-1. Install the `0.17.0` toolchain channel with `midenup install 0.17.0`, or `cargo install cargo-miden --version 0.11.0-rc.3`. The channel ships `midenc` / `cargo-miden` `0.11.0-rc.3`, protocol `0.17.0-rc.7`, core and VM `0.33.0`, client `0.17.0-rc.3` and node `0.17.0-rc.2`. It no longer lists a separate `miden-precompiles.masp` artifact.
-2. Bump `miden` and `miden-sdk-build-script-support` to `"0.15.0-rc.3"` in every contract crate.
+1. Install the `0.17.0` toolchain channel with `midenup install 0.17.0`, or `cargo install cargo-miden --version 0.11.0`. The channel ships `midenc` / `cargo-miden` `0.11.0`, protocol `0.17.0`, core and VM `0.33.0`, client `0.17.0` and node `0.17.0`. It no longer lists a separate `miden-precompiles.masp` artifact.
+2. Bump `miden` and `miden-sdk-build-script-support` to `"0.15.0"` in every contract crate.
 3. Rebuild every package, dependencies before dependents, and every host-side fixture that loads a `.masp`.
-4. Host-side test crates in the project scaffold move to `miden-client` `0.17.0-rc.3`, `miden-standards` and `miden-testing` `=0.17.0-rc.7`, and `miden-mast-package` `0.33.0`.
+4. Host-side test crates in the project scaffold move to `miden-client`, `miden-standards` and `miden-testing` `0.17.0`, and `miden-mast-package` `0.33.0`.
 
 ---
 
@@ -304,7 +286,7 @@ let note_file = NoteFile::try_from_bytes(&bytes)?;         // Result<NoteFile, N
 
 `miden-client` users keep their import paths: the client re-exports the types as `miden_client::account::{AccountFile, AccountFileError}` and `miden_client::note::{NoteFile, NoteFileError, NoteSyncHint}`. The old `miden_client::notes` module and the CLI's `import` behaviour are covered in [Client Changes](./client-changes).
 
-**(Web)** `NoteFile.serialize()` / `AccountFile.serialize()` bytes from 0.16 (or from 0.17.0-rc.1) do not decode either:
+**(Web)** `NoteFile.serialize()` / `AccountFile.serialize()` bytes from 0.16 do not decode either:
 
 ```typescript
 // After (0.17): a note file exported by 0.16
@@ -314,12 +296,12 @@ NoteFile.deserialize(bytesFrom016);
 ```
 
 :::note The `miden-objects` README describes a marker that is not written
-The rc.7 `crates/miden-objects/README.md` says each file "is a 4-byte marker (`acct` or `note`) followed by one Protobuf message". The code writes no marker: `to_bytes()` is the encoded, versioned Protobuf message only. 0.16 files did start with an `acct` / `note` marker followed by the native serialization.
+The 0.17 `crates/miden-objects/README.md` says each file "is a 4-byte marker (`acct` or `note`) followed by one Protobuf message". The code writes no marker: `to_bytes()` is the encoded, versioned Protobuf message only. 0.16 files did start with an `acct` / `note` marker followed by the native serialization.
 :::
 
 ### Migration Steps
 
-1. Add `miden-objects = "0.17.0-rc.7"`, or import through `miden_client::account` / `miden_client::note`.
+1. Add `miden-objects = "0.17.0"`, or import through `miden_client::account` / `miden_client::note`.
 2. Change imports to `miden_objects::account_file::AccountFile` and `miden_objects::note_file::{NoteFile, NoteSyncHint}`.
 3. Replace `file.account` / `file.auth_secret_keys` with `file.account()` / `file.auth_secret_keys()` or `file.into_parts()`.
 4. Replace `Serializable::to_bytes` / `Deserializable::read_from_bytes` with the inherent `to_bytes()` / `try_from_bytes()`, and map `AccountFileError` / `NoteFileError` where you expected `std::io::Error`.
@@ -335,8 +317,8 @@ The rc.7 `crates/miden-objects/README.md` says each file "is a 4-byte marker (`a
 | `` error[E0599]: no associated function or constant named `read_from_bytes` found for struct `miden_objects::account_file::AccountFile` in the current scope `` | `Deserializable` impl removed | Use `try_from_bytes()`. |
 | `failed to decode the account file` | A 0.16 account file (or any non-Protobuf bytes) | Re-export the account with a 0.17 client. |
 | `failed to decode the note file` | A 0.16 note file | Re-export the note with a 0.17 client. |
-| `notefile deserialization failed: failed to decode the note file: ...` (Web) | Note file bytes from 0.16 or 0.17.0-rc.1 | Re-export with a 0.17 client. |
-| `account file deserialization failed: ...` (Web) | Account file bytes from 0.16 or 0.17.0-rc.1 | Re-export with a 0.17 client. |
+| `notefile deserialization failed: failed to decode the note file: ...` (Web) | Note file bytes from 0.16 | Re-export with a 0.17 client. |
+| `account file deserialization failed: ...` (Web) | Account file bytes from 0.16 | Re-export with a 0.17 client. |
 
 ---
 
@@ -372,7 +354,7 @@ The VM changelog lists this change as "Removed unused Serde support", not marked
 
 ### Migration Steps
 
-1. Drop `features = ["serde"]` from `miden-core` and `features = ["bus-debugger"]` from `miden-processor`. Neither protocol 0.16.1 nor 0.17.0-rc.7 enables them; remove them where your own manifests do.
+1. Drop `features = ["serde"]` from `miden-core` and `features = ["bus-debugger"]` from `miden-processor`. Neither protocol 0.16.1 nor 0.17.0 enables them; remove them where your own manifests do.
 2. Replace `serde_json` / `bincode` encodings of VM types with `to_bytes()` / `read_from_bytes()`.
 
 ### Common Errors
@@ -443,10 +425,10 @@ Nothing below has a converter. Regenerate each artifact from its source with 0.1
 | Account and note files (`.mac`, `.mno`, Web `serialize()` bytes) | Protobuf only; 0.16 files fail to decode | Re-export with a 0.17 client; consume private notes before upgrading | [above](#accountfile-and-notefile-moved-to-miden-objects-and-switched-to-protobuf), [Client Changes](./client-changes) |
 | SQLite store | Opens without a migration error, then fails with `failed to deserialize data from the store` | Delete the store and re-sync; the keystore directory and `miden-client.toml` carry over | [Client Changes](./client-changes) |
 | IndexedDB store | Deleted automatically on first open by 0.17, together with the secret keys of the default browser keystore, which lives in the same database | Back those keys up on 0.16.3 first, then re-sync; recover accounts from the keys, not from 0.16 exports | [Client Changes](./client-changes#store-every-016-sqlite-store-must-be-recreated) |
-| Serialized `TransactionRequest` | Always carries block numbers; bytes from 0.16 or 0.17.0-rc.3 do not deserialize | Rebuild the request | [Client Changes](./client-changes) |
+| Serialized `TransactionRequest` | Always carries block numbers; bytes from 0.16 do not deserialize | Rebuild the request | [Client Changes](./client-changes) |
 | `PartialSmt` bytes | 0.16 bytes with empty-subtree markers fail to decode | Rebuild from source data | [Hashing & Crypto Changes](./hashing-crypto#partialsmt-bytes-from-016-no-longer-decode-uniquenodes-restructured) |
 
-The same holds for the network side. A `0.17.0-rc.4` client is accepted only by a `0.17.0-rc.x` node (the node matches major.minor and the pre-release label, so a stable `0.17.0` node will reject rc clients), the remote prover wire format changed, and the note transport service moved. For a local node, use node `0.17.0-rc.3`, the release rc.4 is built against. See [Client Changes](./client-changes).
+The same holds for the network side. A `0.17.0` client is accepted only by a 0.17 node (the node matches major.minor), the remote prover wire format changed, and the note transport service moved. For a local node, use node `0.17.0`, the release the `0.17.0` client is built against. See [Client Changes](./client-changes).
 
 :::caution Exporting before the upgrade does not help
 The 0.16 guide advised exporting private note files before recreating the store. That does not survive this upgrade: 0.16 exports do not import into 0.17. Consume private notes on 0.16 before upgrading, or have the sender re-send them once both sides run 0.17. 0.16 secret keys survive in a filesystem keystore, which loads unchanged in 0.17, but not in the default browser keystore: the IndexedDB reset deletes them, so back them up on 0.16.3 first.
@@ -468,26 +450,18 @@ The 0.16 guide advised exporting private note files before recreating the store.
 | `invalid value: unsupported execution proof format {format}` | Proof bytes from an older VM release | Re-prove with 0.17. |
 | `failed to deserialize data from the store` | A SQLite store written by a 0.16 client | Delete the store and re-sync. |
 | `failed to decode the account file` / `failed to decode the note file` | A 0.16 account or note file | Re-export with 0.17. |
-| `server rejected request - please check your version and network settings (client version: 0.17.0-rc.4, genesis commitment: ...)` | Client and node differ in major.minor or pre-release label | Use a node and client from the same 0.17 line and label. |
-
-:::note Queued after 0.17.0-rc.7
-Protocol `next` already builds on **VM 0.34.0** and **Plonky3 0.8**, while still versioned `0.17.0-rc.7`. When a protocol release ships on it:
-- 0.33 and 0.34 proofs reject each other. A 0.33 proof decodes under 0.34, then `Verifier::verify` rejects it with `execution proof does not name a compatible VM verifier`, and the reverse fails the same way. Clients, remote provers and nodes must move to 0.34 together.
-- The package format stays `7.0.0`, but a package that links the core library dynamically records the exact core-library version, so packages linked against `0.33.0` must be re-assembled. The protocol kernel procedure offsets also shift, so rc.7-built artifacts must be rebuilt again.
-- Direct `p3-*` dependencies move to `0.8`, and `midenc-hir-type` to `0.16.0`.
-- Compiler `0.11.0-rc.3` pins protocol `=0.17.0-rc.7` and VM `0.33.0`.
-:::
+| `server rejected request - please check your version and network settings (client version: 0.17.0, genesis commitment: ...)` | Client and node differ in major.minor | Use a node and client from the same 0.17 line. |
 
 ---
 
 ## Migration Steps
 
-1. Bump every Miden crate per the [Version Bumps](#version-bumps) table, writing the full pre-release version, and pin the rcs exactly with `=`.
-2. Keep every protocol crate on the same rc, and every VM crate (including `miden-crypto`) on `0.33.0`.
+1. Bump every Miden crate per the [Version Bumps](#version-bumps) table.
+2. Keep every protocol crate on `0.17.0`, and every VM crate (including `miden-crypto`) on `0.33.0`.
 3. Add `miden-objects` only if you use `AccountFile` / `NoteFile` or the Protobuf types directly, and never the unrelated `miden-objects` `0.12.x`.
 4. Drop the `serde` feature from `miden-core` and `bus-debugger` from `miden-processor`; align any direct `p3-*` dependency to `0.7`.
-5. Bump every `@miden-sdk/*` package to exactly `0.17.0-rc.4` together, with `npm install --save-exact <package>@0.17.0-rc.4`.
-6. Move contract projects to `miden` `0.15.0-rc.3` and the `0.17.0` toolchain channel, and rebuild them.
+5. Bump every `@miden-sdk/*` package to `0.17.0` together, with `npm install <package>@0.17.0`.
+6. Move contract projects to `miden` `0.15.0` and the `0.17.0` toolchain channel, and rebuild them.
 7. Keep your Rust toolchains: nothing changes for a 0.16.1 user.
 8. Regenerate every 0.16 artifact per [0.16 artifacts do not carry over](#016-artifacts-do-not-carry-over), and upgrade client, prover and node together.
 
@@ -504,4 +478,4 @@ Protocol `next` already builds on **VM 0.34.0** and **Plonky3 0.8**, while still
 | `invalid value: unsupported execution proof format {format}` | Proof serialized by 0.16 | Re-prove with 0.17. |
 | `failed to deserialize data from the store` | 0.16 SQLite store | Delete the store and re-sync. |
 | `failed to decode the account file` / `failed to decode the note file` | 0.16 export | Re-export with a 0.17 client. |
-| `server rejected request - please check your version and network settings (...)` | Client and node from different lines, or rc versus stable | Run matching versions. |
+| `server rejected request - please check your version and network settings (...)` | Client and node from different lines | Run matching versions. |

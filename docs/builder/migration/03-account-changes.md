@@ -98,10 +98,6 @@ let fungible_id_low_byte = asset_id.to_word()[2].as_canonical_u64() & 0xff; // 0
 | `account code procedures following the authentication procedure are not sorted in ascending order` | `AccountCode::from_parts` with unsorted procedures, or deserializing 0.16 code | Sort them, or rebuild with `AccountBuilder`. |
 | `account procedures following the authentication procedure must be unique and sorted in ascending order` | Kernel check on a new account | Same. |
 
-:::note Queued after 0.17.0-rc.7
-On `next`, the standard components link `miden-standards` dynamically instead of inlining it. According to that change's description, the auth procedure roots of `AuthSingleSig`, `AuthMultisig` and `AuthNetworkAccount` change with it, so accounts built with them get a different code commitment and account ID than on rc.7. Do not pin account IDs or code commitments computed with an rc; recompute them against 0.17.0 final. A custom `MastForestStore` must then also serve the standards library, as `TransactionMastStore::new()` does.
-:::
-
 ---
 
 ## Network accounts: `BasicWallet`, P2ID, a real deploy, and the chain's fee asset
@@ -162,8 +158,8 @@ const components = AccountComponent.createNetworkAuthComponents(
 await client.transactions.consume({ account: account.id(), notes: [allowlistedNoteId] });
 ```
 
-:::caution The rc.4 docs sample has the wrong signature
-The Web SDK's own 0.17.0-rc.4 docs deploy a network account with `client.transactions.consume(account.id(), [allowlistedNoteId])`. The shipped signature is `consume({ account, notes })`, as above.
+:::caution The 0.17 docs sample has the wrong signature
+The Web SDK's own 0.17.0 docs deploy a network account with `client.transactions.consume(account.id(), [allowlistedNoteId])`. The shipped signature is `consume({ account, notes })`, as above.
 :::
 
 ### Migration Steps

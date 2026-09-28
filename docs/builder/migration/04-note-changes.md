@@ -509,7 +509,7 @@ let attachment = PswapNoteAttachment::try_from(&note_attachment)?; // new, valid
 ### Migration Steps
 
 1. Change `parent_depth()` consumers to `u32`.
-2. Do not match PSWAP notes by a cached script root. Use `PswapNote::script_root()` from the version you run (the root changes again after 0.17.0-rc.7), and expect notes created by an older version to carry the older root.
+2. Do not match PSWAP notes by a cached script root. Use `PswapNote::script_root()` from the version you run, and expect notes created by an older version to carry the older root.
 3. Do not remove assets from a PSWAP note before its script runs: the script now asserts that the offered asset still equals the one the note was created with.
 
 ### Common Errors

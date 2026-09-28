@@ -42,7 +42,7 @@ miden-core      = { linkage = "dynamic", version = "0.29" }
 miden-protocol  = { linkage = "dynamic", version = "0.16.0" }
 miden-standards = { linkage = "static",  version = "0.16.0" }
 
-# After (0.17.0-rc.7)
+# After (0.17)
 miden-core      = { linkage = "dynamic", version = "0.33" }
 miden-protocol  = { linkage = "dynamic", version = "0.17.0" }
 miden-standards = { linkage = "static",  version = "0.17.0" }
@@ -61,7 +61,7 @@ This page holds four groups of change. The first is the dangerous one: a dozen p
 Every procedure whose body changed has a new MAST root, and every standard note script root and standard component code commitment changes. Re-assemble every note script, transaction script and account component that links these libraries (the package format itself is covered in [VM & Assembler Changes](./vm-assembler)).
 
 :::info A mislabeled changelog section
-The protocol changelog at `v0.17.0-rc.7` carries a second heading labeled `v0.16.0 (2026-08-06)` directly below the rc.5 section. None of its entries is in `0.16.1`: it is the 0.17 fixes list under a wrong heading, and it contains several breaking MASM changes covered on this page (non-fungible `mint_and_send`, the foreign-procedure root check, the transfer-policy expiration cap). Several renames on this page (`account_id::validate`, `note::execution_hint`, `types::MemoryAddress`, the `kernel_proc_offsets` constants) are not in the changelog at all.
+The protocol 0.17 changelog carries a second heading labeled `v0.16.0 (2026-08-06)` directly below the 0.17 entries. None of its entries is in `0.16.1`: it is the 0.17 fixes list under a wrong heading, and it contains several breaking MASM changes covered on this page (non-fungible `mint_and_send`, the foreign-procedure root check, the transfer-policy expiration cap). Several renames on this page (`account_id::validate`, `note::execution_hint`, `types::MemoryAddress`, the `kernel_proc_offsets` constants) are not in the changelog at all.
 :::
 
 The VM 0.33 assembler reports a stale import or procedure as `undefined item '...'`. A `use` names the full module path (`use miden::precompiles::hashes::keccak256` gives `undefined item 'miden::precompiles::hashes::keccak256'`); an `exec` names only the procedure (`exec.tx::get_block_number` gives `undefined item 'get_block_number'`); a `syscall` names the kernel path (`undefined item '::$kernel::<name>'`). The protocol and standards libraries are linked as packages, so importing one of their private modules also reports `undefined item`, not `private submodule`.
@@ -159,7 +159,7 @@ exec.tx::get_reference_block_commitment  # []             -> [REF_BLOCK_COMMITME
 push.1234 exec.tx::get_block_commitment  # [block_number] -> [BLOCK_COMMITMENT]
 ```
 
-If you call the kernel directly: `kernel_proc_offsets::TX_GET_BLOCK_NUMBER_OFFSET` was renamed to `TX_GET_REFERENCE_BLOCK_NUMBER_OFFSET` (value `52` at rc.7).
+If you call the kernel directly: `kernel_proc_offsets::TX_GET_BLOCK_NUMBER_OFFSET` was renamed to `TX_GET_REFERENCE_BLOCK_NUMBER_OFFSET` (value `52` in 0.17).
 
 ### Migration Steps
 
@@ -285,8 +285,8 @@ fee::create_and_fund_fee_note  # [serial_number_block, ASSET_ID, ASSET_VALUE] ->
 fee::apply_cycle_margins       # [num_extra_cycles] -> [num_estimated_extra_cycles]   (was [num_extra_cycles, num_sponsorship_notes])
 ```
 
-:::caution The 0.16.x fee helpers are not in the 0.17 release candidates
-The fee-estimation and fee-bound helpers that shipped in 0.16.0 and 0.16.1 do not exist in the 0.17 release candidates, and the 0.17 changelog does not mention their removal. Replace them as follows.
+:::caution The 0.16.x fee helpers are not in 0.17
+The fee-estimation and fee-bound helpers that shipped in 0.16.0 and 0.16.1 do not exist in 0.17, and the 0.17 changelog does not mention their removal. Replace them as follows.
 
 | Removed (present in 0.16.0 / 0.16.1) | 0.17 replacement |
 | --- | --- |
@@ -364,7 +364,7 @@ exec.asset::id_into_faucet_id
 
 1. Replace `exec.tx::get_fee_faucet_id exec.fungible_asset::create_id` with `exec.tx::get_fee_asset_id`.
 2. Where you need the faucet ID, append `exec.asset::id_into_faucet_id` (from `miden::protocol::asset`).
-3. Rename `kernel_proc_offsets::TX_GET_FEE_FAUCET_ID_OFFSET` to `TX_GET_FEE_ASSET_ID_OFFSET` if you syscall by hand (value `60` at rc.7).
+3. Rename `kernel_proc_offsets::TX_GET_FEE_FAUCET_ID_OFFSET` to `TX_GET_FEE_ASSET_ID_OFFSET` if you syscall by hand (value `60` in 0.17).
 
 ---
 
@@ -794,19 +794,19 @@ On the Rust side, `CoreLibrary::recursive_verifier_root()` became `vm_recursive_
 
 ### Summary
 
-A procedure's MAST root changes whenever its instructions change. Between VM 0.29.2 (0.16) and 0.33.0 (0.17.0-rc.7) many exported procedures got a new root, so any root you recorded (proof-request keys, allowlists, `dynexec` / `dyncall` targets) is stale. They include:
+A procedure's MAST root changes whenever its instructions change. Between VM 0.29.2 (0.16) and 0.33.0 (0.17) many exported procedures got a new root, so any root you recorded (proof-request keys, allowlists, `dynexec` / `dyncall` targets) is stale. They include:
 
 | Procedure | Root changed in VM | Why |
 | --- | --- | --- |
 | `crypto::dsa::ecdsa_k256_keccak::verify`, `verify_bytes` | 0.30, 0.31 | Internal refactors |
-| `sys::vm::verify_vm_proof` → `sys::vm::verify_proof` | 0.30, 0.31, 0.33 (and again in 0.34) | ACE registry, rename and security descriptor, context isolation |
-| `sys::pvm::verify_proof` (new in 0.30) | 0.31, 0.33 (and again in 0.34) | Same |
+| `sys::vm::verify_vm_proof` → `sys::vm::verify_proof` | 0.30, 0.31, 0.33 | ACE registry, rename and security descriptor, context isolation |
+| `sys::pvm::verify_proof` (new in 0.30) | 0.31, 0.33 | Same |
 | `math::u64::shl`, `shr`, `rotl`, `rotr` | 0.31 | Range check added (see [below](#instruction-and-core-library-behaviour-changes)) |
 | `collections::sorted_array::find_word`, `find_key_value`, `find_half_key_value` | 0.30 | u32 pointer checks |
 | `crypto::dsa::falcon512_poseidon2::verify`, `load_h_s2_and_product` | 0.30 | Horner evaluation-point layout |
 | `mem::pipe_words_to_memory`, `mem::pipe_preimage_to_memory`, `collections::mmr::unpack` | 0.30 | Advice pipe refactored for domain-separated hashing (`unpack` calls `pipe_preimage_to_memory`) |
 
-Also changed: `crypto::hashes::keccak256::hash` and `merge` (`hash_bytes` kept its root), and many of the recursive verifier's helpers under `stark::*`, `pcs::*` and `sys::vm::*`. The new `stark::security::compute_conjectured_security_level` gets another new root in 0.34, like the two verifiers. Procedures of your own that use bare `exp` also get a new root (see [below](#instruction-and-core-library-behaviour-changes)).
+Also changed: `crypto::hashes::keccak256::hash` and `merge` (`hash_bytes` kept its root), and many of the recursive verifier's helpers under `stark::*`, `pcs::*` and `sys::vm::*`. Procedures of your own that use bare `exp` also get a new root (see [below](#instruction-and-core-library-behaviour-changes)).
 
 The changelog announces the ECDSA `verify` root change in VM 0.30, but not the second change in 0.31.
 
@@ -1107,14 +1107,6 @@ u32shr.6
 - **P2ID storage has four items**: `[target_id_suffix, target_id_prefix, salt_0, salt_1]`. `p2id::prepare_note` and `p2id::create_output_note` keep their signatures and write a zero salt. If you compute a P2ID recipient by hand, write four items and pass `num_storage_items = 4`, or it fails with `P2ID note expects exactly 4 note storage items`. See [Note Changes](./note-changes).
 - **Standard note scripts** check targeting through `miden::standards::note::note_target` and reclaim through `note::note_reclaim`, their error constants were renamed, config notes must be public, and every standard script root changed. See [Note Changes](./note-changes).
 - **Assets left in a consumed note fail the transaction.** The TX_FEE note script no longer moves its assets into the consuming account, so the consuming account's code must collect them (`input_note::remove_asset` / `remove_all_assets`). This also corrects the 0.16 version of this page, which said a note left with assets in place is treated as partially consumed: in both 0.16.1 and 0.17 the epilogue asserts that the total number of assets across the account vault and the output notes stays the same, so the transaction fails with `total number of assets in the account and all involved notes must stay the same`. See [Note Changes](./note-changes).
-
-:::note Queued after 0.17.0-rc.7
-These are on the protocol's `next` branch (VM 0.34), not in `0.17.0-rc.7`:
-
-- **Kernel procedure offsets shift again.** `output_note::seal` and `output_note::is_sealed` were inserted at offsets 47 and 48, so every `TX_*` offset moves up by two (`TX_GET_REFERENCE_BLOCK_NUMBER_OFFSET` 52 → 54, `TX_GET_FEE_ASSET_ID_OFFSET` 60 → 62). Named constants keep working after a rebuild; hard-coded numbers do not, and everything built against rc.7 must be rebuilt.
-- **Standard components link `miden-standards` dynamically** (`linkage = "dynamic"` instead of `"static"`). The upstream description of this change says the auth procedure roots of `AuthSingleSig`, `AuthMultisig` and `AuthNetworkAccount` change, and with them the code commitments and account IDs of accounts built from them; that effect was not reproduced for this guide. Do not pin account IDs or code commitments computed on rc.7. PSWAP also seals its payback and remainder notes, which changes the PSWAP script root.
-- **Sorted-array lookups are capped at 65,536 entries.** `collections::sorted_array::find_word`, `find_key_value` and `find_half_key_value` fail on larger ranges with `sorted array entry count <n> exceeds maximum of 65536`. The check runs in the host's event handler, so the MAST is unchanged and the failure depends on the host's core-library version. Split larger ranges.
-:::
 
 ---
 

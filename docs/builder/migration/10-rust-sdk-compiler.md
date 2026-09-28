@@ -16,14 +16,14 @@ Every contract package must be rebuilt with `midenc` / `cargo-miden` 0.11: packa
 
 ## Quick Fix
 
-Bump the SDK in every contract crate. A prerelease must be named exactly: `miden = "0.15"` does not match `0.15.0-rc.3`.
+Bump the SDK in every contract crate.
 
 ```toml title="Cargo.toml (each contract crate)"
 [dependencies]
-miden = "0.15.0-rc.3"                            # was "0.14"
+miden = "0.15.0"                            # was "0.14"
 
 [build-dependencies]
-miden-sdk-build-script-support = "0.15.0-rc.3"   # was "0.14"
+miden-sdk-build-script-support = "0.15.0"   # was "0.14"
 ```
 
 Point the project at the 0.17 toolchain channel, install it and rebuild, then fix the renames most contracts hit:
@@ -34,7 +34,7 @@ channel = "0.17.0"        # was "0.16.0"
 ```
 
 ```bash
-midenup install 0.17.0    # midenc + cargo-miden 0.11.0-rc.3
+midenup install 0.17.0    # midenc + cargo-miden 0.11.0
 cargo miden build         # rebuild every contract; Miden path dependencies are rebuilt with it
 ```
 
@@ -64,38 +64,34 @@ This page covers the contract toolchain (`midenc`, `cargo-miden` and the `cargo 
 
 | Component | 0.16 line | 0.17 line |
 | --- | --- | --- |
-| `midenc` / `cargo-miden` | 0.10.x | 0.11.0-rc.3 |
-| `miden` SDK crates (`miden`, `miden-base`, `miden-base-macros`, `miden-base-sys`, `miden-stdlib-sys`, `miden-sdk-alloc`, `miden-field-repr`, `miden-field-repr-derive`, `miden-tx-script-args`, `miden-sdk-build-script-support`, `midenc-frontend-wasm-metadata`) | 0.14.0 | 0.15.0-rc.3 |
-| `cargo miden new` template bundle | 0.32.1 | 0.33.0-rc.3 |
+| `midenc` / `cargo-miden` | 0.10.x | 0.11.0 |
+| `miden` SDK crates (`miden`, `miden-base`, `miden-base-macros`, `miden-base-sys`, `miden-stdlib-sys`, `miden-sdk-alloc`, `miden-field-repr`, `miden-field-repr-derive`, `miden-tx-script-args`, `miden-sdk-build-script-support`, `midenc-frontend-wasm-metadata`) | 0.14.0 | 0.15.0 |
+| `cargo miden new` template bundle | 0.32.1 | 0.33.0 |
 | midenup channel (`miden-toolchain.toml`) | `0.16.0` | `0.17.0` |
-| Protocol it builds against (`miden-protocol`, `miden-standards`) | `=0.16.0-rc.4` | `=0.17.0-rc.7` |
+| Protocol it builds against (`miden-protocol`, `miden-standards`) | `0.16` | `0.17.0` |
 | VM crates it builds against | 0.29 | 0.33.0 |
 | `.masp` package format | 6.0.0 | 7.0.0 |
 | MSRV / nightly | 1.99 / `nightly-2026-09-01` | unchanged |
 
-- **The 0.16 version skew is gone.** Client `0.17.0-rc.3` and `0.17.0-rc.4` depend on protocol `0.17.0-rc.7` and VM 0.33, exactly what compiler 0.11.0-rc.3 pins, and the midenup `0.17.0` channel ships the same set (midenc / cargo-miden 0.11.0-rc.3, protocol 0.17.0-rc.7, core / VM 0.33.0).
+- **The 0.16 version skew is gone.** Client `0.17.0` depends on protocol `0.17.0` and VM 0.33, exactly what compiler 0.11.0 pins, and the midenup `0.17.0` channel ships the same set (midenc / cargo-miden 0.11.0, protocol 0.17.0, core / VM 0.33.0).
 - **The MSRV is still 1.99 plus a nightly toolchain**, higher than the 1.98.1 of the protocol and client crates. Your toolchain must satisfy the highest requirement among the components you build.
 - **Host-side test and integration crates** move with the protocol. The project scaffold's `integration` crate pins:
 
 ```toml title="integration/Cargo.toml"
 # Before (0.16)
-miden-client              = { version = "0.16.0-rc.1", features = ["tonic"] }
-miden-client-sqlite-store = { version = "0.16.0-rc.1", package = "miden-client-sqlite-store" }
-miden-standards           = { version = "0.16.0-rc.4", features = ["testing"] }
-miden-testing             = "0.16.0-rc.4"
+miden-client              = { version = "0.16", features = ["tonic"] }
+miden-client-sqlite-store = { version = "0.16", package = "miden-client-sqlite-store" }
+miden-standards           = { version = "0.16", features = ["testing"] }
+miden-testing             = "0.16"
 miden-mast-package        = { version = "0.29", default-features = false }
 
 # After (0.17)
-miden-client              = { version = "0.17.0-rc.3", features = ["tonic"] }
-miden-client-sqlite-store = { version = "0.17.0-rc.3", package = "miden-client-sqlite-store" }
-miden-standards           = { version = "=0.17.0-rc.7", features = ["testing"] }
-miden-testing             = "=0.17.0-rc.7"
+miden-client              = { version = "0.17.0", features = ["tonic"] }
+miden-client-sqlite-store = { version = "0.17.0", package = "miden-client-sqlite-store" }
+miden-standards           = { version = "0.17.0", features = ["testing"] }
+miden-testing             = "0.17.0"
 miden-mast-package        = { version = "0.33.0", default-features = false }
 ```
-
-:::note Queued after 0.17.0-rc.7
-Protocol `next` already pins VM 0.34.0 while still versioned `0.17.0-rc.7`. If stable protocol 0.17.0 ships on VM 0.34, compiler 0.11.0-rc.3 (VM 0.33.0, exact protocol pin) lags behind the client again until a new compiler release. The package format is 7.0.0 in both VM 0.33.0 and 0.34.0.
-:::
 
 ---
 
@@ -103,7 +99,7 @@ Protocol `next` already pins VM 0.34.0 while still versioned `0.17.0-rc.7`. If s
 
 ### Summary
 
-The 0.11 compiler links against VM 0.33 and protocol `0.17.0-rc.7`, and the packages it writes use package format 7.0.0. Packages written by 0.10.x (format 6.0.0, VM 0.29, the protocol `0.16.0-rc.4` kernel) cannot be loaded by a 0.17 client, by `midenc`, or by the SDK macros that read dependency packages.
+The 0.11 compiler links against VM 0.33 and protocol `0.17.0`, and the packages it writes use package format 7.0.0. Packages written by 0.10.x (format 6.0.0, VM 0.29, the protocol 0.16 kernel) cannot be loaded by a 0.17 client, by `midenc`, or by the SDK macros that read dependency packages.
 
 ### Affected Code
 
@@ -115,19 +111,19 @@ components = ["midenc", "cargo-miden", "core", "protocol"]
 ```
 
 ```bash
-midenup install 0.17.0        # midenc + cargo-miden 0.11.0-rc.3, protocol 0.17.0-rc.7, core/vm 0.33.0
+midenup install 0.17.0        # midenc + cargo-miden 0.11.0, protocol 0.17.0, core/vm 0.33.0
 cargo miden build             # rebuild every contract; Miden path dependencies are rebuilt with it
 ```
 
 ### Migration Steps
 
-1. Install the 0.17 toolchain: `midenup install 0.17.0`, or `cargo +nightly-2026-09-01 install cargo-miden --version 0.11.0-rc.3 --locked` (cargo-miden needs a nightly toolchain). Update the CI step that runs `midenup install` too.
-2. Bump `miden` and `miden-sdk-build-script-support` to `"0.15.0-rc.3"` in every contract crate.
+1. Install the 0.17 toolchain: `midenup install 0.17.0`, or `cargo +nightly-2026-09-01 install cargo-miden --version 0.11.0 --locked` (cargo-miden needs a nightly toolchain). Update the CI step that runs `midenup install` too.
+2. Bump `miden` and `miden-sdk-build-script-support` to `"0.15.0"` in every contract crate.
 3. Delete old `target/` outputs and rebuild every package. `cargo miden build` rebuilds Miden path dependencies itself; rebuild any dependency you reference as a prebuilt `.masp` file first, because the SDK macros read a dependency's embedded WIT and MAST from its `.masp`.
 4. Rebuild host-side fixtures that load `.masp` files (tests, scripts, deployment tooling). The CLI's bundled component packages in `.miden/packages` must be refreshed too, and custom packages you pass to the CLI rebuilt; see [Client Changes](./client-changes#cli-re-create-midenpackages-after-upgrading).
 
 :::caution The compiler changelog does not tell you to rebuild
-The compiler changelog for 0.11.0-rc.1 to rc.3 has no migration section and never says `.masp` files must be rebuilt. rc.3's "compiled packages need no changes" holds only relative to rc.2. Packages built by 0.10.x use package format 6.0.0 and the 0.16 kernel: rebuild all of them.
+The compiler changelog for 0.11 has no migration section and never says `.masp` files must be rebuilt. Packages built by 0.10.x use package format 6.0.0 and the 0.16 kernel: rebuild all of them.
 :::
 
 ### Common Errors
@@ -211,7 +207,7 @@ Unchanged and still compiling: `Asset::new(word, value)` and `Asset::new([f0, f1
 
 ### Summary
 
-`tx::get_block_number()` is now `tx::get_reference_block_number()`, and `tx::get_block_commitment()` is now `tx::get_reference_block_commitment()`. The name `tx::get_block_commitment` is reused for `get_block_commitment(block_number: BlockNumber) -> Word`, which reads a block up to and including the reference block and panics for a later one. An older block must already be tracked by the transaction's partial blockchain (for example the block that created an authenticated input note, or a block added with the Rust client's `TransactionRequestBuilder::block_numbers`, new in client 0.17.0-rc.4); otherwise execution fails. The MASM procedures were renamed the same way; see [MASM Changes](./masm-changes).
+`tx::get_block_number()` is now `tx::get_reference_block_number()`, and `tx::get_block_commitment()` is now `tx::get_reference_block_commitment()`. The name `tx::get_block_commitment` is reused for `get_block_commitment(block_number: BlockNumber) -> Word`, which reads a block up to and including the reference block and panics for a later one. An older block must already be tracked by the transaction's partial blockchain (for example the block that created an authenticated input note, or a block added with the Rust client's `TransactionRequestBuilder::block_numbers`, new in client 0.17.0); otherwise execution fails. The MASM procedures were renamed the same way; see [MASM Changes](./masm-changes).
 
 ### Affected Code
 
@@ -461,7 +457,7 @@ fn host_side_amount() {
 
 ### Summary
 
-`cargo miden new` fetches the newest `templates/v*` release **in the minor series of its embedded bundle**, and a stable build never picks a prerelease. `cargo-miden` 0.10.2 embeds templates 0.32.1, so it keeps generating 0.16-line projects (`miden = "0.14"`, channel `0.16.0`). `cargo-miden` 0.11.0-rc.3 embeds templates 0.33.0-rc.3.
+`cargo miden new` fetches the newest `templates/v*` release **in the minor series of its embedded bundle**. `cargo-miden` 0.10.2 embeds templates 0.32.1, so it keeps generating 0.16-line projects (`miden = "0.14"`, channel `0.16.0`). `cargo-miden` 0.11.0 embeds templates 0.33.0.
 
 The generated guest code is the same in both template releases; only versions changed, plus the same host-side edit at two call sites in the scaffold's integration crate (`src/helpers.rs` and `tests/counter_test.rs`), because `AccountComponent::from_package` takes the package by value in protocol 0.17 (see [Account Changes](./account-changes)).
 
@@ -482,10 +478,10 @@ let counter_component =
 
 ### Migration Steps
 
-1. Upgrade `cargo-miden` to 0.11.0-rc.3 (for example with `midenup install 0.17.0`) before running `cargo miden new`.
+1. Upgrade `cargo-miden` to 0.11.0 (for example with `midenup install 0.17.0`) before running `cargo miden new`.
 2. In an existing scaffolded project, apply the pins from [Versions](#versions): contract crates, the integration crate, `miden-toolchain.toml`, and the CI `midenup install 0.17.0` step.
 3. Pass an owned `Package` to `AccountComponent::from_package`.
-4. Keep contract crates out of the host workspace, as the scaffold does (`exclude = ["contracts/"]`). `miden-base-macros`, a dependency of `miden`, pins `miden-protocol = "=0.17.0-rc.7"`, so a single workspace whose host crates need a later 0.17.x protocol release is likely to fail dependency resolution.
+4. Keep contract crates out of the host workspace, as the scaffold does (`exclude = ["contracts/"]`).
 
 :::caution The standalone account template still lacks `#[account_procedure]`
 The `cargo miden new --account` template declares `fn add(&self, a: Felt, b: Felt) -> Felt;` without `#[account_procedure]`, while the `--tx-script` template calls `account.add(a, b)`. Add the attribute yourself. The full-project scaffold's `counter-account` marks both of its methods.
@@ -608,7 +604,7 @@ If a type you own also gets a method of the same name from another trait in scop
 
 - **`midenc` no longer resolves `miden-precompiles` as a built-in library.** VM 0.33 merges the precompiles into the core library, which is linked implicitly as before. Remove `-l precompiles` / `-l miden-precompiles` from `midenc` invocations; an explicit flag now falls through to a search-path lookup and fails. Tool authors: `midenc_session::LinkLibrary::precompiles()` is gone, and `LinkLibrary::core()` covers it. The midenup `0.17.0` channel no longer lists a `miden-precompiles.masp` artifact.
 - **Raw extern bindings renamed or made private.** `output_note::extern_output_note_get_assets_info` is now `pub(crate)` (use `output_note::get_assets_info(note_idx)`). `tx::extern_tx_get_block_number` is now `tx::extern_tx_get_reference_block_number`, and `tx::extern_tx_get_block_commitment` now takes a block number (the new `extern_tx_get_reference_block_commitment` has the old shape). Prefer the safe wrappers. The `tx` extern changes are in neither the SDK changelog nor its migration notes.
-- **Cycle counts moved.** Asset reads now execute a protocol procedure, and the kernel changed, so identical contracts cost different cycles (from compiler 0.10.2 to 0.11.0-rc.3, the basic-wallet P2ID consume went 5030 → 5008 cycles and the prologue 3473 → 3883). Do not hard-code cycle budgets across the upgrade.
+- **Cycle counts moved.** Asset reads now execute a protocol procedure, and the kernel changed, so identical contracts cost different cycles (from compiler 0.10.2 to 0.11.0, the basic-wallet P2ID consume went 5030 → 5008 cycles and the prologue 3473 → 3883). Do not hard-code cycle budgets across the upgrade.
 - **Host code that mirrors felt encodings** (`miden-tx-script-args`, `miden-field-repr`) now sits on `miden-field` 0.33.0, where `Word` no longer has host-side `serde` derives. `Felt` is unchanged.
 - **Coming from compiler 0.10.1** (the version the 0.16 guide was checked against): since 0.10.2, `cargo miden build` logging is configured with `MIDENC_TRACE` and `CARGO_MIDEN_LOG` is no longer read, and `midenc --manifest-path` is honored.
 

@@ -15,7 +15,7 @@ A 0.16 SQLite store is not rejected up front. The SQL schema did not change, so 
 :::
 
 :::warning Client, node, remote prover and note transport move together
-A 0.17 client talks only to a 0.17 node, and a `0.17.0-rc.x` client only to a `0.17.0-rc.x` node: the node matches major.minor and the pre-release label. On 2026-09-28 the public testnet still ran 0.16 and rejected every 0.17 client, while devnet accepted `0.17.0-rc.4`. The remote prover wire format and the note transport gRPC service changed as well, so both services must be upgraded to 0.17. See [(Node) Client, node, remote prover and note transport must all be 0.17](#node-client-node-remote-prover-and-note-transport-must-all-be-017).
+A 0.17 client talks only to a 0.17 node: the node matches major.minor, so a 0.16 node rejects every 0.17 client. The remote prover wire format and the note transport gRPC service changed as well, so both services must be upgraded to 0.17. See [(Node) Client, node, remote prover and note transport must all be 0.17](#node-client-node-remote-prover-and-note-transport-must-all-be-017).
 :::
 
 ## Quick Fix
@@ -25,8 +25,7 @@ A 0.17 client talks only to a 0.17 node, and a `0.17.0-rc.x` client only to a `0
 rm ~/.miden/store.sqlite3
 ( cd "$(mktemp -d)" && miden-client init --local >/dev/null \
   && rm -rf ~/.miden/packages && cp -R .miden/packages ~/.miden/packages )
-# point [rpc] endpoint AND [note_transport] endpoint in miden-client.toml at 0.17 services
-# (on 2026-09-28: https://rpc.devnet.miden.io and https://transport.devnet.miden.io), then
+# point [rpc] endpoint AND [note_transport] endpoint in miden-client.toml at 0.17 services, then
 miden-client sync
 ```
 
@@ -42,13 +41,12 @@ let fee_faucet_id = client
 ```
 
 ```bash
-# Web: back up browser-keystore keys on 0.16.3 first (see (Store)), then pin the rc exactly
-# (it is on the `next` dist-tag; `@next` alone would save ^0.17.0-rc.4, which accepts later rcs)
-npm install --save-exact @miden-sdk/miden-sdk@0.17.0-rc.4 @miden-sdk/react@0.17.0-rc.4
+# Web: back up browser-keystore keys on 0.16.3 first (see (Store)), then bump every @miden-sdk/* package together
+npm install @miden-sdk/miden-sdk@0.17.0 @miden-sdk/react@0.17.0
 ```
 
 ```typescript
-// Web: point rpcUrl and noteTransportUrl at 0.17 services ("devnet" on 2026-09-28), sync, then read the fee faucet
+// Web: point rpcUrl and noteTransportUrl at 0.17 services, sync, then read the fee faucet
 const client = await MidenClient.create({ rpcUrl: "devnet", noteTransportUrl: "devnet" });
 await client.sync();
 const feeFaucet = await client.feeFaucetId(); // replaces header.feeFaucetId()
@@ -60,7 +58,7 @@ If you encounter errors, continue reading for detailed migration steps.
 
 ## Summary
 
-The client changes fall into five groups. **Local state does not survive the upgrade**: the SQLite store, the IndexedDB store (with the default browser keystore's secret keys), exported `.mac` / `.mno` files and the CLI's bundled `.miden/packages` all have to be recreated or backed up first, and only the package failure names a version. **Deployment pairing** is stricter: client, node, remote prover and note transport service must all be 0.17, rc with rc, and a 0.17 node may require an invitation code before it creates a new account. **The fee faucet left the block header**: both the Rust client and the Web SDK now read it from the protocol configuration the node delivers on sync, so sync before executing. **Rename churn** (`ValidatorKeys` → `ValidatorConfig`, `ProvingOptions` → `Prover`, `AccountType.FungibleFaucet` → `FaucetType.FungibleFaucet`, `exec --script-path` → `exec --package`, new trait methods and error variants) fails to compile or fails loudly. And several **silent behavioural changes** will not fail your build: multisig requests built with `fee_conversion_salt` fail at execution, `expiration_delta` now expires consume-only requests, a note stranded by a discarded transaction is refused, a broken note transport no longer fails `sync_state`, the keystore returns an empty set instead of an error, and the Web SDK drops block-locked notes from "available" lists.
+The client changes fall into five groups. **Local state does not survive the upgrade**: the SQLite store, the IndexedDB store (with the default browser keystore's secret keys), exported `.mac` / `.mno` files and the CLI's bundled `.miden/packages` all have to be recreated or backed up first, and only the package failure names a version. **Deployment pairing** is stricter: client, node, remote prover and note transport service must all be 0.17, and a 0.17 node may require an invitation code before it creates a new account. **The fee faucet left the block header**: both the Rust client and the Web SDK now read it from the protocol configuration the node delivers on sync, so sync before executing. **Rename churn** (`ValidatorKeys` → `ValidatorConfig`, `ProvingOptions` → `Prover`, `AccountType.FungibleFaucet` → `FaucetType.FungibleFaucet`, `exec --script-path` → `exec --package`, new trait methods and error variants) fails to compile or fails loudly. And several **silent behavioural changes** will not fail your build: multisig requests built with `fee_conversion_salt` fail at execution, `expiration_delta` now expires consume-only requests, a note stranded by a discarded transaction is refused, a broken note transport no longer fails `sync_state`, the keystore returns an empty set instead of an error, and the Web SDK drops block-locked notes from "available" lists.
 
 ---
 
@@ -72,7 +70,7 @@ The 0.17 client cannot read data a 0.16 client wrote. Block headers, accounts an
 
 ### Affected Code
 
-The 0.17.0-rc.4 CLI on a store written and synced by the 0.16 CLI fails on every command that builds a client (`account`, `notes`, `tx`, `info`, `sync`, `new-wallet`) with exit code 1:
+The 0.17.0 CLI on a store written and synced by the 0.16 CLI fails on every command that builds a client (`account`, `notes`, `tx`, `info`, `sync`, `new-wallet`) with exit code 1:
 
 ```text
 Error: cli::client_error
@@ -98,7 +96,7 @@ The changelog says a new client database is required, which is true, but not how
 1. Delete the store file (`store.sqlite3` in the `.miden` directory, or the path you pass to `sqlite_store(path)`) and let the client recreate it, then `sync`.
 2. Do not plan to carry private accounts over with `export`: 0.16 `.mac` / `.mno` files do not decode in 0.17 either. A 0.17 client also cannot talk to the 0.16 network the old store was synced against, so plan to recreate accounts on the 0.17 network.
 3. Keep the keystore directory. A 0.16 filesystem keystore (key files plus `key_index.json`) loads unchanged in 0.17, and `miden-client keys --list` shows the old keys and their account associations. A recreated account gets a new ID. The CLI can commit it to a kept ECDSA key's public key (`new-wallet --ecdsa <PUBLIC_KEY>`), but `--falcon` always generates a new key.
-4. Keep `miden-client.toml`. A 0.16 CLI config parses under 0.17 and the CLI creates a fresh store next to it. Point `[rpc] endpoint` at a 0.17 node **and `[note_transport] endpoint` at a transport that serves `note_transport.Api`** (on 2026-09-28, `https://rpc.devnet.miden.io` and `https://transport.devnet.miden.io`). The 0.16 value, `https://transport.miden.io`, served only the old service on that date, and `sync` keeps succeeding while private notes stop arriving. Then refresh `.miden/packages` (see [(CLI) Re-create `.miden/packages`](#cli-re-create-midenpackages-after-upgrading)).
+4. Keep `miden-client.toml`. A 0.16 CLI config parses under 0.17 and the CLI creates a fresh store next to it. Point `[rpc] endpoint` at a 0.17 node **and `[note_transport] endpoint` at a transport that serves `note_transport.Api`**. With a transport that serves only the 0.16 service, `sync` keeps succeeding while private notes stop arriving. Then refresh `.miden/packages` (see [(CLI) Re-create `.miden/packages`](#cli-re-create-midenpackages-after-upgrading)).
 5. If you implement a custom `Store`, see the custom-store bullet in [(Rust) Other library changes](#rust-other-library-changes).
 
 **Web SDK (IndexedDB store)**
@@ -124,14 +122,14 @@ The changelog says a new client database is required, which is true, but not how
 2. Expect the store to be deleted on first open. The SDK logs:
 
    ```text
-   IndexedDB client version mismatch (stored=0.16.3, expected=0.17.0-rc.4). Resetting store.
+   IndexedDB client version mismatch (stored=0.16.3, expected=0.17.0). Resetting store.
    ```
 
    Re-sync from scratch, and recover accounts from the keys you backed up, or from seeds, not from 0.16 exports.
 3. Do not carry a 0.16 `exportStore` dump into a 0.17 client with `importStore`: the import copies tables verbatim, including the stored `clientVersion`.
 4. Rolling back from 0.17 to 0.16 does **not** wipe the store (a stored version newer than the client only rewrites the version). Delete the `MidenClientDB_<network>` database, or your `storeName`, yourself.
-5. The reset fires only when the stored version is older and a different major.minor, so moving between 0.17 rcs, or from an rc to 0.17.0, keeps the store.
-6. Point `noteTransportUrl` at a 0.17 transport as well as `rpcUrl` at a 0.17 node (`"devnet"` for both on 2026-09-28). `createTestnet()` and `noteTransportUrl: "testnet"` resolve to `https://transport.miden.io`, which served only the old service on that date.
+5. The reset fires only when the stored version is older and a different major.minor, so moving between 0.17 patch releases keeps the store.
+6. Point `noteTransportUrl` at a 0.17 transport as well as `rpcUrl` at a 0.17 node. `createTestnet()` and `noteTransportUrl: "testnet"` resolve to `https://transport.miden.io`.
 7. Node.js: the Node entry uses a SQLite store that the SDK does not version-check: `~/.miden/stores/<storeName>/<storeName>.db` when you pass `storeName`, and a fresh temporary directory otherwise. Delete the `.db` file yourself; the `keystore` directory next to it is a filesystem keystore and carries over, and the SQLite rules above apply.
 
 ### Common Errors
@@ -146,20 +144,17 @@ The changelog says a new client database is required, which is true, but not how
 
 ### Summary
 
-Every RPC call carries `accept: application/vnd.miden; version=<miden-client crate version>[; genesis=<hex>]`. The node accepts it only if major.minor match its own version and the pre-release label (`rc`, `alpha`, or none) matches; for a pre-release node the patch must match too. The rc number is ignored.
+Every RPC call carries `accept: application/vnd.miden; version=<miden-client crate version>[; genesis=<hex>]`. The node accepts it only if major.minor match its own version; the patch is ignored.
 
-| Client | 0.16.x node | 0.17.0-rc.3 node | 0.17.0 node (stable, future) |
-| --- | --- | --- | --- |
-| 0.16.1 | accepted | rejected | rejected |
-| 0.17.0-rc.4 | rejected | accepted | rejected |
-| 0.17.x stable (future) | rejected | rejected | accepted (any 0.17 patch) |
-
-Observed on 2026-09-28: `rpc.testnet.miden.io` accepted 0.16.x and rejected every 0.17 version (it ran a stable 0.16 node); `rpc.devnet.miden.io` accepted `0.17.0-rc.3` / `0.17.0-rc.4` and rejected `0.16.1` and `0.17.0`; `rpc.mainnet.miden.io` (the new `Endpoint::mainnet()`) did not resolve.
+| Client | 0.16.x node | 0.17.x node |
+| --- | --- | --- |
+| 0.16.1 | accepted | rejected |
+| 0.17.0 | rejected | accepted (any 0.17 patch) |
 
 Two more services must match the client:
 
-- **Remote prover.** `remote_prover.ProofRequest` and `Proof` changed from a `proof_type` enum plus an opaque `bytes payload` to typed `oneof` messages. The remote prover has no version negotiation, so a 0.17 client talking to a 0.16 prover fails at decode time rather than with a version error. The endpoint constants (`TESTNET_PROVER_ENDPOINT`, `DEVNET_PROVER_ENDPOINT`, new `MAINNET_PROVER_ENDPOINT`) keep their URLs; the service behind them must match. We did not verify which version the public prover endpoints run, or the exact error a mismatched prover produces.
-- **Note transport.** The client now speaks `note_transport.Api` (defined in the node repository) instead of `miden_note_transport.MidenNoteTransport`. The endpoint URLs are unchanged, so the server behind them must be upgraded. On 2026-09-28 `transport.devnet.miden.io` served the new service, while `transport.miden.io` (the testnet default) served only the old one. A transport failure no longer fails `sync_state`, so a mismatched transport server is silent; see [(Rust) Note transport](#rust-note-transport-new-service-silent-failures-screening-and-a-new-cursor).
+- **Remote prover.** `remote_prover.ProofRequest` and `Proof` changed from a `proof_type` enum plus an opaque `bytes payload` to typed `oneof` messages. The remote prover has no version negotiation, so a 0.17 client talking to a 0.16 prover fails at decode time rather than with a version error. The endpoint constants (`TESTNET_PROVER_ENDPOINT`, `DEVNET_PROVER_ENDPOINT`, new `MAINNET_PROVER_ENDPOINT`) keep their URLs; the service behind them must match.
+- **Note transport.** The client now speaks `note_transport.Api` (defined in the node repository) instead of `miden_note_transport.MidenNoteTransport`. The endpoint URLs are unchanged, so the server behind them must be upgraded. A transport failure no longer fails `sync_state`, so a mismatched transport server is silent; see [(Rust) Note transport](#rust-note-transport-new-service-silent-failures-screening-and-a-new-cursor).
 
 ### Affected Code
 
@@ -170,16 +165,16 @@ server does not support any of the specified application/vnd.miden content types
 # What the Rust client surfaces (ClientError -> RpcError -> AcceptHeaderError)
 RPC error
 accept header validation failed
-server rejected request - please check your version and network settings (client version: 0.17.0-rc.4, genesis commitment: none)
+server rejected request - please check your version and network settings (client version: 0.17.0, genesis commitment: none)
 ```
 
 The Web SDK surfaces the same rejection as `Failed to ensure genesis in place: ... accept header validation failed`.
 
 ### Migration Steps
 
-1. Point a `0.17.0-rc.x` client at a 0.17 rc node (devnet on 2026-09-28, or a local node from the matching release). It will not talk to testnet until testnet moves to 0.17, and it will stop working when a network moves to a stable 0.17.0 node: plan to move to the stable client then.
+1. Point a 0.17 client at a 0.17 node, public or a local node from the matching release. A 0.16 node rejects it.
 2. Upgrade every client in the graph together (Rust client, CLI, Web SDK, any prover crate pinning `miden-client`). A mixed graph fails at the first RPC.
-3. For a local node, use the node release the client is built against: `miden-client` 0.17.0-rc.4 is built (per its `Cargo.lock`) against `miden-node-proto-build` `0.17.0-rc.3`. The accept header does not guard rc-to-rc drift in the embedded object schemas.
+3. For a local node, run node `0.17.0`.
 4. Use a remote prover from the 0.17 node release, and a note transport server that serves `note_transport.Api`. Switch the transport endpoint together with the RPC endpoint: the CLI's `[note_transport] endpoint` (`init --network devnet` or `--note-transport-endpoint <URL>` sets it), the Web SDK's `noteTransportUrl`, or in Rust `ClientBuilder::for_devnet()` or `ClientBuilder::note_transport(..)`.
 5. The node still keeps account state for only 50 blocks; that window did not change.
 
@@ -187,7 +182,7 @@ The Web SDK surfaces the same rejection as `Failed to ensure genesis in place: .
 
 | Error Message | Cause | Solution |
 | --- | --- | --- |
-| `server rejected request - please check your version and network settings (client version: 0.17.0-rc.4, genesis commitment: ...)` | Client and node differ in major.minor or pre-release label | Use a node and client from the same 0.17 line and label. |
+| `server rejected request - please check your version and network settings (client version: 0.17.0, genesis commitment: ...)` | Client and node differ in major.minor | Use a node and client from the same 0.17 line. |
 | `Failed to ensure genesis in place: ... accept header validation failed` (Web) | Same | Same. |
 
 ---
@@ -196,7 +191,7 @@ The Web SDK surfaces the same rejection as `Failed to ensure genesis in place: .
 
 ### Summary
 
-A 0.17 node creates a new (non-network) account on chain only if it is registered on the node's allowlist, unless the operator runs it with `--disable-account-allowlist` (`MIDEN_NODE_DISABLE_ACCOUNT_ALLOWLIST`). Before submitting a transaction that creates such an account (after it is proven), or before proving a batch that does, the client asks the node and fails with `ClientError::AccountNotAllowlisted`. Register the account with an invitation code first. Existing on-chain accounts and network accounts are never gated. We did not check which public networks enforce the allowlist.
+A 0.17 node creates a new (non-network) account on chain only if it is registered on the node's allowlist, unless the operator runs it with `--disable-account-allowlist` (`MIDEN_NODE_DISABLE_ACCOUNT_ALLOWLIST`). Before submitting a transaction that creates such an account (after it is proven), or before proving a batch that does, the client asks the node and fails with `ClientError::AccountNotAllowlisted`. Register the account with an invitation code first. Existing on-chain accounts and network accounts are never gated.
 
 ### Affected Code
 
@@ -273,12 +268,7 @@ let fee_faucet_id = config.fee_asset_id().faucet_id();
 
 1. Replace `header.fee_parameters().fee_faucet_id()` with `client.get_protocol_config(header.protocol_config_commitment()).await?.fee_asset_id().faucet_id()`. `FeeParameters` now carries only `verification_base_fee()`.
 2. Call `client.sync_state()` at least once on a new store before executing a transaction or listing consumable notes. Fetching genesis alone does not deliver a configuration, and note screening loads it as soon as there is a note to screen, so `get_consumable_notes` fails as well as execution.
-3. The node sends the configuration only when a sync starts at genesis or when the configuration changed over the synced range. A store whose sync height is past genesis but holds no configuration for the current commitment never receives it, and syncing again does not help. If `protocol configuration ... is not stored` persists after a sync, delete the store and sync from genesis.
-4. A stale `fee_faucet_id = ...` line in `miden-client.toml` is ignored silently (the CLI config does not deny unknown fields). Remove it to avoid confusion.
-
-:::note The 0.17.0-rc.1 changelog describes an API that is gone
-The rc.1 entry describes registering a configuration through `ClientBuilder::protocol_config`, `Client::add_protocol_config`, the `MIDEN_PROTOCOL_CONFIG` environment variable and a CLI `fee_faucet_id` config key, and says the node does not provide it over RPC. None of this exists at rc.4: rc.2 removed it, and the node delivers the configuration through sync. There is no supported way to supply a configuration yourself; `Client::seed_protocol_config` exists only behind the `testing` feature, for mock chains. If you tried the rc.1 API, delete it.
-:::
+3. The node sends the configuration only when a sync starts at genesis or when the configuration changed over the synced range. A store whose sync height is past genesis but holds no configuration for the current commitment never receives it, and syncing again does not help. If `protocol configuration ... is not stored` persists after a sync, delete the store and sync from genesis. There is no supported way to supply a configuration yourself; `Client::seed_protocol_config` exists only behind the `testing` feature, for mock chains.
 
 ### Common Errors
 
@@ -286,7 +276,6 @@ The rc.1 entry describes registering a configuration through `ClientBuilder::pro
 | --- | --- | --- |
 | `protocol configuration <commitment> is not stored; sync the client to get it from the node` | Execution or note screening before the first `sync_state`, or a store past genesis that never received a configuration | Run `sync_state`; if it persists, recreate the store. |
 | ``error[E0599]: no method named `fee_faucet_id` found`` on `&FeeParameters` | The fee faucet moved to `ProtocolConfig` | Use `get_protocol_config(..).fee_asset_id().faucet_id()`. |
-| `error[E0599]` for `protocol_config` on `ClientBuilder` or `add_protocol_config` on `Client` | rc.1 API removed | Delete the call and sync instead. |
 | `received an invalid response from the Miden node: node returned a protocol configuration with commitment ... for a block header that commits to ...` | The node sent a configuration that does not match the header | Report it to the node operator. |
 
 ---
@@ -300,12 +289,12 @@ Client-specific details:
 - `MultisigAuthArgs` and `FeeConversionInfo` resolve from `miden_client::account::component`. `SequentialCommit` (for `to_commitment` / `to_elements`) is not re-exported by `miden-client`, so it needs a direct `miden-protocol` dependency.
 - Setting any non-empty auth arg makes the client skip its own fee commitment. Set one on a fee-free chain too: the component asserts the preimage is present whatever the base fee.
 - Nothing derives the bound block from the auth args: add it with `.block_numbers([bound_block])`. The client fetches that header from the node if it is not in the store.
-- `TransactionRequest` now always serializes `block_numbers` first, so stored request bytes from 0.17.0-rc.3 or any 0.16 client do not deserialize. Rebuild and re-serialize them.
+- `TransactionRequest` now always serializes `block_numbers` first, so stored request bytes from any 0.16 client do not deserialize. Rebuild and re-serialize them.
 - `chain_anchor_for_request` and `execute_transaction_at` still exist and now also track the blocks in `block_numbers`, but do not re-execute a multisig proposal at an old anchor: the node keeps account state for only 50 blocks, and foreign accounts, the fee faucet included, are loaded at the reference block.
 - Take the fee faucet from `get_protocol_config`, not from the block header.
 
 :::note `fee_conversion_info` in the 0.16 guide
-The 0.16 guide names `TransactionRequestBuilder::fee_conversion_info(info, salt)`. That method existed only in 0.16.0-rc.1 to rc.3. From 0.16.0-rc.4 on (so in 0.16.0, 0.16.1 and 0.17.0-rc.4) the builder has `fee_conversion_salt(salt)`, and the client builds the native `FeeConversionInfo` from the reference block itself.
+The 0.16 guide names `TransactionRequestBuilder::fee_conversion_info(info, salt)`. In 0.16.0, 0.16.1 and 0.17.0 the builder has `fee_conversion_salt(salt)` instead, and the client builds the native `FeeConversionInfo` from the reference block itself.
 :::
 
 ---
@@ -504,7 +493,7 @@ let records = client.get_transactions(TransactionFilter::Ids(vec![tx_id])).await
 1. Treat a successful submit as "accepted", not "committed": sync and read the transaction's status until it is `Committed` or `Discarded`.
 2. Handle `TransactionRequestError::InputNoteBeingProcessed { note, transaction_id }` (reached through `ClientError::TransactionRequestError`) instead of retrying the same consume.
 3. Keep the window between building a request and submitting it short when the transaction reads foreign state.
-4. We found no supported way in rc.4 to return a stranded note to a consumable state. Retrying the consume is refused; the observed recovery was a fresh note.
+4. We found no supported way in 0.17 to return a stranded note to a consumable state. Retrying the consume is refused; the observed recovery was a fresh note.
 
 ### Common Errors
 
@@ -823,30 +812,28 @@ New in 0.17, no migration needed: `Endpoint::mainnet()`, `ClientBuilder::for_mai
 
 ---
 
-## (Web) Install from the `next` dist-tag and bump every package together
+## (Web) Bump every `@miden-sdk/*` package together
 
 ### Summary
 
-All 20 published `@miden-sdk/*` packages share one version, and every first-party peer range moved to `^0.17.0-rc.4` (`react`, `para`, `para-react`, `turnkey`, `turnkey-react`, `wallet-adapter-base`, `wallet-adapter-miden`, `wallet-adapter-react`, `telemetry-otel`, `telemetry-sentry`). A 0.16 peer range does not accept 0.17, so bump them together.
-
-The 0.17 release candidates publish to the `next` dist-tag. On 2026-09-28, `latest` was `0.16.3` and `next` was `0.17.0-rc.4` for `miden-sdk`, `react`, `miden-wallet-adapter`, `vite-plugin`, `para`, `turnkey`, `create` and the Node binaries. A plain `npm install @miden-sdk/miden-sdk` therefore still installs 0.16.3, and a caret range such as `^0.17.0` matches no rc.
+All 20 published `@miden-sdk/*` packages share one version, and every first-party peer range moved to `^0.17.0` (`react`, `para`, `para-react`, `turnkey`, `turnkey-react`, `wallet-adapter-base`, `wallet-adapter-miden`, `wallet-adapter-react`, `telemetry-otel`, `telemetry-sentry`). A 0.16 peer range does not accept 0.17, so bump them together.
 
 ### Affected Code
 
 ```diff title="package.json"
 - "@miden-sdk/miden-sdk": "0.16.3",
 - "@miden-sdk/react": "0.16.3"
-+ "@miden-sdk/miden-sdk": "0.17.0-rc.4",
-+ "@miden-sdk/react": "0.17.0-rc.4"
++ "@miden-sdk/miden-sdk": "0.17.0",
++ "@miden-sdk/react": "0.17.0"
 ```
 
 ### Migration Steps
 
 1. Before the bump reaches users, back up the default browser keystore's secret keys on 0.16.3: the first 0.17 open deletes them with the rest of the IndexedDB store. See [(Store) Every 0.16 SQLite store must be recreated](#store-every-016-sqlite-store-must-be-recreated).
-2. Pin the exact `0.17.0-rc.4` version (`npm install --save-exact <package>@0.17.0-rc.4`). A plain `npm install <package>@next` saves `^0.17.0-rc.4`, which also accepts later rcs, and the rcs broke compatibility between each other. Do the same for every other `@miden-sdk/*` package you depend on (vite plugin, wallet adapters, Para, Turnkey, telemetry).
+2. Install `0.17.0` (`npm install <package>@0.17.0`). Do the same for every other `@miden-sdk/*` package you depend on (vite plugin, wallet adapters, Para, Turnkey, telemetry).
 3. The 0.16 guide pinned `miden-sdk 0.16.1` with `react 0.16.0`; since 0.16.2 the two ship in lockstep at the same version.
 4. Node.js: the Node entry still resolves its native binary through the `optionalDependencies` `@miden-sdk/node-darwin-arm64`, `node-darwin-x64` and `node-linux-x64-gnu`, pinned to the exact same version. Do not install them directly.
-5. Rust crates published from the Web SDK repository (`miden-client-web`, `miden-idxdb-store`, `js-export-macro`, `miden-mobile-prover`) are at `0.17.0-rc.4`. `miden-client-web` requires `miden-client` `0.17.0-rc.4` and `miden-protocol` `0.17.0-rc.7`; `miden-idxdb-store` and `miden-mobile-prover` require `miden-client` `0.17.0-rc.4`.
+5. Rust crates published from the Web SDK repository (`miden-client-web`, `miden-idxdb-store`, `js-export-macro`, `miden-mobile-prover`) are at `0.17.0`. `miden-client-web` requires `miden-client` `0.17.0` and `miden-protocol` `0.17.0`; `miden-idxdb-store` and `miden-mobile-prover` require `miden-client` `0.17.0`.
 
 ---
 
@@ -889,7 +876,7 @@ const client = await MidenClient.create({ rpcUrl, feeFaucetId: "0x..." });
 4. `BlockHeader.verificationBaseFee()` is unchanged.
 
 :::note `feeFaucetId` is optional, whatever some doc comments say
-`ClientOptions.feeFaucetId` and `MidenConfig.feeFaucetId` are optional since 0.17.0-rc.2. You do not need them to execute or screen notes, and a wrong value is corrected by the next sync rather than executed under. The rc.1 changelog said creating a client without `feeFaucetId` fails; rc.2 superseded that. Some shipped rc.4 text still says it is required (the JSDoc on `MidenClient.create`, `createTestnet` and `createDevnet`, and some doc samples); the code makes it optional.
+`ClientOptions.feeFaucetId` and `MidenConfig.feeFaucetId` are optional. You do not need them to execute or screen notes, and a wrong value is corrected by the next sync rather than executed under. Some shipped 0.17.0 text still says it is required (the JSDoc on `MidenClient.create`, `createTestnet` and `createDevnet`, and some doc samples); the code makes it optional.
 :::
 
 ### Common Errors
@@ -1018,14 +1005,14 @@ const request = (await client.feeAwareTransactionRequestBuilder(account)).withFo
 - Do not call `withFeeConversionSalt` or `withAuthArg` on the builder it returns for a multisig: each clears the other and discards the auth args.
 - The `feeConversionSalt` option consumes the `Word` (it moves across the WASM boundary). Build a fresh `Word` per call: a spent handle is not rejected, it arrives as "no salt" and a random salt is drawn.
 - Stop passing `anchor` for multisig requests (`preview`, `executeRequest`, `submit`). Sync each party to at least the bound block (`Math.max(...request.blockNumbers())`) and execute at the tip.
-- `TransactionRequest.serialize()` now always carries block numbers, so bytes from 0.16 or 0.17.0-rc.3 and earlier do not interoperate with rc.4. A dApp and its wallet exchanging a `CustomTransaction` through the wallet adapter must both be on 0.17.0-rc.4 or later.
+- `TransactionRequest.serialize()` now always carries block numbers, so bytes from 0.16 do not interoperate with 0.17. A dApp and its wallet exchanging a `CustomTransaction` through the wallet adapter must both be on 0.17.
 - New: `TransactionRequestBuilder.withBlockNumbers()` and `TransactionRequest.blockNumbers()`.
 
 ---
 
 ## (Web) Rebuild a bundled native mobile prover
 
-`miden-mobile-prover` links `miden-client`, now 0.17.0-rc.4 on protocol 0.17.0-rc.7. A prover binary built for 0.16 proves against the 0.16 kernel and fails on 0.17 transactions. Capacitor, iOS and Android apps that embed it must rebuild the library from `miden-mobile-prover` 0.17.0-rc.4 (or from the Web SDK release tag) and ship it with the SDK bump. This is not in the changelog.
+`miden-mobile-prover` links `miden-client`, now 0.17.0 on protocol 0.17.0. A prover binary built for 0.16 proves against the 0.16 kernel and fails on 0.17 transactions. Capacitor, iOS and Android apps that embed it must rebuild the library from `miden-mobile-prover` 0.17.0 (or from the Web SDK release tag) and ship it with the SDK bump. This is not in the changelog.
 
 ---
 
@@ -1038,7 +1025,7 @@ const request = (await client.feeAwareTransactionRequestBuilder(account)).withFo
 | Raw `WebClient.createClientWithExternalKeystore` inserts `feeFaucetId` **before** the three callbacks | Insert the argument (see below), or use `MidenClient.create({ keystore: { getKey, insertKey, sign } })`. Not in the changelog. |
 | Wrapper statics `WasmWebClient.createClient` / `createClientWithExternalKeystore` gained trailing `observability` (already accepted at runtime in 0.16.3, newly typed) and `feeFaucetId` parameters | No change needed. |
 | `AccountVaultDelta.fungible()`, `FungibleAssetDelta` and `FungibleAssetDeltaItem` removed | Use `addedFungibleAssets()` / `removedFungibleAssets()`. See [Assets, Vault & Faucet](./asset-vault-faucet). |
-| `NoteFile.deserialize` / `AccountFile.deserialize` reject bytes serialized by 0.16 or 0.17.0-rc.1 | Re-export from a 0.17 client. |
+| `NoteFile.deserialize` / `AccountFile.deserialize` reject bytes serialized by 0.16 | Re-export from a 0.17 client. |
 | Network accounts cannot be deployed by an empty transaction, must use the chain's fee faucet, and always allowlist P2ID | See [Account Changes](./account-changes). |
 | Emitting a note to a network account caps the transaction at 20 blocks; `createNetworkNote` declares the target as a foreign account | See [Transaction Changes](./transaction-changes). |
 | New account creation can be gated by an allowlist | See [(Node) New accounts may need an invitation code](#node-new-accounts-may-need-an-invitation-code). |
@@ -1111,7 +1098,7 @@ miden-client new-wallet
 
 ### Migration Steps
 
-1. The simplest path, since the store has to be recreated anyway: move the old `.miden` directory aside and run `miden-client init` again, with `--network` pointing at a 0.17 node (`--network devnet` also sets a 0.17 note transport on 2026-09-28; a custom URL sets none, so add `--note-transport-endpoint`). This writes fresh packages. The keystore lives in `.miden/keystore` by default, so copy that directory into the new `.miden` if you want to keep your keys.
+1. The simplest path, since the store has to be recreated anyway: move the old `.miden` directory aside and run `miden-client init` again, with `--network` pointing at a 0.17 node (`--network devnet` also sets devnet's note transport; a custom URL sets none, so add `--note-transport-endpoint`). This writes fresh packages. The keystore lives in `.miden/keystore` by default, so copy that directory into the new `.miden` if you want to keep your keys.
 2. To keep the directory, replace only `packages/`: run `init --local` in a temporary directory and copy its `.miden/packages` over the old one, as above.
 3. Rebuild any custom `.masp` component packages you pass with `-p`, `--extra-packages` or `--package` with a VM 0.33 toolchain; they fail with the same `unsupported version` error.
 4. The nine bundled package names are unchanged: `basic-wallet.masp`, `basic-fungible-faucet.masp`, `basic-non-fungible-faucet.masp`, `auth/basic-auth.masp`, `auth/ecdsa-auth.masp`, `auth/no-auth.masp`, `auth/multisig-auth.masp`, `auth/guarded-multisig-auth.masp`, `auth/network-account-auth.masp`.
@@ -1125,13 +1112,9 @@ miden-client new-wallet
 
 ---
 
-## (CLI) `init` still defaults to testnet, which rejects a 0.17 CLI
+## (CLI) `init` still defaults to testnet
 
-:::note Time-sensitive
-This describes the public deployment on 2026-09-28. Once testnet runs 0.17, the default works again.
-:::
-
-`miden-client init` with no `--network` still configures `https://rpc.testnet.miden.io`, and on 2026-09-28 that node rejected the 0.17.0-rc.4 client at the accept header. A fresh 0.17 install fails its first `sync` until it is pointed at a 0.17 node. The default `[note_transport] endpoint`, `https://transport.miden.io`, also served only the 0.16 transport service, and a transport failure does not fail `sync`. Run `init --network devnet` (both endpoints were 0.17 on that date), or pass `--network <0.17 endpoint>` with `--note-transport-endpoint <URL>`, or edit `[rpc] endpoint` and `[note_transport] endpoint`. See [(Node) Client, node, remote prover and note transport must all be 0.17](#node-client-node-remote-prover-and-note-transport-must-all-be-017).
+`miden-client init` with no `--network` still configures `https://rpc.testnet.miden.io`, and `[note_transport] endpoint` defaults to `https://transport.miden.io`. A 0.17 CLI needs a 0.17 node: a 0.16 node rejects it at the accept header, so the first `sync` fails until the CLI is pointed at a 0.17 node. A note transport that serves only the 0.16 service does not fail `sync` at all. Point both at 0.17 services: pass `--network <0.17 endpoint>` with `--note-transport-endpoint <URL>`, or edit `[rpc] endpoint` and `[note_transport] endpoint`. See [(Node) Client, node, remote prover and note transport must all be 0.17](#node-client-node-remote-prover-and-note-transport-must-all-be-017).
 
 ```text
 $ miden-client init --local && miden-client sync
@@ -1140,7 +1123,7 @@ Error: cli::client_error
   × client error
   ├─▶ RPC error
   ├─▶ accept header validation failed
-  ╰─▶ server rejected request - please check your version and network settings (client version: 0.17.0-rc.4, genesis commitment: none)
+  ╰─▶ server rejected request - please check your version and network settings (client version: 0.17.0, genesis commitment: none)
   help: The node rejected the request due to a version mismatch. Ensure your client version is compatible with the node version. See docs: https://docs.miden.xyz/builder/tools/clients/rust-client/cli/cli-troubleshooting
 ```
 
@@ -1266,7 +1249,7 @@ BTC = { address = "mtst1...", decimals = 8 }   # on testnet
 
 ### Summary
 
-`init --network mainnet` configures `https://rpc.mainnet.miden.io` with note transport `https://transport.mainnet.miden.io` (on 2026-09-28 `rpc.mainnet.miden.io` did not resolve). A new optional `[rpc] network_id`, set by `init --network-id <HRP>`, overrides the bech32 prefix derived from the endpoint, which is `mcst` for any unrecognised endpoint.
+`init --network mainnet` configures `https://rpc.mainnet.miden.io` with note transport `https://transport.mainnet.miden.io`. A new optional `[rpc] network_id`, set by `init --network-id <HRP>`, overrides the bech32 prefix derived from the endpoint, which is `mcst` for any unrecognised endpoint.
 
 ### Affected Code
 
@@ -1378,7 +1361,7 @@ miden-client keys --commitment 0x04...          # 65-byte uncompressed SEC1 acce
 ## (CLI) Other changes
 
 - **`import` requires a path.** `miden-client import` with no file used to succeed silently; it is now a usage error (`error: the following required arguments were not provided:` / `<FILENAMES>...`).
-- **The protocol configuration arrives through `sync`.** Nothing to configure: the CLI gets the chain's protocol configuration, including the fee asset, from the node on `sync`. Sync before running transactions on a fresh store. The rc.1-only `fee_faucet_id` config key and `MIDEN_PROTOCOL_CONFIG` variable are gone, and a leftover `fee_faucet_id` line is ignored.
+- **The protocol configuration arrives through `sync`.** Nothing to configure: the CLI gets the chain's protocol configuration, including the fee asset, from the node on `sync`. Sync before running transactions on a fresh store.
 - **`notes --list consumable --account-id <ID>` now filters.** In 0.16 the filter was ignored and consumable notes for every tracked account were listed.
 - **`call` accepts bech32 addresses** for `account-id` arguments and for the faucet half of an `asset` argument. A result that does not decode as the declared return type now prints `The result is not a valid value of the procedure's return type: ...` plus the raw stack, instead of failing the command.
 - **Bundled packages named by bare name are read with the trusted reader** (resolved from `package_directory`); a path ending in `.masp` is still validated.
@@ -1393,7 +1376,7 @@ miden-client keys --commitment 0x04...          # 65-byte uncompressed SEC1 acce
 | Error Message | Cause | Solution |
 | --- | --- | --- |
 | `failed to deserialize data from the store` | A 0.16 SQLite store | Delete the store and re-sync. |
-| `server rejected request - please check your version and network settings (client version: ..., genesis commitment: ...)` | Client and node differ in major.minor or pre-release label | Run a 0.17 rc node with a 0.17 rc client. |
+| `server rejected request - please check your version and network settings (client version: ..., genesis commitment: ...)` | Client and node differ in major.minor | Run a 0.17 node with a 0.17 client. |
 | `Failed to ensure genesis in place: ... accept header validation failed` (Web) | Same | Same. |
 | `failed to decode the account file` / `failed to decode the note file` | A `.mac` / `.mno` file or `AccountFile` / `NoteFile` bytes written by 0.16 | Re-export with 0.17, or recreate the account or note. |
 | `invalid value: unsupported version. Got '[6, 0, 0]', but only '[7, 0, 0]' is supported` | Stale `.miden/packages` or a package built with a VM 0.29 toolchain | Refresh `.miden/packages`; rebuild custom packages. |
@@ -1402,7 +1385,7 @@ miden-client keys --commitment 0x04...          # 65-byte uncompressed SEC1 acce
 | `advice stack read failed` (inside the executor error chain) | `fee_conversion_salt` / `withFeeConversionSalt` on a multisig account | Build `MultisigAuthArgs` (Rust) or use `feeAwareTransactionRequestBuilder` (Web). |
 | `the advice map holds no preimage for the multisig auth args` | A multisig request without auth args | Same. |
 | `failed to lookup value in Merkle store` | Multisig bound block not added to the request | Add it with `block_numbers` / `withBlockNumbers`. |
-| `note with details commitment <hex> is being consumed by pending transaction <id>` | The note is held by a pending or discarded transaction | Wait for the pending transaction; if it was discarded, rc.4 has no supported way to release the note. |
+| `note with details commitment <hex> is being consumed by pending transaction <id>` | The note is held by a pending or discarded transaction | Wait for the pending transaction; if it was discarded, 0.17 has no supported way to release the note. |
 | `Property 'feeFaucetId' does not exist on type 'BlockHeader'.` (TS2339) | Accessor removed | `await client.feeFaucetId()` |
 | `Property 'FungibleFaucet' does not exist on type 'typeof AccountType'.` (TS2339) | Stale selector | `FaucetType.FungibleFaucet` |
 | `error: unexpected argument '--script-path' found` | `exec` takes packages only | Compile the script and pass `--package`. |
