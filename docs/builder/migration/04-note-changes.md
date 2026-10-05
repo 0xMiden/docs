@@ -7,7 +7,7 @@ description: "P2ID storage gains two salt elements, every standard note script r
 # Note Changes
 
 :::warning Breaking Change
-Every standard note script changed, so every script root hard-coded from 0.16 is wrong. P2ID storage grew from two items to four, which changes every P2ID recipient and note ID even with no code change, and a P2ID recipient still built by hand with two items produces a note nobody can consume. Config notes moved to `miden_standards::note::config`, and TX_FEE notes no longer hand their assets to the consumer, so a plain wallet can no longer consume one. PSWAP seals its payback and remainder notes, and the new `StandardNote::UPGRADE` variant breaks exhaustive matches.
+Every standard note script changed, so every script root hard-coded from 0.16 is wrong. P2ID storage grew from two items to four, which changes every P2ID recipient and note ID even with no code change, and a P2ID recipient still built by hand with two items produces a note nobody can consume. Config notes moved to `miden_standards::note::config`. PSWAP seals its payback and remainder notes, and the new `StandardNote::UPGRADE` variant breaks exhaustive matches.
 :::
 
 ## Quick Fix
@@ -30,7 +30,7 @@ If you encounter errors, continue reading for detailed migration steps.
 
 ## Summary
 
-Every standard note script was rewritten in 0.17: targeting and reclaiming moved into shared modules, storage is read with a bound, the MINT scripts were unified, config notes renamed "selector" to "variant" and must be public, P2ID gained a salt, PSWAP seals its outputs, and TX_FEE stopped moving assets. Together they change every standard script root and the benchmarked note costs, and none of them fails to compile. Notes built through the standard builders keep working; what breaks is anything that caches a root, matches an error string, or builds a standard note's storage by hand.
+Every standard note script was rewritten in 0.17: targeting and reclaiming moved into shared modules, storage is read with a bound, the MINT scripts were unified, config notes renamed "selector" to "variant" and must be public, P2ID gained a salt, and PSWAP seals its outputs. Together they change every standard script root and the benchmarked note costs, and none of them fails to compile. Notes built through the standard builders keep working; what breaks is anything that caches a root, matches an error string, or builds a standard note's storage by hand.
 
 The Rust API changes do fail to compile, and they are mechanical: config notes moved to `note::config` and their `account()` getter became `target()`, `MintNoteStorage` collapsed to two variants, `StandardNote::num_storage_items` returns a `NumStorageItems`, `FeeSponsorshipNote` takes a `FungibleAsset`, `NoteExecutionHint` gained an `Unknown` variant, `PswapNote::parent_depth` returns a `u32`, and `StandardNote` gained an `UPGRADE` variant for the new `UpgradeNote`, which upgrades a network account's code.
 
@@ -112,7 +112,7 @@ exec.note::compute_and_store_recipient
 
 ### Summary
 
-Every standard note script was touched, so no script root hard-coded from 0.16 matches `XNote::script_root()` any more: P2ID, P2IDE, SWAP, PSWAP, MINT, BURN, TX_FEE, FEE_SPONSORSHIP and every config note. The new UPGRADE note adds a root of its own; see [New `UpgradeNote` upgrades network account code](#new-upgradenote-upgrades-network-account-code). Nothing fails to compile; cached roots simply stop matching the notes you create. A PSWAP root cached from 0.17.0-rc.7 or earlier is stale too, because output sealing moved it again.
+Every standard note script was touched, so no script root hard-coded from 0.16 matches `XNote::script_root()` any more: P2ID, P2IDE, SWAP, PSWAP, MINT, BURN, TX_FEE, FEE_SPONSORSHIP and every config note. The new UPGRADE note adds a root of its own; see [New `UpgradeNote` upgrades network account code](#new-upgradenote-upgrades-network-account-code). Nothing fails to compile; cached roots simply stop matching the notes you create. A PSWAP root cached from protocol 0.17.0-rc.7 or earlier is stale too, because output sealing moved it again.
 
 Config note scripts now also assert that the note is public, so a hand-built private config note fails at consumption. The builders already produce public notes.
 
@@ -492,7 +492,7 @@ let attachment = PswapNoteAttachment::try_from(&note_attachment)?; // new, valid
 
 `UpgradeNote` is a new standard note that upgrades the code of the network account that consumes it. Its storage is the four-element `[NEW_CODE_COMMITMENT]`. The note is always public and is bound to its target by a `NetworkAccountTarget` attachment, so the target must be a public account. The new `AccountCode` travels in the note in `AccountCodeUpgradeAttachment` chunks (attachment scheme 7, up to 256 words each); the script joins them, inserts the code into the advice map and calls `upgrade` on the account's `UpgradeManager` component, so the consuming transaction does not need to supply the code. How the upgrade itself works, including the storage layout the new code must keep, is covered in [Account Changes](./account-changes).
 
-A note's attachments hold at most 512 words and the target attachment takes one, so the encoded code must fit in 511 words (about 14 KB of serialized `AccountCode`), less any attachments you add yourself. Larger code fails `build()`.
+A note's attachments hold at most 512 words and the target attachment takes one, so the encoded code must fit in 511 words (about 14 KB of serialized `AccountCode`), less any attachments you add yourself. Larger code fails `build()`. A note also carries at most four attachments (`NoteAttachments::MAX_COUNT`), so code over 256 words (two chunks plus the target) leaves room for one attachment of your own, and a fifth fails with `5 attachments were provided but maximum is 4`.
 
 The target account needs:
 

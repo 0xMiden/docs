@@ -204,7 +204,7 @@ client.submit_new_transaction(account.id(), request).await?;
 In 0.16, code in an `AccountDelta` or `AccountPatch` marked a "full state" delta or patch, that is, a new account. An upgrade now puts code in the delta of an existing account, so that notion is gone:
 
 - **`AccountCodePatch`** (`miden_protocol::account`) wraps the optional code: `AccountCodePatch::new(Option<AccountCode>)`, `as_code()`, `into_code()`, `is_empty()`. It serializes as the `Option<AccountCode>` it replaces.
-- **Signatures.** `AccountDelta::new` and `AccountPatch::new` take an `AccountCodePatch` instead of `Option<AccountCode>`. `code()` returns `&AccountCodePatch`, and `into_parts()` returns one.
+- **Signatures.** `AccountDelta::new` and `AccountPatch::new` take an `AccountCodePatch` instead of `Option<AccountCode>`. `code()` returns `&AccountCodePatch`, and `AccountDelta::into_parts()` returns one.
 - **No full state.** `is_full_state()` is removed from both types, and so are `TryFrom<&AccountDelta> for Account` and `TryFrom<&AccountPatch> for Account`. `try_to_new_account()` replaces the conversions. It also succeeds on an upgrade's delta, returning a meaningless account, so call it only when you know the transaction created the account.
 - **Checks moved.** The constructors no longer reject code together with storage `Update` or `Remove` operations; `try_to_new_account()` does. `AccountDelta::new` now also requires a non-zero nonce delta when only the code changed.
 - **Applying and merging.** `Account::apply_patch` accepts a patch with code and replaces the account's code; 0.16 rejected such a patch. `AccountPatch::merge` accepts an incoming patch with code, whose code wins, and requires only that the incoming final nonce be greater, no longer exactly one greater.

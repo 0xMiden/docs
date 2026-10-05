@@ -45,7 +45,7 @@ miden-protocol            = "0.17.0"
 miden-standards           = "0.17.0"
 miden-tx                  = "0.17.0"
 miden-tx-batch            = "0.17.0"
-miden-objects             = "0.17.0"   # new: only for AccountFile / NoteFile or the Protobuf encodings
+miden-objects             = "0.17.0"   # new: AccountFile / NoteFile and the Protobuf encodings
 miden-assembly            = "0.35.0"
 miden-core                = "0.35.0"
 miden-core-lib            = "0.35.0"
@@ -172,6 +172,9 @@ Complete these steps to verify your migration:
 - [ ] Recreate the CLI's `.miden/packages`
 - [ ] Supply a `ProtocolConfig` wherever you build `TransactionInputs` or implement `DataStore`; in the Web SDK read the fee faucet with `client.feeFaucetId()`
 - [ ] Serve `StandardsLib` from any custom `MastForestStore` / `DataStore`
+- [ ] Check every call to `native_account::upgrade` (it now really upgrades the code), and move delta and patch code to `AccountCodePatch` / `try_to_new_account()`
+- [ ] Add match arms for `StandardNote::UPGRADE` and `TransactionEventId::AccountBeforeCodeUpgrade`, and switch note-script felt encoding to `NoteScript::to_elements()`
+- [ ] Do not modify PSWAP outputs after the script seals them
 - [ ] Relay private notes only after the creating transaction commits, with its inclusion proof
 - [ ] Pay fees in the native fee asset at rate 1/1
 - [ ] For multisig accounts, build `MultisigAuthArgs`, add the bound block with `block_numbers`, and execute at the tip rather than at a shared `ChainAnchor`

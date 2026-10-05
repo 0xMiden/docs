@@ -83,7 +83,7 @@ miden-core = { linkage = "dynamic", version = "0.35" }
 3. Drop every persisted package produced by 0.16: databases, caches and registries. The client's bundled packages are covered in [Client Changes](./client-changes).
 4. Make the VM version part of your package cache key. A package linked against one core-library build does not resolve against the next. At the MAST level, execution resolves external calls by procedure root, so calls into core procedures whose roots changed fail with `procedure with root digest ... could not be found`.
 5. Rebuild statically linked packages too. They do not record a core-library dependency, but they are `6.0.0` packages like any other, and the core procedures they embed keep their 0.16 bodies until you rebuild.
-6. If you built packages with a 0.17 release candidate (VM 0.33): they are `7.0.0` and still load, but a manifest at `version = "0.33"` fails resolution like a `0.29` one, and a project that depends on a package assembled against core `0.33` fails with `dependency resolution failed: ... depends on miden-core <digest> in =0.33.0 ...`. Re-assemble them bottom-up as well. Statically linked rc packages keep the 0.33 core bodies (including the old `aead::decrypt` overlap check, see [MASM Changes](./masm-changes)) until rebuilt.
+6. If you built packages with a 0.17 release candidate on VM 0.33 or 0.34 (client 0.17.0-rc.4 or earlier, protocol 0.17.0-rc.8 or earlier): they are `7.0.0` and still load, but a manifest at `version = "0.33"` or `"0.34"` fails resolution like a `0.29` one, and a project that depends on a package assembled against core `0.33` fails with `dependency resolution failed: ... depends on miden-core <digest> in =0.33.0 ...`. Re-assemble them bottom-up as well. Statically linked rc packages keep the 0.33 core bodies (including the old `aead::decrypt` overlap check, see [MASM Changes](./masm-changes)) until rebuilt.
 
 ### Common Errors
 
@@ -103,7 +103,7 @@ miden-core = { linkage = "dynamic", version = "0.35" }
 
 `ExecutionProof` bytes are now versioned. They start with a format byte (`2` in 0.17) followed by the recursive VM and PVM (precompile VM) verifier roots the proof claims compatibility with, and the verifier accepts only its own release's roots. A 0.16 proof fails to decode because its first byte was a length prefix, not a format byte. No converter exists.
 
-Proofs from a 0.17 release candidate (VM 0.33) still decode, because the format byte is still `2`, but VM 0.34 and 0.35 closed AIR soundness gaps that changed the VM and PVM verifier roots, so verification rejects them with `execution proof does not name a compatible VM verifier`.
+Proofs from a 0.17 release candidate on VM 0.33 or 0.34 (client 0.17.0-rc.4 or earlier, protocol 0.17.0-rc.8 or earlier) still decode, because the format byte is still `2`, but VM 0.34 and 0.35 closed AIR soundness gaps that changed the VM and PVM verifier roots, so verification rejects them with `execution proof does not name a compatible VM verifier`.
 
 ### Affected Code
 
@@ -124,7 +124,7 @@ let proof = ExecutionProof::read_from_bytes(&old_proof_bytes)?;
 | Error Message | Cause | Solution |
 | --- | --- | --- |
 | `invalid value: unsupported execution proof format {format}` | Proof bytes from VM 0.29 to 0.32 (0.16 included) | Regenerate the proof with the current VM. |
-| `execution proof does not name a compatible VM verifier` | Proof from VM 0.33 (a 0.17 release candidate): it decodes, but names verifier roots that 0.35 no longer accepts | Regenerate the proof with the current VM. |
+| `execution proof does not name a compatible VM verifier` | Proof from VM 0.33 or 0.34 (a 0.17 release candidate): it decodes, but names verifier roots that 0.35 no longer accepts | Regenerate the proof with the current VM. |
 
 ---
 
@@ -1276,7 +1276,7 @@ miden-vm bundle --version 1.2.0 --release ./src/mod.masm
 | `invalid value: unsupported version. Got '[6, 0, 0]', but only '[7, 0, 0]' is supported` | Package written by 0.16 | Re-assemble from source. |
 | `dependency resolution failed: Because there is no version of miden-core in >= 0.29.0 and < 0.30.0 ...` | `miden-project.toml` still asks for `miden-core` `0.29` (or `0.33` from an rc) | Set `version = "0.35"` and re-assemble bottom-up. |
 | `invalid value: unsupported execution proof format {format}` | Proof serialized by 0.16 | Regenerate the proof. |
-| `execution proof does not name a compatible VM verifier` | Proof from a 0.17 release candidate (VM 0.33) | Regenerate the proof. |
+| `execution proof does not name a compatible VM verifier` | Proof from a 0.17 release candidate on VM 0.33 or 0.34 | Regenerate the proof. |
 | `procedure with root digest <root> could not be found` | Call into a core-library procedure whose root changed | Re-assemble against the current core library. |
 | `error[E0432]: unresolved import` naming `miden_verifier::verify` | Free `verify` removed | `Verifier::new().verify(&claim, &proof)`. |
 | `error[E0432]: unresolved import` naming `miden_prover::ProvingOptions` | Replaced by `Prover` | `Prover::new().with_hash_fn(..)`. |

@@ -367,7 +367,7 @@ The VM changelog lists this change as "Removed unused Serde support", not marked
 ### Migration Steps
 
 1. Drop `features = ["serde"]` from `miden-core` and `features = ["bus-debugger"]` from `miden-processor`. Neither protocol 0.16.1 nor 0.17.0 enables them; remove them where your own manifests do.
-2. Replace `serde_json` / `bincode` encodings of VM types with `to_bytes()` / `read_from_bytes()`.
+2. Replace `serde_json` / `bincode` encodings of VM types. For anything you store or send, prefer the Protobuf messages in `miden_objects::proto` where one exists (`MastForest`, `ExecutionProof`, `AdviceInputs`, `AdviceMap`); use `to_bytes()` / `read_from_bytes()` for the rest, such as `Program`.
 
 ### Common Errors
 
@@ -476,7 +476,7 @@ The 0.16 guide advised exporting private note files before recreating the store.
 
 1. Bump every Miden crate per the [Version Bumps](#version-bumps) table.
 2. Keep every protocol crate on `0.17.0`, and every VM crate (including `miden-crypto`) on `0.35.0`.
-3. Add `miden-objects` only if you use `AccountFile` / `NoteFile` or the Protobuf types directly, and never the unrelated `miden-objects` `0.12.x`.
+3. Add `miden-objects` for `AccountFile` / `NoteFile` and the Protobuf encodings, and never the unrelated `miden-objects` `0.12.x`.
 4. Drop the `serde` feature from `miden-core` and `bus-debugger` from `miden-processor`; align any direct `p3-*` dependency to `0.8`.
 5. Bump every `@miden-sdk/*` package to `0.17.0` together, with `npm install <package>@0.17.0`.
 6. Move contract projects to `miden` `0.15.0` and the `0.17.0` toolchain channel, and rebuild them.

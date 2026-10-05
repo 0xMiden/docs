@@ -30,7 +30,10 @@ store=$(sed -n 's/^store_filepath *= *"\(.*\)"$/\1/p' "$cfg")
 pkgs=$(sed -n 's/^package_directory *= *"\(.*\)"$/\1/p' "$cfg")
 case "$store" in /*) ;; *) store="$dir/$store";; esac
 case "$pkgs" in /*) ;; *) pkgs="$dir/$pkgs";; esac
-echo "$cfg | $store | $pkgs"     # check before deleting
+echo "$cfg | $store | $pkgs"     # check these three paths before running the next block
+```
+
+```bash
 rm -f "$store" "$store-wal" "$store-shm"
 tmp=$(mktemp -d) && (cd "$tmp" && miden-client init --local >/dev/null) \
   && mkdir -p "$pkgs" && cp -R "$tmp/.miden/packages/." "$pkgs/" && rm -rf "$tmp"
@@ -535,7 +538,7 @@ let (notes, next) = transport.fetch_notes(&[tag], cursor).await?; // poll instea
 ```
 
 ```rust
-// Custom NoteTransportClient: send_note(header, details: Vec<u8>) becomes the only send method
+// Custom NoteTransportClient: send_note(header, details) is replaced by send_note_with_proof, the only send method
 async fn send_note_with_proof(&self, note: TransportNote, inclusion_proof: NoteInclusionProof)
     -> Result<(), NoteTransportError>;
 ```
@@ -1249,7 +1252,7 @@ end
 
 ### Migration Steps
 
-1. Compile each script to a `.masp` library package with a toolchain on VM 0.35: the `midenc` 0.11 line. A `midenc` 0.10 writes package format `6.0.0`, which the 0.17 CLI rejects. See [Rust Contract SDK & Compiler](./rust-sdk-compiler).
+1. Compile each script to a `.masp` library package with the `midenc` 0.11 line, which writes package format `7.0.0`. A `midenc` 0.10 writes package format `6.0.0`, which the 0.17 CLI rejects. See [Rust Contract SDK & Compiler](./rust-sdk-compiler).
 2. Replace `--script-path <file>.masm` / `-s <file>.masm` with `--package <file>.masp` / `-p <file>.masp`. A path without an extension is looked up in the configured `package_directory`.
 3. `--inputs-path`, `--hex-words` and `-a` / `--account` are unchanged.
 4. DAP builds (`--features dap`): `--start-debug-adapter` now loads the package's debug info, and a DAP "restart" reloads the `.masp` file from disk instead of recompiling source. Rebuild the package before restarting to pick up source edits, and compile with debug info (`--debug full`) for source stepping.
