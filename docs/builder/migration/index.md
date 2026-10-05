@@ -146,7 +146,7 @@ Work through these sections in order for a complete migration:
 | [1. Imports & Dependencies](./imports-dependencies) | Crate bumps, VM 0.29 → 0.33, the new `miden-objects` crate, artifacts that do not carry over |
 | [2. Hashing & Crypto Changes](./hashing-crypto) | `serde` removed from `Word` and Merkle types, `SmtForest` → `LargeSmtForest`, `PartialSmt` bytes, stricter decoders |
 | [3. Account Changes](./account-changes) | Versioned accounts, sorted procedures, network accounts, `from_package` by value, `StorageMap`, RBAC and `ApproverSet` |
-| [4. Note Changes](./note-changes) | P2ID with four storage items, new standard script roots, config notes, TX_FEE notes keeping their assets |
+| [4. Note Changes](./note-changes) | P2ID with four storage items, new standard script roots, config notes |
 | [5. Assets, Vault & Faucet](./asset-vault-faucet) | `Asset` as a struct, `AccountVaultDelta` with whole assets, versioned asset IDs, new standard faucet IDs, callbacks and mint policies |
 | [6. Transaction Changes](./transaction-changes) | `ProtocolConfig`, `MultisigAuthArgs` and executing at the tip, native-asset fees, 20-block network-note cap, `VerificationOutcome` |
 | [7. Client Changes](./client-changes) | Store recreation, client and node pairing, fee faucet from sync, Rust/Web/React/CLI changes |
@@ -175,7 +175,6 @@ Complete these steps to verify your migration:
 - [ ] Replace `match` arms on `Asset::Fungible` / `Asset::NonFungible` and uses of `FungibleAssetDelta` / `fungible()`
 - [ ] Recompute every hard-coded account ID, code commitment, asset ID, note ID, P2ID recipient and standard note script root
 - [ ] Build P2ID recipients with four storage items, or through the standard builders
-- [ ] Consume TX_FEE notes only with an account that collects their assets (for example with `AuthTxFeeCollector`), and filter them out of "consume everything" flows
 - [ ] Deploy network accounts with a transaction that has an effect, using the chain's fee asset
 - [ ] Re-check every MASM call to a procedure whose stack effect changed, starting with `tx::get_block_commitment` and `guardian::verify_signature`
 - [ ] Rename `tx::get_fee_faucet_id` → `tx::get_fee_asset_id`, `active_account::compute_commitment` → `native_account::compute_commitment`, and `miden::precompiles::*` → `miden::core::precompiles::*`

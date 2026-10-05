@@ -37,7 +37,7 @@ miden-standards           = "0.17.0"
 miden-tx                  = "0.17.0"
 miden-tx-batch            = "0.17.0"
 miden-testing             = "0.17.0"   # dev-dependency
-miden-objects             = "0.17.0"   # new: only for AccountFile / NoteFile or the Protobuf encodings
+miden-objects             = "0.17.0"   # new: AccountFile / NoteFile and the Protobuf encodings
 miden-assembly            = "0.33.0"
 miden-core                = "0.33.0"
 miden-core-lib            = "0.33.0"
@@ -143,7 +143,7 @@ Two features released on the 0.16 line after 0.17 branched were deliberately rep
 - **`miden-objects`** holds the canonical Protobuf representations of protocol objects, and is the new home of `AccountFile` and `NoteFile` (see [below](#accountfile-and-notefile-moved-to-miden-objects-and-switched-to-protobuf)).
 - **`miden-protobuf`** and **`miden-protobuf-derive`** are the Protobuf conversion framework `miden-objects` is built on.
 
-Add `miden-objects` only if you read or write account and note files yourself or use the Protobuf encodings. `miden-client` depends on it and re-exports the file types, so client users do not need it.
+Use the Protobuf encodings in `miden-objects` for anything you store or send, and the `Serializable` / `Deserializable` byte formats as little as possible: they are to be removed before public mainnet. `miden-client` depends on `miden-objects` and re-exports the file types, so client users who only handle account and note files do not need it directly.
 
 :::warning `miden-objects` 0.12 is a different crate
 crates.io already has `miden-objects` `0.12.x`. That was the **old name of the protocol crate** (today's `miden-protocol`). The 0.17 `miden-objects` is an unrelated, new Protobuf crate. Do not "restore" an old `miden-objects = "0.12"` dependency, and do not look for `miden_objects::account::Account`: protocol types stay in `miden-protocol`.
@@ -151,7 +151,7 @@ crates.io already has `miden-objects` `0.12.x`. That was the **old name of the p
 
 ### Migration Steps
 
-1. Depend on `miden-objects = "0.17.0"` only where you use `AccountFile`, `NoteFile` or the Protobuf types directly.
+1. Depend on `miden-objects = "0.17.0"` where you use `AccountFile`, `NoteFile` or the Protobuf types, and move stored or transmitted protocol objects from `Serializable` bytes to those Protobuf encodings.
 2. Keep importing `Account`, `Note`, `TransactionInputs` and every other protocol type from `miden-protocol`.
 
 ---

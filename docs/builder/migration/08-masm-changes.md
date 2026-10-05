@@ -1106,7 +1106,6 @@ u32shr.6
 - **EVM-style ECDSA public-key recovery**: `ecdsa_k256_keccak::recover` (`[MSG_WORD, SIG_PTR, ...] -> [QX[8], QY[8], ...]`) and `recover_bytes` (`[MSG_PTR, MSG_LEN_BYTES, SIG_PTR, ...]`) read an `R || S || V` witness from memory. They accept high-`s`, and a wrong message recovers a different valid key, so authenticate the returned key against trusted state. `CoreLibrary::handlers()` registers the host handler; a host that builds its handler list by hand must add it. The `verify` / `verify_bytes` advice layout is unchanged from 0.16.
 - **P2ID storage has four items**: `[target_id_suffix, target_id_prefix, salt_0, salt_1]`. `p2id::prepare_note` and `p2id::create_output_note` keep their signatures and write a zero salt. If you compute a P2ID recipient by hand, write four items and pass `num_storage_items = 4`, or it fails with `P2ID note expects exactly 4 note storage items`. See [Note Changes](./note-changes).
 - **Standard note scripts** check targeting through `miden::standards::note::note_target` and reclaim through `note::note_reclaim`, their error constants were renamed, config notes must be public, and every standard script root changed. See [Note Changes](./note-changes).
-- **Assets left in a consumed note fail the transaction.** The TX_FEE note script no longer moves its assets into the consuming account, so the consuming account's code must collect them (`input_note::remove_asset` / `remove_all_assets`). This also corrects the 0.16 version of this page, which said a note left with assets in place is treated as partially consumed: in both 0.16.1 and 0.17 the epilogue asserts that the total number of assets across the account vault and the output notes stays the same, so the transaction fails with `total number of assets in the account and all involved notes must stay the same`. See [Note Changes](./note-changes).
 
 ---
 
@@ -1128,7 +1127,6 @@ u32shr.6
 | `the asset stored in the MINT note does not belong to this faucet` | Non-fungible `mint_and_send` or MINT note whose `ASSET_ID` belongs to another faucet | Same. |
 | `account procedure with procedure root <root> is not in the account procedure index map` | FPI to a root the foreign account does not export | Call a procedure the foreign account exports. |
 | `unknown asset ID version` | Hand-built asset ID with the 0.16 metadata byte | Use the standards asset builders. |
-| `total number of assets in the account and all involved notes must stay the same` | Assets left in a consumed note (for example a TX_FEE note) | Collect them in account code. |
 | `procedure with root digest <root> could not be found` | Pinned core-library root that changed | Derive roots with `procref` or the `CoreLibrary` accessors. |
 | `assertion failed with error message: shift amount must be in the range [0, 64)` | `u64` shift or rotation with `n >= 64` | Reduce `n` modulo 64 first. |
 | `conflicting attributes for procedure definition` | `@callconv` other than component-model on a protocol ABI procedure | Drop the explicit `@callconv`. |

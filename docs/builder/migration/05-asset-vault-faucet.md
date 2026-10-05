@@ -165,7 +165,12 @@ fn balance_change(summary: &TransactionSummary, asset_id: AssetId) -> i64 {
     else {
         return 0;
     };
-    let amount = delta.asset().unwrap_fungible().amount().as_u64() as i64;
+    // A non-fungible asset has no amount: return 0, as the 0.16 fungible-only lookup did.
+    // `unwrap_fungible()` would panic here.
+    let Some(fungible) = delta.asset().as_fungible() else {
+        return 0;
+    };
+    let amount = fungible.amount().as_u64() as i64;
     match delta.delta_op() {
         AssetDeltaOperation::Add => amount,
         AssetDeltaOperation::Remove => -amount,

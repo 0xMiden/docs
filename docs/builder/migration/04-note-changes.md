@@ -1,7 +1,7 @@
 ---
 sidebar_position: 4
 title: "Note Changes"
-description: "P2ID storage gains two salt elements, every standard note script root changes, config notes move to note::config, and TX_FEE notes leave their assets in the note"
+description: "P2ID storage gains two salt elements, every standard note script root changes, and config notes move to note::config"
 ---
 
 # Note Changes
@@ -34,7 +34,7 @@ Every standard note script was rewritten in 0.17: targeting and reclaiming moved
 
 The Rust API changes do fail to compile, and they are mechanical: config notes moved to `note::config` and their `account()` getter became `target()`, `MintNoteStorage` collapsed to two variants, `StandardNote::num_storage_items` returns a `NumStorageItems`, `FeeSponsorshipNote` takes a `FungibleAsset`, `NoteExecutionHint` gained an `Unknown` variant, and `PswapNote::parent_depth` returns a `u32`.
 
-Three changes fail only at run time: consuming a two-item P2ID note, consuming a TX_FEE note with an account that does not collect its assets, and consuming a hand-built private config note.
+Two changes fail only at run time: consuming a two-item P2ID note, and consuming a hand-built private config note.
 
 ---
 
@@ -257,50 +257,6 @@ assert_eq!(note.target(), managed);
 | --- | --- | --- |
 | `unresolved import miden_standards::note::PauseConfigNote` | Moved | Import `miden_standards::note::config::PauseConfigNote`. |
 | `no method named account found for struct PauseConfigNote` | Getter renamed | Use `.target()`. |
-
----
-
-## TX_FEE notes leave their assets in the note
-
-### Summary
-
-The TX_FEE note script no longer calls `basic_wallet::move_note_assets_to_account` on the consumer; it only checks that the note has no storage. The consuming account's own code must remove the assets from the note. Assets left in a consumed note are neither in the vault nor in an output note, so the transaction epilogue's asset-preservation check fails: **a plain wallet account can no longer consume a TX_FEE note**.
-
-The new `AuthTxFeeCollector` auth component collects them. It forwards the single asset of every consumed note into one P2ID note for a target given in the auth args. The TX_FEE script root, and with it every TX_FEE note ID, changes.
-
-This matters little for most applications, and a lot for batch builders and for anything that consumes every note it receives.
-
-:::info Incomplete changelog entry
-The changelog says TX_FEE notes leave their assets in the note for the consuming account's own code to collect. It does not say that a consumer which does not collect them fails with `total number of assets in the account and all involved notes must stay the same`; the change's own test asserts exactly that.
-:::
-
-### Affected Code
-
-```masm
-# Before (0.16) - notes/tx_fee.masm main
-push.STORAGE_PTR exec.active_note::get_storage
-eq.0 assert.err=ERR_TX_FEE_UNEXPECTED_NUMBER_OF_STORAGE_ITEMS
-exec.basic_wallet::move_note_assets_to_account
-```
-
-```masm
-# After (0.17) - notes/tx_fee.masm main
-push.NUM_STORAGE_ITEMS push.STORAGE_PTR exec.active_note::get_bounded_storage drop
-```
-
-### Migration Steps
-
-1. Consume TX_FEE notes only with an account whose code collects note assets: an account with `AuthTxFeeCollector` (plus a component such as `BasicWallet`), or custom account code that removes each fee asset by note index (`input_note::remove_asset` or `input_note::remove_all_assets`) and adds it to the vault (`native_account::add_asset`) or to an output note (`output_note::add_asset`). That code must run as an account procedure outside the TX_FEE script: in the auth procedure, as `AuthTxFeeCollector` does, or in a procedure your transaction script `call`s (the transaction script runs after every note script). The `active_note::*` procedures cannot reach TX_FEE assets: they act on the note whose script is running, and the TX_FEE script never calls into the account.
-2. Remove TX_FEE notes from any "consume everything" wallet flow. `NoteConsumptionChecker::can_consume` and `StandardNote::is_consumable` still report a TX_FEE note as `ConsumableWithAuthorization` for every account, without executing it, so filter TX_FEE notes out yourself, by script root (`TxFeeNote::script_root()`) or tag (`TxFeeNote::TAG`).
-3. Recompute any cached TX_FEE script root or TX_FEE note ID.
-
-How fees are paid in 0.17 is covered in [Transaction Changes](./transaction-changes).
-
-### Common Errors
-
-| Error Message | Cause | Solution |
-| --- | --- | --- |
-| `total number of assets in the account and all involved notes must stay the same` | TX_FEE note consumed without collecting its assets | Collect them in account code, for example with `AuthTxFeeCollector`. |
 
 ---
 
@@ -540,7 +496,6 @@ let attachment = PswapNoteAttachment::try_from(&note_attachment)?; // new, valid
 | `<name> config note must be public` | Hand-built private config note | Use the builder, or `NoteType::Public`. |
 | `unresolved import miden_standards::note::PauseConfigNote` (or another config note) | Config notes moved | Import from `miden_standards::note::config`. |
 | `no method named account found for struct PauseConfigNote` | Getter renamed | Use `.target()`. |
-| `total number of assets in the account and all involved notes must stay the same` | TX_FEE note consumed without collecting its assets | Consume it with `AuthTxFeeCollector` or custom collecting code. |
 | `no function or associated item named new_fungible_private found for enum MintNoteStorage` | Constructors renamed | Use `new_private` / `new_public`. |
 | `no method named target_id found for struct FeeSponsorshipNote` | Accessor removed | Use `tag()`. |
 | `error[E0004]: non-exhaustive patterns: NoteExecutionHint::Unknown(_) not covered` | New variant | Add the arm. |

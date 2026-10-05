@@ -32,7 +32,7 @@ If you encounter errors, continue reading for detailed migration steps.
 
 Most of what changes for accounts in 0.17 does not show up at compile time. Accounts and asset IDs gained a version, the note metadata version field widened, moving the note type, and account procedures are now sorted, so account commitments and serialized bytes differ from 0.16 for the same inputs, and so do the code commitments and account IDs of most multi-component accounts.
 
-The compile breaks are small and mechanical: `from_package` takes the package by value, `with_asset_callbacks` became `enable_asset_callbacks`, `AccountHeader` converts only from a reference, `NoteCreator` moved, `AccountComponentInterface` gained two variants, `multisig_smart` lost its delay-only policies, the AggLayer builders changed, and a few error variants were renamed.
+The compile breaks are small and mechanical: `from_package` takes the package by value, `with_asset_callbacks` became `enable_asset_callbacks`, `AccountHeader` converts only from a reference, `NoteCreator` moved, `AccountComponentInterface` gained two variants, the AggLayer builders changed, and a few error variants were renamed.
 
 Network accounts change at run time. `AuthNetworkAccount::new` installs `BasicWallet` and allowlists P2ID, an empty deploy transaction aborts, and a 0.17 node silently never consumes notes for a network account built with a fee asset other than the chain's.
 
@@ -48,7 +48,7 @@ Nothing fails to compile, but almost every value derived from these objects chan
 - **Asset ID word.** The metadata byte in the third element is now `[reserved(2) | composition(2) | version(4)]`, with version 1. A fungible asset ID's low byte goes `0x01` → `0x11`, a non-fungible one `0x00` → `0x01`. Asset vault keys (`AssetIdHash`), vault roots, note asset commitments, and therefore the IDs of notes carrying assets, all change. A word with version 0, such as an all-zero word, no longer decodes as an `AssetId`. The asset side is covered in [Assets, Vault & Faucet](./asset-vault-faucet).
 - **Note metadata.** The version field widened from 4 to 6 bits and the note type moved from bit 4 to bit 6, so the metadata word and note commitment of every **public** note change. Private notes keep the same low byte. The transaction kernel now rejects input notes whose metadata version is not 1 or whose reserved bit is set.
 - **Account delta and patch commitments.** The domain separators moved into the hasher capacity and gained a version, so `AccountDelta::to_commitment()`, which a `TransactionSummary` signs, differs for identical deltas.
-- **Serialized bytes.** `Account`, `AccountHeader`, `AssetId`, `FungibleAsset`, `Asset` and `PartialNoteMetadata` (and so `Note`, `NoteHeader` and output notes) now lead with a version byte, `NoteHeader` writes the metadata first, and `AccountVaultDelta` has a new byte layout. A standalone `NonFungibleAsset` keeps its 0.16 byte layout. Do not load bytes written by 0.16: they are not guaranteed to fail with the version error, because a 0.16 fungible asset or public note starts with `0x01`, passes the version check, and fails, or misparses, further in.
+- **Serialized bytes.** `Account`, `AccountHeader`, `AssetId`, `FungibleAsset`, `Asset` and `PartialNoteMetadata` (and so `Note`, `NoteHeader` and output notes) now lead with a version byte, `NoteHeader` writes the metadata first, and `AccountVaultDelta` has a new byte layout. A standalone `NonFungibleAsset` keeps its 0.16 byte layout. Do not load bytes written by 0.16: they are not guaranteed to fail with the version error, because a 0.16 fungible asset or public note starts with `0x01`, passes the version check, and fails, or misparses, further in. For anything you store or send, move to the Protobuf encodings in [`miden-objects`](./imports-dependencies#new-crates-and-the-miden-objects-name-trap) and use the `Serializable` / `Deserializable` byte formats as little as possible: they are to be removed before public mainnet.
 
 MASM code that assembles asset ID words or note metadata by hand must use the new bit positions; see [MASM Changes](./masm-changes).
 
@@ -110,10 +110,6 @@ Four things change for network accounts, and only the first can fail to compile:
 - **An empty transaction no longer deploys a network account.** The network-account auth procedure now asserts, before it pays the fee, that the transaction consumed an input note, created an output note, or changed account state. A new account is not exempt. Expiration and other transaction metadata do not count, and a zero base fee does not help: the check sits outside the fee branch.
 - **The account must be built with the chain's fee asset.** The protocol side is unchanged: `FeePolicyManager` writes its fee asset into the slot `FeePolicyManager::fee_asset_id_slot()`. What is new is the 0.17 node's network transaction builder, which refuses to execute for a network account whose slot differs from `ProtocolConfig::fee_asset_id()`. Notes sent to such an account are committed but never consumed, and the client sees no error.
 - **(Web) P2ID is always allowlisted.** Every account built from `createNetworkAuthComponents` allowlists the P2ID script and prices it at zero unless you list the P2ID root with your own fee, so it consumes P2ID notes sent to it whether or not you listed that root.
-
-:::info Filed as a fix
-The changelog lists the empty-transaction check as a non-breaking fix ("Fixed `AuthNetworkAccount` accepting empty fee-only transactions"), under a heading labelled `v0.16.0`. It is not in 0.16.1, and it breaks the 0.16 pattern of deploying a network account with an empty transaction.
-:::
 
 ### Affected Code
 
@@ -273,10 +269,6 @@ let builder = AccountBuilder::new(seed).enable_asset_callbacks();
 
 `From<Account>` and `From<PartialAccount>` for `AccountHeader` were removed; the `&` implementations remain. Build a header from a reference, or with the new `to_header()`. `AccountHeader::new` is unchanged: the version is implicit, and only version 1 exists.
 
-:::info Incomplete changelog entry
-The changelog entry says only that the account now carries a version. The same change removed the by-value conversions and renamed `AccountError::HeaderDataIncorrectLength` to `UnexpectedHeaderLength`.
-:::
-
 ### Affected Code
 
 ```rust
@@ -336,7 +328,7 @@ use miden_standards::account::note_creator::NoteCreator;
 
 `AccountComponentInterface` is not `#[non_exhaustive]`, so two new variants break exhaustive matches:
 
-- `AuthTxFeeCollector`, the new standard auth component that collects TX_FEE notes. See [TX_FEE notes leave their assets in the note](./note-changes#tx_fee-notes-leave-their-assets-in-the-note).
+- `AuthTxFeeCollector`, the new standard auth component that collects TX_FEE notes.
 - `CustomAuth(AccountProcedureRoot)`, reported for an account whose auth procedure is not a standard one. In 0.16, `AccountInterface::from_account` and `from_code` panicked on such accounts (`account interface must contain exactly one auth component, found 0`).
 
 `AccountInterface::components()` also changed shape. It used to always end with a `Custom(vec)` entry, empty when every procedure belonged to a standard component. It now omits `Custom` when nothing is left over, and a custom auth procedure appears as `CustomAuth(root)` instead of inside `Custom`.
@@ -410,49 +402,6 @@ match err {
 | --- | --- | --- |
 | `error[E0004]: non-exhaustive patterns: StorageMapError::MaxLeafEntriesExceeded(_) not covered` | New variant | Add an arm. |
 | `maximum number of storage map leaf entries exceeded` | Overfull sparse Merkle tree leaf | Reduce colliding keys. |
-
----
-
-## `multisig_smart` delay-only procedure policies removed
-
-### Summary
-
-Every procedure policy must now have an immediate threshold. Delayed execution is not implemented, so a delay-only policy would have made its procedure uncallable. `ProcedurePolicy::with_delay_threshold` and `ProcedurePolicyExecutionMode::DelayOnly` are gone, and `immediate_threshold()` returns a `u32` instead of an `Option<u32>`.
-
-:::info
-The changelog says only that `multisig_smart` now rejects delay-only procedure policies. It does not say that the constructor and the enum variant were removed, or that `immediate_threshold()` changed type.
-:::
-
-### Affected Code
-
-```rust
-// Before (0.16)
-use miden_standards::account::auth::multisig_smart::{ProcedurePolicy, ProcedurePolicyExecutionMode};
-let policy = ProcedurePolicy::with_delay_threshold(2)?;
-let immediate: Option<u32> = policy.immediate_threshold();
-```
-
-```rust
-// After (0.17)
-use miden_standards::account::auth::multisig_smart::ProcedurePolicy;
-let policy = ProcedurePolicy::with_immediate_and_delay_thresholds(3, 2)?; // both must be >= 1
-let immediate: u32 = policy.immediate_threshold();
-```
-
-### Migration Steps
-
-1. Replace `with_delay_threshold(d)` with `with_immediate_and_delay_thresholds(i, d)`, or with `with_immediate_threshold(i)`.
-2. Drop the `Option` handling on `immediate_threshold()`.
-3. Remove `ProcedurePolicyExecutionMode::DelayOnly` arms.
-
-### Common Errors
-
-| Error Message | Cause | Solution |
-| --- | --- | --- |
-| `no function or associated item named with_delay_threshold found for struct ProcedurePolicy` | Removed | Use `with_immediate_and_delay_thresholds`. |
-| `immediate and delayed thresholds must both be at least 1` | Passing 0 as the immediate threshold to emulate a delay-only policy | Use a real immediate threshold. |
-| `delayed threshold requires an immediate threshold` | `set_procedure_policy` called on chain with a zero immediate and a non-zero delayed threshold | Pass a non-zero immediate threshold. |
-| `procedure policy note restrictions require an immediate threshold` (0.16: `procedure policy note restrictions require an immediate or delayed threshold`) | `set_procedure_policy` with note restrictions and both thresholds zero | Pass a non-zero immediate threshold, or no note restrictions. |
 
 ---
 
