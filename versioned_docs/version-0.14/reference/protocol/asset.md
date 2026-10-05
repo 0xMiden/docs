@@ -28,7 +28,7 @@ In Miden, assets serve as the primary means of expressing and transferring value
 All data structures following the Miden asset model that can be exchanged.
 :::
 
-Native assets adhere to the Miden `Asset` model (encoding, issuance, storage). Every native `Asset` is encoded using 32 bytes, including both the [ID](./account/id) of the issuing account and the `Asset` details.
+Native assets adhere to the Miden `Asset` model (encoding, issuance, storage). In an account vault each native `Asset` is stored as an `ASSET_KEY` plus an `ASSET_VALUE` (two words / 64 bytes) that together carry the issuing faucet [ID](./account/id), callback metadata, and asset payload — see [Encoding](#encoding).
 
 ### Issuance
 
@@ -46,11 +46,11 @@ Faucets can issue either fungible or non-fungible assets as defined at account c
 
 #### Fungible asset
 
-Fungible assets are encoded with the amount and the `faucet_id` of the issuing faucet. The amount is always $2^{63}-2^{31}$ or smaller, representing the maximum supply for any fungible `Asset`. Examples include ETH and various stablecoins (e.g., DAI, USDT, USDC).
+Fungible assets are encoded with the amount, the issuing `faucet_id`, and the per-asset callback flag (see [Encoding](#encoding) and [Callbacks](#callbacks)). Units merge in a vault only when both the faucet id **and** the callback flag match; the amount is always $2^{63}-2^{31}$ or smaller. Examples include ETH and various stablecoins (e.g., DAI, USDT, USDC).
 
 #### Non-fungible asset
 
-Non-fungible assets are encoded by hashing the `Asset` data into 32 bytes and placing the `faucet_id` as the second element. Examples include NFTs like a DevCon ticket.
+Non-fungible assets are encoded from a 4-limb `DATA_HASH` of the NFT payload plus the issuing `faucet_id` and callback metadata (see [Encoding](#encoding)). Each NFT has a distinct vault key derived from `DATA_HASH[0..2]`; that does **not** imply a distinct SMT leaf — NFTs from the same faucet can share a leaf. Examples include NFTs like a DevCon ticket.
 
 ### Storage
 
@@ -152,8 +152,8 @@ The low byte of the faucet account-id suffix is reserved for metadata (it is zer
 
 | Kind | `asset_id_*` limbs | Meaning |
 | --- | --- | --- |
-| Fungible | both zero | All fungible units from a faucet share one vault leaf and merge by amount. |
-| Non-fungible | taken from `DATA_HASH[0..2]` | Each NFT has a distinct key (and therefore a distinct leaf). |
+| Fungible | both zero | Units that share the same faucet id **and** callback flag occupy one vault entry and merge by amount. Different callback flags are distinct assets (see [Callbacks](#callbacks)). |
+| Non-fungible | taken from `DATA_HASH[0..2]` | Each NFT has a distinct vault key. Distinct keys from the same faucet may still share an SMT leaf — leaf identity is not 1:1 with vault keys. |
 
 ### `ASSET_VALUE` layout
 
