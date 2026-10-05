@@ -1,13 +1,13 @@
 ---
 sidebar_position: 4
 title: "Note Changes"
-description: "P2ID storage gains two salt elements, every standard note script root changes, and config notes move to note::config"
+description: "P2ID storage gains two salt elements, every standard note script root changes, config notes move to note::config, PSWAP seals its outputs, and the new UpgradeNote upgrades network account code"
 ---
 
 # Note Changes
 
 :::warning Breaking Change
-Every standard note script changed, so every script root hard-coded from 0.16 is wrong. P2ID storage grew from two items to four, which changes every P2ID recipient and note ID even with no code change, and a P2ID recipient still built by hand with two items produces a note nobody can consume. Config notes moved to `miden_standards::note::config`, and TX_FEE notes no longer hand their assets to the consumer, so a plain wallet can no longer consume one.
+Every standard note script changed, so every script root hard-coded from 0.16 is wrong. P2ID storage grew from two items to four, which changes every P2ID recipient and note ID even with no code change, and a P2ID recipient still built by hand with two items produces a note nobody can consume. Config notes moved to `miden_standards::note::config`, and TX_FEE notes no longer hand their assets to the consumer, so a plain wallet can no longer consume one. PSWAP seals its payback and remainder notes, and the new `StandardNote::UPGRADE` variant breaks exhaustive matches.
 :::
 
 ## Quick Fix
@@ -22,7 +22,7 @@ use miden_standards::note::config::{PauseConfig, PauseConfigNote};
 let managed = note.target();
 ```
 
-Then replace every hard-coded standard note script root with `P2idNote::script_root()`, `MintNote::script_root()`, `StandardNote::X.script().root()` and so on, taken from the version you run.
+Then replace every hard-coded standard note script root with `P2idNote::script_root()`, `MintNote::script_root()`, `StandardNote::X.script().root()` and so on, taken from the version you run, and add a `StandardNote::UPGRADE` arm to exhaustive matches on `StandardNote`. Take note consumption costs from `miden_standards::note::costs` rather than hard-coding them.
 
 If you encounter errors, continue reading for detailed migration steps.
 
@@ -30,11 +30,11 @@ If you encounter errors, continue reading for detailed migration steps.
 
 ## Summary
 
-Every standard note script was rewritten in 0.17: targeting and reclaiming moved into shared modules, storage is read with a bound, the MINT scripts were unified, config notes renamed "selector" to "variant" and must be public, P2ID gained a salt, and TX_FEE stopped moving assets. Together they change every standard script root, and none of them fails to compile. Notes built through the standard builders keep working; what breaks is anything that caches a root, matches an error string, or builds a standard note's storage by hand.
+Every standard note script was rewritten in 0.17: targeting and reclaiming moved into shared modules, storage is read with a bound, the MINT scripts were unified, config notes renamed "selector" to "variant" and must be public, P2ID gained a salt, PSWAP seals its outputs, and TX_FEE stopped moving assets. Together they change every standard script root and the benchmarked note costs, and none of them fails to compile. Notes built through the standard builders keep working; what breaks is anything that caches a root, matches an error string, or builds a standard note's storage by hand.
 
-The Rust API changes do fail to compile, and they are mechanical: config notes moved to `note::config` and their `account()` getter became `target()`, `MintNoteStorage` collapsed to two variants, `StandardNote::num_storage_items` returns a `NumStorageItems`, `FeeSponsorshipNote` takes a `FungibleAsset`, `NoteExecutionHint` gained an `Unknown` variant, and `PswapNote::parent_depth` returns a `u32`.
+The Rust API changes do fail to compile, and they are mechanical: config notes moved to `note::config` and their `account()` getter became `target()`, `MintNoteStorage` collapsed to two variants, `StandardNote::num_storage_items` returns a `NumStorageItems`, `FeeSponsorshipNote` takes a `FungibleAsset`, `NoteExecutionHint` gained an `Unknown` variant, `PswapNote::parent_depth` returns a `u32`, and `StandardNote` gained an `UPGRADE` variant for the new `UpgradeNote`, which upgrades a network account's code.
 
-Two changes fail only at run time: consuming a two-item P2ID note, and consuming a hand-built private config note.
+Three changes fail only at run time: consuming a two-item P2ID note, consuming a hand-built private config note, and adding assets to a PSWAP payback or remainder note after the PSWAP script built it.
 
 ---
 
@@ -112,9 +112,11 @@ exec.note::compute_and_store_recipient
 
 ### Summary
 
-Every standard note script was touched, so no script root hard-coded from 0.16 matches `XNote::script_root()` any more: P2ID, P2IDE, SWAP, PSWAP, MINT, BURN, TX_FEE, FEE_SPONSORSHIP and every config note. Nothing fails to compile; cached roots simply stop matching the notes you create.
+Every standard note script was touched, so no script root hard-coded from 0.16 matches `XNote::script_root()` any more: P2ID, P2IDE, SWAP, PSWAP, MINT, BURN, TX_FEE, FEE_SPONSORSHIP and every config note. The new UPGRADE note adds a root of its own; see [New `UpgradeNote` upgrades network account code](#new-upgradenote-upgrades-network-account-code). Nothing fails to compile; cached roots simply stop matching the notes you create. A PSWAP root cached from 0.17.0-rc.7 or earlier is stale too, because output sealing moved it again.
 
 Config note scripts now also assert that the note is public, so a hand-built private config note fails at consumption. The builders already produce public notes.
+
+The benchmarked consumption costs that `NetworkNotePricer` turns into fees changed with the scripts and with the dynamic linking of the standard account components. For example, `P2ID_CONSUMPTION_CYCLES` went from 57970 to 58477 and `PSWAP_CONSUMPTION_CYCLES` from 29942 to 31473, and `UPGRADE_CONSUMPTION_CYCLES` is new. Fee schedules or price checks built on hard-coded 0.16 cycle counts are stale.
 
 :::info The changelog names only the config notes
 The changelog says only that the config note script roots change. The P2ID, P2IDE, SWAP, PSWAP, MINT, BURN, TX_FEE and fee-sponsorship roots change as well. The P2ID, MINT, PSWAP and TX_FEE entries describe the behaviour change without saying the root moves, and P2IDE, SWAP, BURN and fee-sponsorship are covered only by the shared-module and bounded-storage entries.
@@ -125,6 +127,7 @@ The changelog says only that the config note script roots change. The P2ID, P2ID
 1. Replace hard-coded note script roots with `P2idNote::script_root()`, `MintNote::script_root()`, `StandardNote::X.script().root()` and so on, from the version you run.
 2. If you build config notes by hand, make them `NoteType::Public`.
 3. Update string matches on consumption errors; see the next section.
+4. Take note costs from the `miden_standards::note::costs` constants or `StandardNote::note_cost(root)` of the version you run, and fees from `NetworkNotePricer`, instead of hard-coding cycle counts or fees.
 
 ### Common Errors
 
@@ -439,11 +442,13 @@ let parts: Option<(u8, u32)> = hint.into_parts(); // None for Unknown
 
 ---
 
-## PSWAP: `parent_depth` is `u32`, and the script root changes
+## PSWAP: `parent_depth` is `u32`, outputs are sealed, and the script root changes
 
 ### Summary
 
-`PswapNote::parent_depth()` returns a `u32` instead of a `u64`. The builder rejects a PSWAP attachment that is not exactly one zero-padded word or whose depth does not fit a `u32`, and `PswapNoteAttachment` gained a validating `TryFrom<&NoteAttachment>`. The PSWAP note script root changes: fills are now priced against the note's initial offered asset rather than its remaining assets, and the script bounds its lineage depth to a `u32` and rejects a malformed attachment. Existing notes keep the script they were created with.
+`PswapNote::parent_depth()` returns a `u32` instead of a `u64`. The builder rejects a PSWAP attachment that is not exactly one zero-padded word or whose depth does not fit a `u32`, and `PswapNoteAttachment` gained a validating `TryFrom<&NoteAttachment>`. The PSWAP note script root changes: fills are now priced against the note's initial offered asset rather than its remaining assets, the script bounds its lineage depth to a `u32` and rejects a malformed attachment, and it seals its outputs. Existing notes keep the script they were created with.
+
+After building the payback P2ID note and the remainder PSWAP note, the script checks that each holds exactly the expected asset and then seals it with the new `output_note::seal` (see [MASM Changes](./masm-changes)). A sealed note takes no further assets or attachments, so a filler can no longer add to a PSWAP output from its transaction script or from a later note. If an asset callback added an asset or raised the balance before the check, the fill fails. An asset callback may still append public attachments, which the output note ID then includes.
 
 :::info
 The changelog lists the PSWAP behaviour changes, but not the `parent_depth()` return-type change.
@@ -467,13 +472,111 @@ let attachment = PswapNoteAttachment::try_from(&note_attachment)?; // new, valid
 1. Change `parent_depth()` consumers to `u32`.
 2. Do not match PSWAP notes by a cached script root. Use `PswapNote::script_root()` from the version you run, and expect notes created by an older version to carry the older root.
 3. Do not remove assets from a PSWAP note before its script runs: the script now asserts that the offered asset still equals the one the note was created with.
+4. Do not add assets or attachments to PSWAP payback or remainder notes after the fill. Put anything extra in a separate output note.
+5. If an asset involved in a PSWAP has callbacks, make sure `on_before_asset_added_to_note` does not add assets to the note it is called for.
 
 ### Common Errors
 
 | Error Message | Cause | Solution |
 | --- | --- | --- |
 | `PSWAP offered asset differs from the asset the note was created with` | Assets were removed from the PSWAP note before its script ran | Leave PSWAP note assets to the PSWAP script. |
+| `sealed output notes cannot be modified` | A transaction script or later note added an asset or attachment to a PSWAP payback or remainder note | Leave PSWAP outputs as the script built them; create a separate note. |
+| `PSWAP output was altered before sealing` | An asset callback added an asset to a PSWAP output, or raised its balance, before the script sealed it | Keep asset callbacks from adding assets to PSWAP outputs. |
 | `PSWAP attachment must consist of exactly one word` / `PSWAP parent depth carried in the consumed note attachment is not a u32` / `PSWAP lineage depth exceeds u32` | Consuming a PSWAP note with a malformed attachment, or at the maximum lineage depth | Build PSWAP notes with the `PswapNote` builder, which rejects malformed attachments. |
+
+---
+
+## New `UpgradeNote` upgrades network account code
+
+### Summary
+
+`UpgradeNote` is a new standard note that upgrades the code of the network account that consumes it. Its storage is the four-element `[NEW_CODE_COMMITMENT]`. The note is always public and is bound to its target by a `NetworkAccountTarget` attachment, so the target must be a public account. The new `AccountCode` travels in the note in `AccountCodeUpgradeAttachment` chunks (attachment scheme 7, up to 256 words each); the script joins them, inserts the code into the advice map and calls `upgrade` on the account's `UpgradeManager` component, so the consuming transaction does not need to supply the code. How the upgrade itself works, including the storage layout the new code must keep, is covered in [Account Changes](./account-changes).
+
+A note's attachments hold at most 512 words and the target attachment takes one, so the encoded code must fit in 511 words (about 14 KB of serialized `AccountCode`), less any attachments you add yourself. Larger code fails `build()`.
+
+The target account needs:
+
+- **`UpgradeManager` and an `Authority`.** `UpgradeManager` (`miden_standards::account::upgrade`) gates `upgrade` through the account's `Authority`. Under `Authority::OwnerControlled` the note sender must be the `Ownable2Step` owner; under `RbacControlled` it must hold the role mapped to `upgrade`, or `ADMIN` if none is mapped.
+- **An allowlist entry and a fee for an `AuthNetworkAccount`.** Add `UpgradeNote::script_root()` to the note allowlist and give it a fee schedule entry. `AuthNetworkAccount::default_allowed_note_scripts()` still returns three roots, without UPGRADE.
+
+`StandardNote` gained an `UPGRADE` variant and is not `#[non_exhaustive]`, so exhaustive matches stop compiling. The note's benchmarked cost is `UPGRADE_CONSUMPTION_CYCLES`.
+
+:::danger Do not pair `UpgradeManager` with `AuthControlled` on a network account
+Under `Authority::AuthControlled`, `upgrade` leaves authorization to the auth component, and `AuthNetworkAccount` accepts an allowlisted note from any sender. Anyone could then replace the account's code.
+:::
+
+### Affected Code
+
+```rust
+// Before (0.16)
+match standard_note {
+    StandardNote::FEE_SPONSORSHIP => { /* ... */ },
+    StandardNote::TX_FEE => { /* ... */ },
+    // ... one arm per variant
+}
+```
+
+```rust
+// After (0.17)
+match standard_note {
+    StandardNote::UPGRADE => { /* ... */ }, // new
+    StandardNote::FEE_SPONSORSHIP => { /* ... */ },
+    StandardNote::TX_FEE => { /* ... */ },
+    // ... one arm per variant
+}
+```
+
+```rust
+// After (0.17): an upgradeable network account, and a note that upgrades it
+use miden_standards::account::access::AccessControl;
+use miden_standards::account::upgrade::UpgradeManager;
+use miden_standards::note::{AccountCodeUpgradeAttachment, UpgradeNote};
+
+let allowed_notes = BTreeSet::from([UpgradeNote::script_root()]);
+let account = AccountBuilder::new(seed)
+    .account_type(AccountType::Public)
+    // fee_policy_manager needs a fee schedule entry for UpgradeNote::script_root()
+    .with_components(AuthNetworkAccount::new(allowed_notes, fee_policy_manager)?)
+    .with_components(AccessControl::Ownable2Step { owner }) // Ownable2Step + Authority::OwnerControlled
+    .with_component(UpgradeManager)
+    .build()?;
+
+let note: Note = UpgradeNote::builder()
+    .sender(owner)
+    .target(account.id())
+    .code(new_code) // AccountCode
+    .serial_number(serial)
+    .build()?
+    .into();
+
+// Reading the code back from a received note
+let upgrade = AccountCodeUpgradeAttachment::try_from_attachments(note.attachments())?;
+let code: &AccountCode = upgrade.code_upgrade().code();
+```
+
+### Migration Steps
+
+1. Add a `StandardNote::UPGRADE` arm to exhaustive matches on `StandardNote`.
+2. To make a network account upgradeable, install `UpgradeManager` with an owner- or role-controlled `Authority` (for example `AccessControl::Ownable2Step` or `AccessControl::Rbac`) when you create it. The note can only call an `upgrade` procedure the account already has.
+3. Allowlist `UpgradeNote::script_root()` on the account's `AuthNetworkAccount` and give it a fee schedule entry. On a deployed account, add the root with a `NetworkAccountConfigNote` (`NetworkAccountConfig::AddAllowedNoteScript`) and the fee with a `ConstantFeePolicyConfigNote`.
+4. Build the new code from the account's current components plus your changes. Code without `UpgradeManager` cannot be upgraded again.
+5. Send the note from the account's authority. The account must already exist: an upgrade in the transaction that creates it fails.
+
+### Common Errors
+
+| Error Message | Cause | Solution |
+| --- | --- | --- |
+| `error[E0004]: non-exhaustive patterns: StandardNote::UPGRADE not covered` | New variant | Add the arm. |
+| `failed to bind the upgrade note to its target account` (`NoteError::Other`) | `build()` with a target that is not a public account | Target a public network account. |
+| `note attachments contain a total of N words, but the maximum allowed is 512 words` (`NoteError::NoteAttachmentsTooManyWords`) | The code, plus the target and your own attachments, does not fit in the note | Shrink the code or drop extra attachments. |
+| `upgrade note must be public` | A hand-built private upgrade note | Build it with `UpgradeNote::builder()`, which always makes it public. |
+| `upgrade note storage item count is not the expected count` | A hand-built note with fewer than four storage items (more than four fails `the number of note storage items exceeds the maximum accepted by the note script`) | Use the builder. |
+| `upgrade note does not carry an account code upgrade attachment` | A hand-built note without `AccountCodeUpgradeAttachment` chunks | Use the builder. |
+| `input note script root is not in the note script allowlist` | The target's `AuthNetworkAccount` does not allowlist the UPGRADE root | Add `UpgradeNote::script_root()` to the allowlist. |
+| `note script has no fee schedule entry` | The target's fee schedule has no entry for the UPGRADE root | Add a fee entry, zero if you like. |
+| `note sender is not the owner` | The target is `OwnerControlled` and the note was not sent by its owner | Send the note from the owner. |
+| `a new account cannot be upgraded` | The note was consumed by the transaction that creates the account | Deploy the account first. |
+| `an account code upgrade is already pending` | Two upgrades in one transaction, for example two upgrade notes | Consume one upgrade note per transaction. |
 
 ---
 
@@ -499,3 +602,6 @@ let attachment = PswapNoteAttachment::try_from(&note_attachment)?; // new, valid
 | `no function or associated item named new_fungible_private found for enum MintNoteStorage` | Constructors renamed | Use `new_private` / `new_public`. |
 | `no method named target_id found for struct FeeSponsorshipNote` | Accessor removed | Use `tag()`. |
 | `error[E0004]: non-exhaustive patterns: NoteExecutionHint::Unknown(_) not covered` | New variant | Add the arm. |
+| `error[E0004]: non-exhaustive patterns: StandardNote::UPGRADE not covered` | New `UpgradeNote` | Add the arm. |
+| `sealed output notes cannot be modified` | Adding an asset or attachment to a PSWAP payback or remainder note after the fill | Create a separate note. |
+| `input note script root is not in the note script allowlist` / `note script has no fee schedule entry` | Consuming an `UpgradeNote` on a network account that does not allowlist or price it | Add `UpgradeNote::script_root()` to the allowlist and the fee schedule. |

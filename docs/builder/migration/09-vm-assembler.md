@@ -7,7 +7,7 @@ description: "0.16 packages and proofs no longer load, Verifier::verify returns 
 # VM & Assembler Changes
 
 :::warning Breaking Change
-The VM moves **0.29.2 → 0.33.0** (the line protocol `0.17.0` pins). Nothing built or proven with 0.16 loads: packages move to format `7.0.0` and 0.16 proofs do not decode. The free `verify` is gone: `Verifier::new().verify(&claim, &proof)` returns a `VerificationOutcome`, and **`Ok` can still mean "precompile work outstanding"**. `ProvingOptions` and the free `execute` / `prove` functions give way to `Prover` and `FastProcessor`, and `AdviceInputs` makes its fields private.
+The VM moves **0.29.2 → 0.35.0** (the line protocol `0.17.0` pins). Nothing built or proven with 0.16 loads: packages move to format `7.0.0`, packages that link the core library must ask for `miden-core` `0.35`, and 0.16 proofs do not decode. The free `verify` is gone: `Verifier::new().verify(&claim, &proof)` returns a `VerificationOutcome`, and **`Ok` can still mean "precompile work outstanding"**. `ProvingOptions` and the free `execute` / `prove` functions give way to `Prover` and `FastProcessor`, and `AdviceInputs` makes its fields private.
 :::
 
 For the MASM side of this VM line (`miden::core::precompiles::*`, the `sys::vm::verify_proof` rename, the return of `trace`, and core-library procedures whose MAST roots moved), see [MASM Changes](./masm-changes). For the protocol types that wrap these APIs (`LocalTransactionProver`, `TransactionVerifier`, `ProgramExecutor`), see [Transaction Changes](./transaction-changes).
@@ -36,7 +36,7 @@ let output = FastProcessor::new_with_options(stack_inputs, advice, exec_opts)
     .execute_sync(&program, &mut host)?;
 ```
 
-Then re-assemble every `.masp` package from source and regenerate every stored proof. Nothing from 0.16 converts.
+Then set `miden-core` to `version = "0.35"` in every `miden-project.toml`, re-assemble every `.masp` package from source (the packages others link first), and regenerate every stored proof. Nothing from 0.16 converts.
 
 If you encounter errors, continue reading for detailed migration steps.
 
@@ -44,7 +44,7 @@ If you encounter errors, continue reading for detailed migration steps.
 
 ## Summary
 
-The VM changes fall into four groups. **Compatibility:** the package format moved to `7.0.0`, proofs became versioned and bound to the verifier's roots, and the core library's identity changes every release, so every artifact is rebuilt rather than migrated. **Proving and verification:** proving policy moved into a `Prover` value, verification into `Verifier::verify(&claim, &proof)` returning a `VerificationOutcome`, and the partial-proof APIs were replaced by one deferred-precompile model. **Execution and advice:** the free `execute` functions are gone, `execute_trace_inputs*` became `execute_for_proving*`, `AdviceInputs` hides its fields, and the advice stack, map and Merkle store share one 16 MiB byte budget. **Packages and the core library:** `CoreLibrary` is one package, package digests became layered commitments, and the package readers changed their trust levels.
+The VM changes fall into four groups. **Compatibility:** the package format moved to `7.0.0`, proofs became versioned and bound to the verifier's roots, and the core library's identity changes every release, so every artifact is rebuilt rather than migrated. **Proving and verification:** proving policy, including separate memory budgets for the VM and precompile proofs, moved into a `Prover` value, verification into `Verifier::verify(&claim, &proof)` returning a `VerificationOutcome`, and the partial-proof APIs were replaced by one deferred-precompile model. **Execution and advice:** the free `execute` functions are gone, `execute_trace_inputs*` became `execute_for_proving*`, `AdviceInputs` hides its fields, and the advice stack, map and Merkle store share one 16 MiB byte budget. **Packages and the core library:** `CoreLibrary` is one package, package digests became layered commitments, and the package readers changed their trust levels.
 
 Most renames fail to compile. The dangerous changes do not: `Verifier::verify` returns `Ok` for a proof whose precompile work is still unproven, `Prover::prove` (unlike the old free `prove`) leaves that work deferred, the reported security level drops below 96 bits for tall traces (protocol 0.17 rejects those proofs), advice inputs and large traces that passed under 0.16 can fail the new budgets at run time, and `Package::read_from_bytes_trusted` no longer validates the MAST forest.
 
@@ -56,7 +56,7 @@ Most renames fail to compile. The dangerous changes do not: `Verifier::verify` r
 
 `.masp` packages written by 0.16 (format `6.0.0`) are rejected: the 0.17 reader accepts exactly `7.0.0`, and package debug info moved from version `2` to `3`. The MAST forest wire format did not change (`[0, 0, 4]` in both), so a bare serialized `MastForest` still deserializes, but its roots may differ where core-library procedure bodies changed (see [MASM Changes](./masm-changes)).
 
-Separately, the core library package (`miden-core`, namespace `miden::core`) is versioned with the VM, so its identity changes every release. A package that links it dynamically records the dependency's version and digest, and package-level resolution (the assembler, the package registry) only matches that exact build.
+Separately, the core library package (`miden-core`, namespace `miden::core`) is versioned with the VM, so its identity changes every release. Protocol 0.17.0 ships `miden-core` `0.35.0` (dependency commitment `0xdd25712ddf6939c3d5970b060c2c0f6dcb45d5bb15436739417820f5f0a82ec5`). A package that links it dynamically records the dependency's version and digest, and package-level resolution (the assembler, the package registry) only matches that exact build. A `miden-project.toml` that still asks for `miden-core` `0.29` fails dependency resolution: the 0.17 assembler cannot load a 0.29 build of the core library (it is a `6.0.0` package).
 
 ### Affected Code
 
@@ -66,18 +66,32 @@ let pkg = Package::read_from_bytes(&old_masp)?;
 // Err: invalid value: unsupported version. Got '[6, 0, 0]', but only '[7, 0, 0]' is supported
 ```
 
+```toml
+# Before (0.16): miden-project.toml
+[dependencies]
+miden-core = { linkage = "dynamic", version = "0.29" }
+
+# After (0.17)
+[dependencies]
+miden-core = { linkage = "dynamic", version = "0.35" }
+```
+
 ### Migration Steps
 
-1. Re-assemble every `.masp` from source with the new VM (`miden-vm bundle`, the `Assembler`, or your build script).
-2. Drop every persisted package produced by 0.16: databases, caches and registries. The client's bundled packages are covered in [Client Changes](./client-changes).
-3. Make the VM version part of your package cache key. A package linked against one core-library build does not resolve against the next. At the MAST level, execution resolves external calls by procedure root, so calls into core procedures whose roots changed fail with `procedure with root digest ... could not be found`.
-4. Rebuild statically linked packages too. They do not record a core-library dependency, but they are `6.0.0` packages like any other, and the core procedures they embed keep their 0.16 bodies until you rebuild.
+1. Set the `miden-core` dependency in every `miden-project.toml` to `version = "0.35"`.
+2. Re-assemble every `.masp` from source with the new VM (`miden-vm bundle`, the `Assembler`, or your build script). Go bottom-up through dynamically linked packages: a package records the dependency commitment of every package it links, so assemble and publish a dependency before the packages that link it.
+3. Drop every persisted package produced by 0.16: databases, caches and registries. The client's bundled packages are covered in [Client Changes](./client-changes).
+4. Make the VM version part of your package cache key. A package linked against one core-library build does not resolve against the next. At the MAST level, execution resolves external calls by procedure root, so calls into core procedures whose roots changed fail with `procedure with root digest ... could not be found`.
+5. Rebuild statically linked packages too. They do not record a core-library dependency, but they are `6.0.0` packages like any other, and the core procedures they embed keep their 0.16 bodies until you rebuild.
+6. If you built packages with a 0.17 release candidate (VM 0.33): they are `7.0.0` and still load, but a manifest at `version = "0.33"` fails resolution like a `0.29` one, and a project that depends on a package assembled against core `0.33` fails with `dependency resolution failed: ... depends on miden-core <digest> in =0.33.0 ...`. Re-assemble them bottom-up as well. Statically linked rc packages keep the 0.33 core bodies (including the old `aead::decrypt` overlap check, see [MASM Changes](./masm-changes)) until rebuilt.
 
 ### Common Errors
 
 | Error Message | Cause | Solution |
 | --- | --- | --- |
 | `invalid value: unsupported version. Got '[6, 0, 0]', but only '[7, 0, 0]' is supported` | Package written by 0.16 | Re-assemble the package. |
+| `dependency resolution failed: Because there is no version of miden-core in >= 0.29.0 and < 0.30.0 and <pkg> =<version> depends on miden-core >= 0.29.0 and < 0.30.0, <pkg> =<version> is forbidden.` | `miden-project.toml` still asks for `miden-core` `0.29` (`0.33` from an rc reads the same, with `0.33.0` / `0.34.0`) | Set `version = "0.35"`. |
+| `dependency resolution failed: ... <dep> <digest> in =<version> depends on miden-core <digest> in =0.33.0 ...` | A dependency was assembled against a 0.17 release candidate's core library | Re-assemble the dependency, then its dependents. |
 | `invalid value: unsupported debug_info version: 2, expected 3` | Standalone 0.16 debug-info bytes read with the `PackageDebugInfo` readers (a whole 0.16 package fails the package version check first) | Re-assemble the package. |
 | `procedure with root digest <root> could not be found` | A call into a core-library procedure whose root changed | Re-assemble against the current core library. |
 
@@ -89,6 +103,8 @@ let pkg = Package::read_from_bytes(&old_masp)?;
 
 `ExecutionProof` bytes are now versioned. They start with a format byte (`2` in 0.17) followed by the recursive VM and PVM (precompile VM) verifier roots the proof claims compatibility with, and the verifier accepts only its own release's roots. A 0.16 proof fails to decode because its first byte was a length prefix, not a format byte. No converter exists.
 
+Proofs from a 0.17 release candidate (VM 0.33) still decode, because the format byte is still `2`, but VM 0.34 and 0.35 closed AIR soundness gaps that changed the VM and PVM verifier roots, so verification rejects them with `execution proof does not name a compatible VM verifier`.
+
 ### Affected Code
 
 ```rust
@@ -99,7 +115,7 @@ let proof = ExecutionProof::read_from_bytes(&old_proof_bytes)?;
 
 ### Migration Steps
 
-1. Discard every stored proof and queued proving job from 0.16, and regenerate the proofs with the new VM.
+1. Discard every stored proof and queued proving job from 0.16 (and from a 0.17 release candidate), and regenerate the proofs with the new VM.
 2. Upgrade clients, remote provers and nodes together. A remote prover must run the same VM version as the node that verifies its output.
 3. Do not hard-code `miden_core::proof::CURRENT_VM_VERIFIER_ROOT` / `CURRENT_PVM_VERIFIER_ROOT`, `miden_air::config::RELATION_DIGEST`, or recursive-verifier MAST roots across releases. They change with the VM version.
 
@@ -108,6 +124,7 @@ let proof = ExecutionProof::read_from_bytes(&old_proof_bytes)?;
 | Error Message | Cause | Solution |
 | --- | --- | --- |
 | `invalid value: unsupported execution proof format {format}` | Proof bytes from VM 0.29 to 0.32 (0.16 included) | Regenerate the proof with the current VM. |
+| `execution proof does not name a compatible VM verifier` | Proof from VM 0.33 (a 0.17 release candidate): it decodes, but names verifier roots that 0.35 no longer accepts | Regenerate the proof with the current VM. |
 
 ---
 
@@ -293,7 +310,7 @@ The complete mapping:
 | `prove_partial` / `prove_partial_sync` | `execute_for_proving[_sync]`, then `Prover::prove(witness)` |
 | `prove_from_trace_sync(TraceProvingInputs::new(trace_inputs, opts))` / `prove_partial_from_trace_sync` | `Prover::prove_full(witness)` / `Prover::prove(witness)` on an `ExecutionWitness` |
 | n/a | `Prover::prove_vm_witness(VmWitness)`, `Prover::prove_precompiles(Vec<PrecompileWitness>)` |
-| Trace-row cap only (2^29 rows) | 2^29 cap kept, plus a memory budget: `Prover::with_max_prover_memory_bytes(u64)`, default `Prover::DEFAULT_MAX_PROVER_MEMORY_BYTES` (64 GiB) |
+| Trace-row cap only (2^29 rows) | 2^29 cap kept, plus memory budgets: `Prover::with_max_prover_memory_bytes(u64)` for the VM proof and `with_max_precompile_prover_memory_bytes(u64)` for precompile proofs, both 64 GiB by default |
 | `ProvingOptions::hash_fn()` | No getter on `Prover`; keep the `HashFunction` yourself if you read it back |
 | `miden_prover::prove_stark` (public) | Private; no replacement |
 | Errors: `ExecutionError` only | `Prover` methods return `ProverError` (`#[non_exhaustive]`); `prove_sync` still returns `ExecutionError` |
@@ -334,13 +351,19 @@ The changelog names only `prove_partial*` as removed. The shipped code also remo
 
 The row caps fail with `ExecutionError::TraceLenExceeded`, the same error as the 2^29 cap, so a program whose chiplet trace outgrows 14,257,152 rows (heavy hashing, Merkle, memory or bitwise work) reports `trace length exceeded the maximum of 14257152 rows` at the default budget, not a memory estimate. Only the exact model fails with `ExecutionError::ProverMemoryExceeded`. `Prover` methods wrap either error as `failed to materialize VM execution trace: ...`; `prove_sync` returns it unwrapped. **Large proofs that worked under 0.16 can fail by default.**
 
+Precompile proofs have a budget of their own, also 64 GiB by default: `Prover::with_max_precompile_prover_memory_bytes(u64)` (default `Prover::DEFAULT_MAX_PRECOMPILE_PROVER_MEMORY_BYTES`, read back with `max_precompile_prover_memory_bytes()`). `prove_precompiles`, and `prove_full` / `prove_sync` on a program that logged precompile calls, check the modelled peak memory of the precompile STARK against it before building its traces, and fail with `estimated precompile prover memory of {estimated_bytes} bytes exceeds the budget of {budget_bytes} bytes` (wrapped as `failed to prove precompile witness: ...` by `Prover` methods, `failed to generate STARK proof: ...` by `prove_sync`). The free `miden_precompiles_prover::prove_precompiles` applies the default; `prove_precompiles_with_budget` takes the budget explicitly. The `miden-vm` CLI's `--max-prover-memory` sets only the VM budget.
+
 ### Affected Code
 
 ```rust
 // After (0.17)
 let prover = Prover::new()
     .with_hash_fn(HashFunction::Poseidon2)
-    .with_max_prover_memory_bytes(128 << 30); // default: Prover::DEFAULT_MAX_PROVER_MEMORY_BYTES (64 GiB)
+    .with_max_prover_memory_bytes(128 << 30)               // default: Prover::DEFAULT_MAX_PROVER_MEMORY_BYTES (64 GiB)
+    .with_max_precompile_prover_memory_bytes(128 << 30);   // default: Prover::DEFAULT_MAX_PRECOMPILE_PROVER_MEMORY_BYTES (64 GiB)
+
+// Without a Prover:
+let proof = miden_precompiles_prover::prove_precompiles_with_budget(witnesses, hash_fn, 128 << 30)?;
 ```
 
 ```bash
@@ -351,8 +374,9 @@ miden-vm prove program.masm --max-prover-memory 32Gi
 ### Migration Steps
 
 1. If you prove programs whose Core trace pads to 2^23 rows or more, or whose chiplet trace exceeds 14,257,152 rows, raise the budget with `Prover::with_max_prover_memory_bytes` and make sure the host has that memory. Both derived row caps scale with the budget.
-2. Size remote-prover machines against the budget you configure.
-3. Where you handle an oversized trace, match both `ExecutionError::TraceLenExceeded` and `ExecutionError::ProverMemoryExceeded`.
+2. If you prove large precompile batches (`prove_precompiles` over many witnesses, or a single execution with heavy Keccak or ECDSA work), raise `with_max_precompile_prover_memory_bytes` the same way.
+3. Size remote-prover machines against the budgets you configure.
+4. Where you handle an oversized trace, match both `ExecutionError::TraceLenExceeded` and `ExecutionError::ProverMemoryExceeded`.
 
 ### Common Errors
 
@@ -360,6 +384,7 @@ miden-vm prove program.masm --max-prover-memory 32Gi
 | --- | --- | --- |
 | `trace length exceeded the maximum of {N} rows` | A row cap (`ExecutionError::TraceLenExceeded`). At the default budget, `N` is `14257152` for a chiplet-heavy trace and `168429109` for a program of about 168 million cycles; `536870912` is the 2^29 hard cap, reached only with a budget of 204 GiB or more | Raise the budget or split the workload. |
 | `estimated prover memory of {estimated_bytes} bytes exceeds the budget of {budget_bytes} bytes` | Every row cap passed, but the modelled peak for the padded heights is over budget, for example a Core trace padded to 2^23 rows at the default (`ExecutionError::ProverMemoryExceeded`) | Raise the budget or shrink the program. |
+| `estimated precompile prover memory of {estimated_bytes} bytes exceeds the budget of {budget_bytes} bytes` | The precompile STARK's modelled peak is over the precompile budget (`PrecompileProvingError::MemoryBudgetExceeded`) | Raise `with_max_precompile_prover_memory_bytes`, or split the batch. |
 
 :::note Changelog correction
 The changelog says the prover's trace-row cap was "replaced" with a memory budget. The shipped code keeps the 2^29 cap and adds the budget, which derives further row caps of its own. Some upstream descriptions of this change also name `ExecutionOptions::max_prover_memory_bytes`. No such method exists in any release: the budget is `Prover::with_max_prover_memory_bytes` (CLI `--max-prover-memory`), plus an explicit `max_prover_memory_bytes: u64` argument on `execute_and_build_trace_sync` and `build_trace_with_budget`.
@@ -939,7 +964,7 @@ Package::read_from_bytes_trusted(bytes)?    // same-system bytes only: skips MAS
 | `` error[E0599]: no function or associated item named `read_from_bytes_unchecked` found `` | Removed | `read_from_bytes_trusted`. |
 
 :::note Changelog correction
-The changelog does document this change, but files it under the old `v0.28.0` heading, although it first shipped in 0.30.0, so reading only the 0.30 to 0.33 sections misses it. That entry also says untrusted reads drop debug sections; a separate entry in the 0.30.0 section reversed that, and untrusted reads now validate and keep debug info. The 0.16 version of this guide described three trust levels, including `read_from_bytes_unchecked`.
+The changelog does document this change, but files it under the old `v0.28.0` heading, although it first shipped in 0.30.0, so reading only the 0.30 to 0.35 sections misses it. That entry also says untrusted reads drop debug sections; a separate entry in the 0.30.0 section reversed that, and untrusted reads now validate and keep debug info. The 0.16 version of this guide described three trust levels, including `read_from_bytes_unchecked`.
 :::
 
 ---
@@ -1158,15 +1183,26 @@ Code that builds or matches `miden_assembly_syntax::ast` nodes breaks in several
 | n/a | New `Instruction::Trace`, `Instruction::TraceImm(EventImmediate)`, `Instruction::DebugInlineCall(DebugInlineCallInfo)`, `Instruction::DebugInlineCallClear` |
 | `DebugVarLocation::FrameBase { global_index, byte_offset }`, `Expression(Vec<u8>)` | `ResolvedFrameBase { base: DebugFrameBase, byte_offset }`, `Expression(DebugLocationExpression)`, new `Unavailable` |
 | `TypeResolver::get_type -> Result<Type, E>`, `get_local_type -> Result<Option<Type>, E>`, `TypeExpr::resolve_type` | `get_type` / `get_local_type` return `Result<Option<TypeTemplate>, E>`, new required `TypeResolver::finalize`, `TypeExpr::resolve_template`; use `TypeResolver::resolve` for a `Type` |
-| `ParsingError` | Still exhaustive; new `ControlFlowNestingDepthExceeded`; protocol-ABI attribute conflicts report `AttributeConflict` |
-| `midenc_hir_type` 0.10 (`ast::types::*`) | 0.15: `Type::Variadic`, `CallConv::Extern(Arc<str>)`, MASM type names now include `u256` (the existing `Type::U256`), `Type::Struct(StructRef)` / `Type::Enum(EnumRef)` (read through `.get()`), structs over 255 fields rejected, `TypeRepr::BigEndian` removed |
+| `FunctionType { span, cc, args, results }` | New public field `arg_names: Vec<Option<Ident>>` (parameter names; equality and hashing ignore it). `FunctionType::new(..)` leaves it empty; set it with `with_arg_names(..)` |
+| `ParsingError` (exhaustive) | `#[non_exhaustive]`. New `ControlFlowNestingDepthExceeded`, plus `ConstantExpressionNestingDepthExceeded` and `TypeExpressionNestingDepthExceeded` for nesting beyond 256 levels. Protocol-ABI attributes (`@account_procedure`, `@auth_script`, `@note_script`, `@transaction_script`) imply the component-model calling convention: two different ones report `ConflictingProtocolAbiAttribute`, and one with a conflicting `@callconv` reports `CallConvAttributeConflict` |
+| `midenc_hir_type` 0.10 (`ast::types::*`) | 0.17: `Type::Variadic`, `CallConv::Extern(Arc<str>)`, MASM type names now include `u256` (the existing `Type::U256`), `Type::Struct(StructRef)` / `Type::Enum(EnumRef)` (read through `.get()`), structs over 255 fields rejected, `TypeRepr::BigEndian` removed |
 | Constants and inline event names folded during semantic analysis | Kept in the AST and resolved at link time |
 
 ### Migration Steps
 
 1. Add match arms for the new `Instruction` variants, and wrap `EmitImm` payloads in `EventImmediate::Immediate(..)`.
 2. Update `DebugVarLocation` and `TypeResolver` implementations per the table.
-3. Tools that read resolved constant values from a parsed `Module` must now run the linker first.
+3. Add `arg_names` to `FunctionType` struct literals (`Vec::new()` if you have no names, otherwise one entry per argument), or build with `FunctionType::new(..)`.
+4. Add a wildcard arm to every `match` on `ParsingError`.
+5. Tools that read resolved constant values from a parsed `Module` must now run the linker first.
+
+### Common Errors
+
+| Error Message | Cause | Solution |
+| --- | --- | --- |
+| `` error[E0063]: missing field `arg_names` in initializer of `FunctionType` `` | New field | Add `arg_names`, or use `FunctionType::new`. |
+| `` error[E0004]: non-exhaustive patterns: `_` not covered `` on `ParsingError` | Enum is `#[non_exhaustive]` | Add `_ =>`. |
+| `constant expression nesting depth exceeded` / `type expression nesting depth exceeded` | Constant or type expression nested more than 256 levels deep | Flatten the expression. |
 
 ---
 
@@ -1224,7 +1260,9 @@ miden-vm bundle --version 1.2.0 --release ./src/mod.masm
   };
   ```
 
-- **Two-argument `conjectured_security_level` removed.** `miden_air::config::conjectured_security_level(num_queries, query_pow_bits)` (also reachable as `miden_prover::config::conjectured_security_level`) is gone. Read the verified value with `outcome.vm_security_parameters().conjectured_security_level()`, or call `miden_air::security::conjectured_security_level(num_queries, query_pow_bits, deep_pow_bits, folding_pow_bits, log_max_height, num_kernel_procedures)` with raw parameters. `miden_verifier` and `miden_vm` re-export `AirShape`, `InstanceShape`, `LookupShape`, `ProofSecurityParameters`, `ProtocolParams`, `SecurityReport` and `SecurityTerm`.
+- **Two-argument `conjectured_security_level` removed.** `miden_air::config::conjectured_security_level(num_queries, query_pow_bits)` (also reachable as `miden_prover::config::conjectured_security_level`) is gone. Read the verified value with `outcome.vm_security_parameters().conjectured_security_level()`, or call `miden_air::security::conjectured_security_level(num_queries, query_pow_bits, deep_pow_bits, folding_pow_bits, log_max_height, num_kernel_procedures)` with raw parameters. `miden_verifier` and `miden_vm` re-export `AirShape`, `InstanceShape`, `LookupShape`, `ProofSecurityParameters`, `ProtocolParams`, `SecurityReport` and `SecurityTerm`. Code written against a 0.17 release candidate (Plonky3 0.7) needs the Plonky3 0.8 shapes: `AirShape` gained `num_quotient_chunks` and its `lookup` became `Option<LookupShape>`, and `ProtocolParams` gained `ood_pow_bits`.
+- **`AdviceMap` decoding rejects duplicate keys.** `AdviceMap::read_from_bytes`, and every decoder that embeds it such as `AdviceInputs`, fails with `invalid value: duplicate advice map key in serialized payload` where 0.16 silently kept the last value. `to_bytes` never writes a duplicate, so only hand-built or concatenated payloads are affected.
+- **`miden-lifted-stark`: `ProverInstance` takes ownership.** `ProverInstance::new(config, prover_statement, preprocessed)` takes the `ProverStatement` by value, and `prove(self, challenger)` consumes the instance and returns `(StarkOutput, Statement)`. `prover_statement()` is gone; use `statement()` or `into_statement()`. Only direct users of the lifted STARK prover are affected.
 - **Merkle depth must be 1 to 64 for MPVERIFY / MRUPDATE (`mtree_verify`, `mtree_get`, `mtree_set`).** Both operations now reject a depth of 0 or above 64 before they fetch a Merkle path from the advice provider, with `OperationError::MerkleDepthOutOfRange` (`Merkle tree depth must be in the range 1..=64, but was {depth}`). Because the check runs first, a rejected MRUPDATE no longer mutates the advice Merkle store. `mtree_verify` is a bare MPVERIFY, so it rejects any out-of-range depth this way. `mtree_get` and `mtree_set` first fetch the node from the advice provider: a depth of 0 on a root in the store reaches the depth check, but a depth above 64 fails that lookup first with `provided node index {index} is out of bounds for a merkle tree node at depth {depth}`. The path the advice provider returns must also have exactly `depth` nodes, or execution fails with `invalid crypto operation: Merkle path length {path_len} does not match expected depth {depth}`. MASM authors are affected too; see [MASM Changes](./masm-changes#instruction-and-core-library-behaviour-changes).
 - **`FastProcessor` caches loaded MAST forests.** Within one execution, the first time an external call loads a MAST forest from the host, `FastProcessor` caches it under every procedure digest local to that forest and merges its advice map once. `MastForestStore::get` / `get_mast_forest` is therefore called less often: hosts that count or log lookups, or return a different forest for the same digest during one execution, see different behaviour. If two forests both contain a digest, the forest loaded first wins for the rest of the execution, including its package debug info.
 - **Execution witnesses serialize for remote proving.** `ExecutionWitness` implements `Serializable`. `ExecutionWitness::read_from_bytes` treats input as untrusted: it applies a budget proportional to the input size and rejects trailing bytes (`invalid value: extra bytes after execution witness payload`), but it does not check the sparse MAST replay against a source forest. `read_from_bytes_trusted` is permissive and meant only for bytes you produced. Only wire version `2` is accepted.
@@ -1236,7 +1274,9 @@ miden-vm bundle --version 1.2.0 --release ./src/mod.masm
 | Error Message | Cause | Solution |
 | --- | --- | --- |
 | `invalid value: unsupported version. Got '[6, 0, 0]', but only '[7, 0, 0]' is supported` | Package written by 0.16 | Re-assemble from source. |
+| `dependency resolution failed: Because there is no version of miden-core in >= 0.29.0 and < 0.30.0 ...` | `miden-project.toml` still asks for `miden-core` `0.29` (or `0.33` from an rc) | Set `version = "0.35"` and re-assemble bottom-up. |
 | `invalid value: unsupported execution proof format {format}` | Proof serialized by 0.16 | Regenerate the proof. |
+| `execution proof does not name a compatible VM verifier` | Proof from a 0.17 release candidate (VM 0.33) | Regenerate the proof. |
 | `procedure with root digest <root> could not be found` | Call into a core-library procedure whose root changed | Re-assemble against the current core library. |
 | `error[E0432]: unresolved import` naming `miden_verifier::verify` | Free `verify` removed | `Verifier::new().verify(&claim, &proof)`. |
 | `error[E0432]: unresolved import` naming `miden_prover::ProvingOptions` | Replaced by `Prover` | `Prover::new().with_hash_fn(..)`. |
@@ -1249,6 +1289,8 @@ miden-vm bundle --version 1.2.0 --release ./src/mod.masm
 | `advice provider size budget exceeded: adding {added} bytes to the current {current} bytes would exceed the maximum of {max} bytes` | Stack + map + store over the 16 MiB default | Trim the advice or raise `with_max_advice_size_bytes`. |
 | `trace length exceeded the maximum of 14257152 rows` | Chiplet trace over the row cap the 64 GiB default budget derives (other caps print other numbers; see [the memory-budget section](#prover-memory-budget-added-on-top-of-the-trace-row-cap)) | `Prover::with_max_prover_memory_bytes` or `--max-prover-memory`. |
 | `estimated prover memory of {estimated_bytes} bytes exceeds the budget of {budget_bytes} bytes` | Padded trace within the row caps but its modelled peak over the 64 GiB default, for example a Core trace padded to 2^23 rows | `Prover::with_max_prover_memory_bytes` or `--max-prover-memory`. |
+| `estimated precompile prover memory of {estimated_bytes} bytes exceeds the budget of {budget_bytes} bytes` | Precompile proof over its separate 64 GiB default | `Prover::with_max_precompile_prover_memory_bytes`, or a smaller batch. |
+| `invalid value: duplicate advice map key in serialized payload` | Serialized `AdviceMap` repeats a key (0.16 kept the last value) | Write each key once. |
 | `conjectured security level is {actual} bits, below the required {required} bits` | Trace taller than 2^23 rows verified with a 96-bit minimum | Split the workload. |
 | `Program proof is valid but incomplete; outstanding precompile root: {root}` | Proof with outstanding precompile work | Complete the precompile proof first. |
 | `Merkle tree depth must be in the range 1..=64, but was {depth}` | MPVERIFY / MRUPDATE with depth 0 or above 64: `mtree_verify` with either, `mtree_get` / `mtree_set` with depth 0 | Use a depth in `1..=64`. |

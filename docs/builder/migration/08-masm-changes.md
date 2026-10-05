@@ -1,7 +1,7 @@
 ---
 sidebar_position: 8
 title: "MASM Changes"
-description: "Procedures that kept their name but changed their stack effect, the renamed reference-block and fee-asset accessors, relocated standards and core-library modules, and the return of trace events"
+description: "Procedures that kept their name but changed their stack effect, the renamed reference-block and fee-asset accessors, account code upgrades and output note sealing, relocated standards and core-library modules, and the return of trace events"
 ---
 
 # MASM Changes
@@ -43,10 +43,12 @@ miden-protocol  = { linkage = "dynamic", version = "0.16.0" }
 miden-standards = { linkage = "static",  version = "0.16.0" }
 
 # After (0.17)
-miden-core      = { linkage = "dynamic", version = "0.33" }
+miden-core      = { linkage = "dynamic", version = "0.35" }
 miden-protocol  = { linkage = "dynamic", version = "0.17.0" }
-miden-standards = { linkage = "static",  version = "0.17.0" }
+miden-standards = { linkage = "dynamic", version = "0.17.0" }
 ```
+
+The standard components made the same switch to `linkage = "dynamic"` for `miden-standards`: their packages call into the standards library instead of embedding it. The auth procedure roots of the standard single-sig, multisig and network-account auth components change, and with them the code commitment of every account that uses them. A dynamically linked package needs the standards library at run time: `TransactionMastStore::new()` already loads it, but a custom MAST store must serve it too, or execution fails with `procedure with root digest <root> could not be found` (see [Transaction Changes](./transaction-changes)).
 
 Renamed procedures fail loudly at assembly. The procedures in [the stack-effect table](#procedures-that-kept-their-name-but-changed-their-stack-effect) do not: after the renames, audit every call site listed there by hand.
 
@@ -56,7 +58,7 @@ If you encounter errors, continue reading for detailed migration steps.
 
 ## Summary
 
-This page holds four groups of change. The first is the dangerous one: a dozen procedures in `miden::protocol` and `miden::standards` changed their stack effect under an unchanged name. Nothing fails to compile; call sites either trip an assertion that names something unrelated, or run and compute the wrong value. The second group is renames and moves (reference-block helpers, the fee asset accessor, `note_tag`, `note_execution_hint`, the MINT submodules, the fungible amount helpers, privatised low-level helpers); those fail at assembly with `undefined item`. The third group is for authors of custom auth and faucet components: the transaction summary layout, `tx_policy`, `guardian`, multisig, fee payment, and faucet callbacks and policies all changed shape. The fourth is the core library and the language (VM `0.29.2` → `0.33.0`): precompile wrappers moved under `miden::core`, the in-VM verifier is `verify_proof`, `u64` shifts and bare `exp` trap on inputs they used to accept, and the `trace` instruction is back.
+This page holds four groups of change. The first is the dangerous one: a dozen procedures in `miden::protocol` and `miden::standards` changed their stack effect under an unchanged name. Nothing fails to compile; call sites either trip an assertion that names something unrelated, or run and compute the wrong value. `native_account::upgrade` belongs here too: it kept its stack and now really upgrades the account code. The second group is renames and moves (reference-block helpers, the fee asset accessor, `note_tag`, `note_execution_hint`, the MINT submodules, the fungible amount helpers, privatised low-level helpers); those fail at assembly with `undefined item`. Hand-written kernel offsets also shifted. The third group is for authors of custom auth and faucet components: the transaction summary layout, `tx_policy`, `guardian`, multisig, fee payment, and faucet callbacks and policies all changed shape. The fourth is the core library and the language (VM `0.29.2` → `0.35.0`): precompile wrappers moved under `miden::core`, the in-VM verifier is `verify_proof` and the `stark::constants` accessors are gone, `u64` shifts and bare `exp` trap on inputs they used to accept, `aead::decrypt`, sorted-array lookups and `eval_circuit` enforce new limits, and the `trace` instruction is back. New procedures seal output notes against further changes.
 
 Every procedure whose body changed has a new MAST root, and every standard note script root and standard component code commitment changes. Re-assemble every note script, transaction script and account component that links these libraries (the package format itself is covered in [VM & Assembler Changes](./vm-assembler)).
 
@@ -64,7 +66,7 @@ Every procedure whose body changed has a new MAST root, and every standard note 
 The protocol 0.17 changelog carries a second heading labeled `v0.16.0 (2026-08-06)` directly below the 0.17 entries. None of its entries is in `0.16.1`: it is the 0.17 fixes list under a wrong heading, and it contains several breaking MASM changes covered on this page (non-fungible `mint_and_send`, the foreign-procedure root check, the transfer-policy expiration cap). Several renames on this page (`account_id::validate`, `note::execution_hint`, `types::MemoryAddress`, the `kernel_proc_offsets` constants) are not in the changelog at all.
 :::
 
-The VM 0.33 assembler reports a stale import or procedure as `undefined item '...'`. A `use` names the full module path (`use miden::precompiles::hashes::keccak256` gives `undefined item 'miden::precompiles::hashes::keccak256'`); an `exec` names only the procedure (`exec.tx::get_block_number` gives `undefined item 'get_block_number'`); a `syscall` names the kernel path (`undefined item '::$kernel::<name>'`). The protocol and standards libraries are linked as packages, so importing one of their private modules also reports `undefined item`, not `private submodule`.
+The VM 0.35 assembler reports a stale import or procedure as `undefined item '...'`. A `use` names the full module path (`use miden::precompiles::hashes::keccak256` gives `undefined item 'miden::precompiles::hashes::keccak256'`); an `exec` names only the procedure (`exec.tx::get_block_number` gives `undefined item 'get_block_number'`); a `syscall` names the kernel path (`undefined item '::$kernel::<name>'`). The protocol and standards libraries are linked as packages, so importing one of their private modules also reports `undefined item`, not `private submodule`.
 
 ---
 
@@ -72,7 +74,7 @@ The VM 0.33 assembler reports a stale import or procedure as `undefined item '..
 
 ### Summary
 
-The VM 0.33 assembler performs no call-site type check. Almost every public protocol and standards procedure now carries a type signature (see [Procedure type signatures](#procedure-type-signatures-and-typed-pointers)), but signatures document the stack effect; they neither reject nor protect an old call site. The procedures below consume a different stack in 0.17 than in 0.16.
+The VM 0.35 assembler performs no call-site type check. Almost every public protocol and standards procedure now carries a type signature (see [Procedure type signatures](#procedure-type-signatures-and-typed-pointers)), but signatures document the stack effect; they neither reject nor protect an old call site. The procedures below consume a different stack in 0.17 than in 0.16.
 
 ### Affected Code
 
@@ -91,8 +93,9 @@ The VM 0.33 assembler performs no call-site type check. Almost every public prot
 | `multisig_smart::enforce_note_restrictions` | `[num_own_output_notes, note_restrictions]` | `[note_restrictions]` |
 | `faucets::non_fungible::mint_and_send` | `[ASSET_VALUE, tag, note_type, RECIPIENT, pad(6)]` | `[ASSET_ID, ASSET_VALUE, tag, note_type, RECIPIENT, pad(2)]` |
 | `fungible_asset::value_into_amount` | `[ASSET_VALUE]`, unchecked | `[ASSET_VALUE]`, now validates the value |
+| `native_account::upgrade` | `[CODE_UPGRADE_COMMITMENT, STORAGE_UPGRADE_COMMITMENT]`, only recorded the two words | `[NEW_CODE_COMMITMENT, STORAGE_UPGRADE_COMMITMENT]`, now upgrades the account code; the storage word must be empty |
 
-`tx` is `miden::protocol::tx`. The other modules live under `miden::standards`: `auth`, `auth::guardian`, `auth::tx_policy`, `auth::multisig`, `auth::multisig_smart`, `fee`, `faucets::non_fungible` and `assets::fungible_asset`.
+`tx` and `native_account` are `miden::protocol::tx` and `miden::protocol::native_account`. The other modules live under `miden::standards`: `auth`, `auth::guardian`, `auth::tx_policy`, `auth::multisig`, `auth::multisig_smart`, `fee`, `faucets::non_fungible` and `assets::fungible_asset`.
 
 What an unchanged 0.16 call site does in 0.17:
 
@@ -105,6 +108,7 @@ What an unchanged 0.16 call site does in 0.17:
 - **`multisig::auth_tx`** and **`multisig_smart::auth_tx`** bind a wrong block or panic; **`multisig_smart::enforce_note_restrictions`** misreads the restrictions.
 - **`faucets::non_fungible::mint_and_send`** reads the 0.16 frame shifted by one word (the old `ASSET_VALUE` as `ASSET_ID`, recipient elements as `tag` and `note_type`), so it fails while creating the output note with `failed to decode note_type into u8`, or earlier in a custom mint policy that inspects the value.
 - **`fungible_asset::value_into_amount`** keeps its stack effect but now validates, so it fails on malformed values it used to accept.
+- **`native_account::upgrade`** applies the upgrade instead of only recording it. A non-empty storage word fails, and so does any call in a transaction that creates the account, or a second upgrade while one is pending. A code commitment that is neither the empty word nor the current code makes the kernel load and validate that code, which the host must provide in the advice map; the new code takes effect after the auth procedure runs. The Rust side is on [Account Changes](./account-changes).
 
 :::danger A custom guardian component can lose its guardian check without any error
 If your auth component calls `guardian::verify_signature` with the 0.16 own-notes count, a count of 1 now passes as `is_rotation = 1` and the guardian signature is never verified, with nothing to report it. Call `guardian::assert_rotation_policy` and pass its result instead (see [Custom auth components](#custom-auth-components-transaction-summary-tx_policy-and-guardian)).
@@ -126,6 +130,10 @@ If your auth component calls `guardian::verify_signature` with the 0.16 own-note
 | `transaction must not include output notes` | `tx_policy::assert_no_output_notes` called after `fee::pay_fee` created the fee note | Call it with no argument, before paying the fee. |
 | `failed to decode note_type into u8` | Old `non_fungible::mint_and_send` call without `ASSET_ID`: the frame is read shifted by one word | Pass `[ASSET_ID, ASSET_VALUE, ...]`. |
 | `fungible asset value is not well-formed` | Old `value_into_amount` call site now validates | Pass a real fungible value, or use `value_into_amount_unchecked`. |
+| `account storage upgrades are not supported` | `native_account::upgrade` with a non-empty `STORAGE_UPGRADE_COMMITMENT` | Pass the empty word. |
+| `a new account cannot be upgraded` | `native_account::upgrade` in the transaction that creates the account | Deploy the account with the final code, and upgrade in a later transaction. |
+| `an account code upgrade is already pending` | `native_account::upgrade` after an earlier call in the same transaction set a new code commitment | Upgrade once per transaction. |
+| `transaction initialized an upgrade to account code <commitment> but the advice map did not provide the new code` | The host has no code for the requested commitment | Pass the new code with `TransactionArgs::with_account_code_upgrade`. |
 
 ---
 
@@ -159,7 +167,7 @@ exec.tx::get_reference_block_commitment  # []             -> [REF_BLOCK_COMMITME
 push.1234 exec.tx::get_block_commitment  # [block_number] -> [BLOCK_COMMITMENT]
 ```
 
-If you call the kernel directly: `kernel_proc_offsets::TX_GET_BLOCK_NUMBER_OFFSET` was renamed to `TX_GET_REFERENCE_BLOCK_NUMBER_OFFSET` (value `52` in 0.17).
+If you call the kernel directly: `kernel_proc_offsets::TX_GET_BLOCK_NUMBER_OFFSET` was renamed to `TX_GET_REFERENCE_BLOCK_NUMBER_OFFSET`, and its value moved from `52` to `55` (see [Kernel entry points](#kernel-entry-points-syscall-and-foreign-procedure-roots)).
 
 ### Migration Steps
 
@@ -364,7 +372,7 @@ exec.asset::id_into_faucet_id
 
 1. Replace `exec.tx::get_fee_faucet_id exec.fungible_asset::create_id` with `exec.tx::get_fee_asset_id`.
 2. Where you need the faucet ID, append `exec.asset::id_into_faucet_id` (from `miden::protocol::asset`).
-3. Rename `kernel_proc_offsets::TX_GET_FEE_FAUCET_ID_OFFSET` to `TX_GET_FEE_ASSET_ID_OFFSET` if you syscall by hand (value `60` in 0.17).
+3. Rename `kernel_proc_offsets::TX_GET_FEE_FAUCET_ID_OFFSET` to `TX_GET_FEE_ASSET_ID_OFFSET` if you syscall by hand (value `60` in 0.16, `63` in 0.17).
 
 ---
 
@@ -430,7 +438,7 @@ On the Rust side, the new `MultisigAuthArgs` builds the preimage; `MultisigAuthA
 
 ### Summary
 
-The procedure now lives in `miden::protocol::native_account` and panics when the active account is a foreign account. The new `native_account::has_state_changed` wraps the common "initial versus current commitment" check.
+The procedure now lives in `miden::protocol::native_account` and panics when the active account is a foreign account. The new `native_account::has_state_changed` wraps the common "initial versus current commitment" check, and also returns 1 when a code upgrade is pending (see `native_account::upgrade` in [the stack-effect table](#procedures-that-kept-their-name-but-changed-their-stack-effect)).
 
 ### Affected Code
 
@@ -772,13 +780,30 @@ The descriptor, top first, is `[lookup_pow_bits, num_composed_constraints, max_c
 
 New in the same area: `miden::core::sys::pvm::verify_proof` verifies a precompile-VM proof for a deferred root (`[D, ...] -> [security_descriptor(12), ...]`), and `sys::pvm::request_proof` emits `miden::core::sys::pvm::request_proof` so a host can supply the proof package on demand.
 
+Code that builds its own verifier from the `stark::*` and `pcs::*` modules loses its helpers. Every getter, setter and pointer procedure of `miden::core::stark::constants` is gone; the module keeps the address constants (for example `pub const NUM_QUERIES_PTR = 3223322628`), `assert_valid_order_tag` and `zeroize_stack_word`. Some pointer accessors, such as `claim_ptr`, live in `sys::vm::layout` instead. Also removed: `pcs::fri::helper::get_fri_remainder_codeword_max_size`, `pcs::fri::helper::get_fri_remainder_poly_max_degree_plus_1`, `stark::utils::bit_reverse_len_parallel` and `sys::vm::public_inputs::load_deferred_root`.
+
+```masm
+# Before (0.16)
+use miden::core::stark::constants
+
+exec.constants::get_number_queries
+```
+
+```masm
+# After (0.17)
+use { NUM_QUERIES_PTR } from miden::core::stark::constants
+
+mem_load.NUM_QUERIES_PTR
+```
+
 ### Migration Steps
 
 1. Rename `vm::verify_vm_proof` to `vm::verify_proof`, including `procref.vm::verify_vm_proof` used to derive request keys.
 2. Add `use miden::core::stark::security` and replace `swapw exec.vm::compute_conjectured_security_level` with `exec.security::compute_conjectured_security_level` directly on the verifier output.
 3. Rebalance the stack: the verifier returns 16 elements, not 8; the estimator consumes 12 and returns 1.
-4. Delete any code that read verifier state back out of memory after the call (for example through the `stark::constants::*_ptr` accessors): that memory now belongs to a separate context. Some of those accessors, such as `claim_ptr`, also moved from `stark::constants` to `sys::vm::layout`, so a stale call fails with `undefined item 'claim_ptr'`. You no longer need to keep the `3223322624..` region free.
-5. Delete any stack padding you added to compensate for elements the verifier consumed beyond its documented inputs; the documented stack effect is now exact.
+4. Delete any code that read verifier state back out of memory after the call: that memory now belongs to a separate context. You no longer need to keep the `3223322624..` region free.
+5. In a custom verifier, replace each `stark::constants` accessor call with a `mem_load` / `mem_store` of the matching address constant, or with the `sys::vm::layout` procedure (`claim_ptr` and others). Inline the four removed helpers if you used them.
+6. Delete any stack padding you added to compensate for elements the verifier consumed beyond its documented inputs; the documented stack effect is now exact.
 
 On the Rust side, `CoreLibrary::recursive_verifier_root()` became `vm_recursive_verifier_root()` (see [VM & Assembler Changes](./vm-assembler)).
 
@@ -787,6 +812,8 @@ On the Rust side, `CoreLibrary::recursive_verifier_root()` became `vm_recursive_
 | Error Message | Cause | Solution |
 | --- | --- | --- |
 | `undefined item 'verify_vm_proof'` or `undefined item 'compute_conjectured_security_level'` | Procedure renamed or moved | Use `vm::verify_proof` and `security::compute_conjectured_security_level`. |
+| `undefined item '<accessor>'` (for example `undefined item 'get_number_queries'` or `undefined item 'claim_ptr'`) | Removed `stark::constants` accessor | Use the address constant, or the `sys::vm::layout` procedure. |
+| `undefined item 'load_deferred_root'` | One of the four removed verifier helpers | Inline it. |
 
 ---
 
@@ -794,19 +821,21 @@ On the Rust side, `CoreLibrary::recursive_verifier_root()` became `vm_recursive_
 
 ### Summary
 
-A procedure's MAST root changes whenever its instructions change. Between VM 0.29.2 (0.16) and 0.33.0 (0.17) many exported procedures got a new root, so any root you recorded (proof-request keys, allowlists, `dynexec` / `dyncall` targets) is stale. They include:
+A procedure's MAST root changes whenever its instructions change. Between VM 0.29.2 (0.16) and 0.35.0 (0.17) many exported procedures got a new root, so any root you recorded (proof-request keys, allowlists, `dynexec` / `dyncall` targets) is stale. They include:
 
 | Procedure | Root changed in VM | Why |
 | --- | --- | --- |
 | `crypto::dsa::ecdsa_k256_keccak::verify`, `verify_bytes` | 0.30, 0.31 | Internal refactors |
-| `sys::vm::verify_vm_proof` → `sys::vm::verify_proof` | 0.30, 0.31, 0.33 | ACE registry, rename and security descriptor, context isolation |
-| `sys::pvm::verify_proof` (new in 0.30) | 0.31, 0.33 | Same |
+| `sys::vm::verify_vm_proof` → `sys::vm::verify_proof` | 0.30, 0.31, 0.33, 0.34 | ACE registry, rename and security descriptor, context isolation, AIR soundness fixes |
+| `sys::pvm::verify_proof` (new in 0.30) | 0.31, 0.33, 0.34, 0.35 | Same |
+| `sys::vm::compute_conjectured_security_level` → `stark::security::compute_conjectured_security_level` | 0.31 (moved), 0.34 | Takes the security descriptor; 0.34 also bounds the DEEP composition term |
+| `crypto::aead::decrypt` | 0.35 | Overlap check covers the tag (see [below](#instruction-and-core-library-behaviour-changes)) |
 | `math::u64::shl`, `shr`, `rotl`, `rotr` | 0.31 | Range check added (see [below](#instruction-and-core-library-behaviour-changes)) |
 | `collections::sorted_array::find_word`, `find_key_value`, `find_half_key_value` | 0.30 | u32 pointer checks |
 | `crypto::dsa::falcon512_poseidon2::verify`, `load_h_s2_and_product` | 0.30 | Horner evaluation-point layout |
 | `mem::pipe_words_to_memory`, `mem::pipe_preimage_to_memory`, `collections::mmr::unpack` | 0.30 | Advice pipe refactored for domain-separated hashing (`unpack` calls `pipe_preimage_to_memory`) |
 
-Also changed: `crypto::hashes::keccak256::hash` and `merge` (`hash_bytes` kept its root), and many of the recursive verifier's helpers under `stark::*`, `pcs::*` and `sys::vm::*`. Procedures of your own that use bare `exp` also get a new root (see [below](#instruction-and-core-library-behaviour-changes)).
+Also changed: `crypto::hashes::keccak256::hash` and `merge` (`hash_bytes` kept its root), and many of the recursive verifier's helpers under `stark::*`, `pcs::*` and `sys::vm::*`. VM 0.34 and 0.35 changed `sys::vm::load_air_context`, `sys::vm::constraints_eval::execute_constraint_evaluation_check` and 18 of the 20 exports under `sys::pvm` (including `verify_proof`, `request_proof` and every `layout::*_ptr`) again, and removed 79 exports: the `stark::constants` accessors and four verifier helpers (see [In-VM proof verification](#in-vm-proof-verification-verify_vm_proof-is-verify_proof)). Procedures of your own that use bare `exp` also get a new root (see [below](#instruction-and-core-library-behaviour-changes)).
 
 The changelog announces the ECDSA `verify` root change in VM 0.30, but not the second change in 0.31.
 
@@ -830,18 +859,23 @@ The changelog announces the ECDSA `verify` root change in VM 0.30, but not the s
 
 These change behaviour at run time without any assembly error.
 
-| Instruction / procedure | 0.16 (VM 0.29.2) | 0.17 (VM 0.33) |
+| Instruction / procedure | 0.16 (VM 0.29.2) | 0.17 (VM 0.35) |
 | --- | --- | --- |
 | `u64::shl`, `shr`, `rotl`, `rotr` | No explicit check; `rotl` / `rotr` accepted out-of-range amounts | Trap with `shift amount must be in the range [0, 64)` when `n >= 64`; 6 more cycles each |
-| Bare `exp` | Exponent up to `2^64 - 1`, 73 cycles | Lowers to `exp.u63`: exponent must be `< 2^63`, 72 cycles; larger exponents trap |
+| Bare `exp` | Exponent up to `2^64 - 1`, 73 cycles | Lowers to `exp.u63`: exponent must be `< 2^63`, 72 cycles; larger exponents fail with `assertion failed with error code: 0` |
 | `horner_eval_base` | Read two elements at `alpha_addr` and `alpha_addr + 1`, any alignment | Reads one word-aligned word that must be `[alpha0, alpha1, 0, 0]` |
 | `horner_eval_ext` | Read a word; elements 2 and 3 ignored | Elements 2 and 3 must be zero |
 | secp256k1 MSMs (`mul_scalar`, `mul_scalar_generator`, `msm_mem`, `msm2`, `msm2_generator`) | Zero scalars and repeated bases rejected during deferred evaluation | Accepted; the result may be the identity point |
+| `crypto::aead::decrypt` | Overlap check ignored the tag word: a destination starting at the tag address passed, overwrote the tag, then failed tag verification | Valid only if `dst_ptr > src_ptr + (num_blocks + 1) * 8 + 3` or `src_ptr > dst_ptr + (num_blocks + 1) * 8 - 1`; otherwise fails with `source and destination ranges must not overlap` |
+| `collections::sorted_array::find_word`, `find_key_value`, `find_half_key_value` | No size limit | Fail when the array holds more than 65,536 entries (words for `find_word`, key-value pairs for the others) |
+| `eval_circuit` | Up to `2^30 - 1` wires per call | At most 32,768 wires (`n_read + n_eval`) per call, and at most 32 invocations while collecting a trace for proving |
 
 Details:
 
 - **`u64` shifts** (`miden::core::math::u64`): new cycle counts are `shl` 21 → 27, `shr` 60/61 → 66/67, `rotl` 46 → 52, `rotr` 60 → 66. The VM changelog files this check under 0.29.0, but it is absent at 0.29.2 and first ships in 0.31.
-- **`exp`**: `exp.uXX` (XX in 0..=63) and `exp.<imm>` are unchanged. Procedures containing bare `exp` get a new MAST root.
+- **`exp`**: bare `exp` is `exp.u63`, so valid exponents are 0 to `2^63 - 1`. A larger exponent fails at run time with `assertion failed with error code: 0`; the assembler cannot catch it. `exp.uN` (N in 0..=63, requires `e < 2^N`) and `exp.<imm>` (any field element; `0^0` is 1) are unchanged. Procedures containing bare `exp` get a new MAST root.
+- **Sorted-array lookups**: the cap lives in the host handler of the `lowerbound_array` / `lowerbound_key_value` events, not in the MASM procedures.
+- **`eval_circuit`**: plain execution enforces only the per-call wire limit. Both limits fit the ACE circuits of the VM and PVM recursive verifiers.
 - **secp256k1 MSMs** (`miden::core::precompiles::curves::secp256k1`): an identity value used as an MSM base is still rejected.
 - **Merkle depth**: `mtree_verify` now rejects a depth of 0 or above 64 before touching the advice provider. `mtree_get` and `mtree_set` fetch the node from the advice provider first: a depth above 64 fails that lookup (`provided node index <index> is out of bounds for a merkle tree node at depth <depth>`), and a depth of 0 on a root in the store reaches the new depth check. Details are on [VM & Assembler Changes](./vm-assembler).
 
@@ -863,10 +897,23 @@ push.ALPHA_ADDR mem_storew_le dropw
 ### Migration Steps
 
 1. Reduce shift and rotation amounts modulo 64 (or bounds-check them) before calling `u64::shl`, `shr`, `rotl` or `rotr`, and update cycle budgets.
-2. If an `exp` exponent can reach `2^63` or more, reduce it (for field elements, exponents can be taken mod `p - 1`) or split the exponentiation. Update any pinned root of a procedure that uses bare `exp`.
+2. Use `exp.<imm>` for constant exponents: it takes any field element. If a dynamic exponent can reach `2^63`, split it at `2^32` (131 cycles instead of 72; it keeps `0^(p-1) = 0`):
+
+   ```masm
+   # [e, b, ...] -> [b^e, ...], any felt e
+   u32split                 # [e_lo, e_hi, b, ...]
+   dup.2 swap exp.u32       # [b^e_lo, e_hi, b, ...]
+   movup.2 exp.4294967296   # [b^(2^32), b^e_lo, e_hi, ...]
+   movup.2 exp.u32          # [(b^(2^32))^e_hi, b^e_lo, ...]
+   mul                      # [b^e, ...]
+   ```
+
+   Reducing the exponent modulo `p - 1` does not help: a field element is already below `p`, so the reduction only changes `e = p - 1` (turning `0^(p-1) = 0` into `0^0 = 1`) and exponents from `2^63` to `p - 2` still fail. Update any pinned root of a procedure that uses bare `exp`.
 3. Store the Horner evaluation point at a word-aligned address as `[alpha0, alpha1, 0, 0]`, and clear elements 2 and 3 if you kept other data there.
 4. If you relied on secp256k1 MSMs failing for zero scalars or duplicate bases, check those conditions explicitly, and handle an identity result (for example with `secp256k1::is_identity` or `assert_not_identity`).
 5. Keep Merkle depths in `1..=64`.
+6. `aead::decrypt`: place the plaintext buffer so it overlaps neither the ciphertext nor the tag word that follows it.
+7. Split sorted arrays above 65,536 entries before calling `sorted_array::find_*`, and keep custom `eval_circuit` circuits within 32,768 wires.
 
 ### Common Errors
 
@@ -877,6 +924,11 @@ push.ALPHA_ADDR mem_storew_le dropw
 | `word access at memory address <addr> in context <ctx> is unaligned: word accesses require addresses that are multiples of 4` | Unaligned `alpha_addr` | Align it to 4. |
 | `Merkle tree depth must be in the range 1..=64, but was <depth>` | `mtree_verify` with depth 0 or above 64, or `mtree_get` / `mtree_set` with depth 0 | Use a depth in `1..=64`. |
 | `provided node index <index> is out of bounds for a merkle tree node at depth <depth>` | `mtree_get` / `mtree_set` with a depth above 64 (the advice lookup fails before the depth check) | Same. |
+| `assertion failed with error code: 0` | Bare `exp` (or `exp.u63`) with an exponent `>= 2^63` | Use `exp.<imm>` for constants, or split the exponent at `2^32` as above. |
+| `assertion failed with error message: source and destination ranges must not overlap` | `aead::decrypt` destination overlaps the source or its tag word | Start the destination after `src_ptr + (num_blocks + 1) * 8 + 3`, or end it before `src_ptr`. |
+| `error during processing of event 'miden::core::collections::sorted_array::lowerbound_array' (ID: <id>)`, caused by `sorted array entry count <n> exceeds maximum of 65536` | `find_word` on more than 65,536 words (`find_key_value` / `find_half_key_value` report `lowerbound_key_value`) | Split the array. |
+| `failed to execute arithmetic circuit evaluation operation: ace circuit evaluation failed: num of wires cannot exceed 32768 but was <n>` | `eval_circuit` with `n_read + n_eval > 32768` | Shrink the circuit. |
+| `failed to execute arithmetic circuit evaluation operation: ace circuit evaluation failed: number of recorded eval_circuit invocations cannot exceed 32` | More than 32 `eval_circuit` calls while building a trace for proving | Reduce the number of circuit evaluations per program. |
 
 ---
 
@@ -1078,13 +1130,15 @@ u32shr.6
 
 ### Summary
 
-- **Only `exec_kernel_proc` is a valid `syscall` target.** The kernel root module is now `lib/dispatcher.masm`, which exports only `exec_kernel_proc`; the 61 API procedures moved to the `api` submodule and are no longer kernel exports. Going through `miden::protocol::*`, or through `syscall.exec_kernel_proc` with a `kernel_proc_offsets` constant, is unaffected.
+- **Only `exec_kernel_proc` is a valid `syscall` target.** The kernel root module is now `lib/dispatcher.masm`, which exports only `exec_kernel_proc`; the 64 API procedures moved to the `api` submodule and are no longer kernel exports. Going through `miden::protocol::*`, or through `syscall.exec_kernel_proc` with a `kernel_proc_offsets` constant, is unaffected.
+- **Kernel procedure offsets shifted.** The kernel has 64 procedures instead of 61. The new ones are `ACCOUNT_GET_CODE_UPGRADE_COMMITMENT_OFFSET = 23`, `OUTPUT_NOTE_SEAL_OFFSET = 48` and `OUTPUT_NOTE_IS_SEALED_OFFSET = 49`. The 0.16 offsets 23 to 46 move up by one, and the `TX_*` offsets (47 to 60 in 0.16) move up by three. Code that names the `kernel_proc_offsets` constants only needs re-assembly; a hard-coded number now dispatches to a different procedure.
 - **A foreign procedure must belong to the foreign account's code.** `tx::execute_foreign_procedure` now fails unless `FOREIGN_PROC_ROOT` is a procedure the foreign account exports; with the standard host, the procedure-index lookup rejects the root before the kernel's own assertion runs. In 0.16 the kernel only checked that the root was non-zero, so a caller could run an arbitrary MAST root, for example a library procedure that reads the foreign account's storage, under that account's identity. Faucet callback roots get the same check (see [Faucet callbacks and policies](#faucet-masm-mint_and_send-callbacks-and-policies)).
 
 ### Migration Steps
 
 1. Replace any `syscall.<kernel api procedure>` with the matching `miden::protocol::*` procedure.
 2. For FPI, pass the root of a procedure the foreign account exports; a library procedure it does not export is rejected.
+3. Replace any hard-coded kernel offset with its `kernel_proc_offsets` constant.
 
 ### Common Errors
 
@@ -1101,10 +1155,14 @@ u32shr.6
   - `active_note::get_storage_info` (`[] -> [NOTE_STORAGE_COMMITMENT, num_storage_items]`) and `active_note::get_bounded_storage` (`[dest_ptr, max_num_storage_items] -> [num_storage_items]`).
   - `miden::protocol::constants::MAX_ASSETS_PER_NOTE` (16; in 0.16.1 only the kernel had it) and `miden::protocol::tx::MAX_EXPIRATION_BLOCK_DELTA` (65535).
   - `native_account::has_state_changed`, `tx::get_reference_block_commitment`, `fungible_asset::validate`.
+  - `native_account::get_code_upgrade_commitment` (`[] -> [NEW_CODE_COMMITMENT]`, the empty word when no upgrade is pending).
+  - `output_note::seal` (`[note_index] -> []`) and `output_note::is_sealed` (`[note_index] -> [is_sealed]`).
   - `miden::standards::expiration::apply_default` and `DEFAULT_EXPIRATION_BLOCK_DELTA` (20).
   - `miden::standards::auth::eip712`, `auth::eip712_transaction_summary`, `access::role_symbol`, and the `tx_fee_collector` auth component (`miden::standards::components::auth::tx_fee_collector`).
 - **EVM-style ECDSA public-key recovery**: `ecdsa_k256_keccak::recover` (`[MSG_WORD, SIG_PTR, ...] -> [QX[8], QY[8], ...]`) and `recover_bytes` (`[MSG_PTR, MSG_LEN_BYTES, SIG_PTR, ...]`) read an `R || S || V` witness from memory. They accept high-`s`, and a wrong message recovers a different valid key, so authenticate the returned key against trusted state. `CoreLibrary::handlers()` registers the host handler; a host that builds its handler list by hand must add it. The `verify` / `verify_bytes` advice layout is unchanged from 0.16.
 - **P2ID storage has four items**: `[target_id_suffix, target_id_prefix, salt_0, salt_1]`. `p2id::prepare_note` and `p2id::create_output_note` keep their signatures and write a zero salt. If you compute a P2ID recipient by hand, write four items and pass `num_storage_items = 4`, or it fails with `P2ID note expects exactly 4 note storage items`. See [Note Changes](./note-changes).
+- **Output note sealing**: `output_note::seal` freezes an output note's assets and attachments so its final note ID cannot change. It is idempotent and only the native account can call it. After it, `output_note::add_asset` and the attachment procedures fail with `sealed output notes cannot be modified`. The standard PSWAP note seals the notes it creates after checking their asset, and fails with `PSWAP output was altered before sealing` if the asset no longer matches (see [Note Changes](./note-changes)).
+- **Multisig procedure thresholds**: in an account using the standard multisig auth, a per-procedure threshold below the default also lets that smaller group of approvers add assets and attachments to the procedure's output notes from a transaction script. A procedure with a lowered threshold should seal every note it creates, after adding its own assets and attachments.
 - **Standard note scripts** check targeting through `miden::standards::note::note_target` and reclaim through `note::note_reclaim`, their error constants were renamed, config notes must be public, and every standard script root changed. See [Note Changes](./note-changes).
 
 ---
@@ -1127,6 +1185,9 @@ u32shr.6
 | `the asset stored in the MINT note does not belong to this faucet` | Non-fungible `mint_and_send` or MINT note whose `ASSET_ID` belongs to another faucet | Same. |
 | `account procedure with procedure root <root> is not in the account procedure index map` | FPI to a root the foreign account does not export | Call a procedure the foreign account exports. |
 | `unknown asset ID version` | Hand-built asset ID with the 0.16 metadata byte | Use the standards asset builders. |
-| `procedure with root digest <root> could not be found` | Pinned core-library root that changed | Derive roots with `procref` or the `CoreLibrary` accessors. |
+| `procedure with root digest <root> could not be found` | Pinned core-library root that changed, or a custom MAST store that does not serve the dynamically linked standards library | Derive roots with `procref` or the `CoreLibrary` accessors; load `StandardsLib` into the store. |
 | `assertion failed with error message: shift amount must be in the range [0, 64)` | `u64` shift or rotation with `n >= 64` | Reduce `n` modulo 64 first. |
+| `assertion failed with error code: 0` | Bare `exp` with an exponent `>= 2^63` | Use `exp.<imm>` for constants, or split the exponent at `2^32`. |
+| `sealed output notes cannot be modified` | Asset or attachment added to an output note after `output_note::seal` | Add everything before sealing. |
+| `a new account cannot be upgraded`, `account storage upgrades are not supported` | `native_account::upgrade` in an account-creating transaction, or with a non-empty storage word | Upgrade in a later transaction, with an empty storage word. |
 | `conflicting attributes for procedure definition` | `@callconv` other than component-model on a protocol ABI procedure | Drop the explicit `@callconv`. |

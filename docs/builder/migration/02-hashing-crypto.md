@@ -1,13 +1,13 @@
 ---
 sidebar_position: 2
 title: "Hashing & Crypto Changes"
-description: "Word and Merkle types lose serde, SmtForest gives way to LargeSmtForest, PartialSmt bytes from 0.16 stop decoding, and Merkle decoders get stricter"
+description: "Word and Merkle types lose serde, SmtForest gives way to LargeSmtForest, PartialSmt bytes from 0.16 stop decoding, random-value helpers are removed, Falcon RNGs must be CryptoRng, and Merkle decoders get stricter"
 ---
 
 # Hashing & Crypto Changes
 
 :::warning Breaking Change
-`miden-crypto` moves `0.29.2` → `0.33.0` with the VM. No hash function or signature scheme changed its output, but the data-structure API did: `Word` and every Merkle, MMR and SMT type lost their `serde` impls (the changelog does not flag this as breaking), `SmtForest` was removed in favour of `LargeSmtForest`, and `PartialSmt` bytes written by 0.16 with empty-subtree markers no longer decode. Several decoders also reject bytes that 0.16 accepted.
+`miden-crypto` moves `0.29.2` → `0.35.0` with the VM; it lives in the VM repository (`crates/crypto`) and shares its version. No hash function or signature scheme changed its output, but the data-structure API did: `Word` and every Merkle, MMR and SMT type lost their `serde` impls (the changelog does not flag this as breaking), `SmtForest` was removed in favour of `LargeSmtForest`, and `PartialSmt` bytes written by 0.16 with empty-subtree markers no longer decode. The random-value helpers (`Randomizable`, `rand_value`, `random_word`, ...) are gone, and Falcon key generation and signing with your own RNG require a `CryptoRng`. Several decoders also reject bytes that 0.16 accepted.
 :::
 
 ## Quick Fix
@@ -23,6 +23,13 @@ struct Record {
 // Merkle, MMR and SMT types: use the binary codec instead of serde
 let bytes = merkle_path.to_bytes();
 let merkle_path = MerklePath::read_from_bytes(&bytes)?;
+
+// Random values: rand distributions replace Randomizable, rand_value and random_word
+use rand::RngExt;
+let word: Word = rand::rng().random();
+
+// Falcon keys and signatures from your own RNG: it must implement CryptoRng
+let secret_key = SecretKey::with_rng(&mut ChaCha20Rng::from_seed(seed));
 ```
 
 Then replace `SmtForest` with `LargeSmtForest`, and rebuild any `PartialSmt` you persisted under 0.16 from its source data.
@@ -33,11 +40,12 @@ If you encounter errors, continue reading for detailed migration steps.
 
 ## Summary
 
-The changes fall into three groups:
+The changes fall into four groups:
 
 - **`serde` removal.** `Word` and about twenty Merkle types no longer implement `Serialize` / `Deserialize`. This fails to compile. Existing JSON with `Word` fields stays readable through a small helper; serde JSON of Merkle types does not.
+- **Randomness.** The `Randomizable` trait and the random-value helpers are removed in favour of `rand` distributions, and Falcon key generation and signing with a caller-supplied RNG require `CryptoRng`. Both fail to compile.
 - **Reshaped APIs.** `SmtForest` and `NodeValue` are gone, `UniqueNodes` and `MerklePath`'s deref target changed, two MMR `Forest` accessors return `Option`, and several enums gained variants. All of these fail to compile.
-- **Stricter decoding.** `PartialSmt` changed its wire format, `Mmr` verifies every node on load, and `LeafIndex`, `SparseMerklePath`, `InOrderIndex`, `PartialMerkleTree` and `PartialMmr` reject invalid values. These fail only at run time, on bytes you persisted yourself or exchange with 0.16 peers.
+- **Stricter decoding.** `PartialSmt` changed its wire format, `Mmr` verifies every node on load, and `LeafIndex`, `SparseMerklePath`, `InOrderIndex`, `PartialMerkleTree`, `PartialMmr` and multi-entry `SmtLeaf` values reject invalid data. These fail only at run time, on bytes you persisted yourself or exchange with 0.16 peers.
 
 What did **not** change: the outputs of Poseidon2, RPO, RPX, Blake3, Keccak and SHA-256; Falcon512-Poseidon2 keys and signatures (byte-identical, including deterministic signing); ECDSA k256/Keccak and EdDSA 25519, apart from the additive `recover_from_prehash`; AEAD Poseidon2, XChaCha20-Poly1305 and ECDH; and the byte formats of `Word`, `Felt`, `Mmr`, `PartialMmr`, `Smt`, `SmtProof`, `MerklePath` and `SparseMerklePath`. `SequentialCommit::to_commitment` still uses `Poseidon2::hash_elements`. Commitment values that do change in 0.17, such as account commitments, asset IDs, note IDs and account delta commitments, change because protocol objects gained versions: see [Account Changes](./account-changes).
 
@@ -49,7 +57,7 @@ What did **not** change: the outputs of Poseidon2, RPO, RPX, Blake3, Keccak and 
 
 `Word` no longer implements `serde::Serialize` / `serde::Deserialize`, and neither do `NodeIndex`, `MerklePath`, `SparseMerklePath`, `MerkleTree`, `PartialMerkleTree`, `InnerNodeInfo`, `MerkleStore`, `StoreNode`, `Mmr`, `MmrPeaks`, `MmrPath`, `MmrProof`, `Forest`, `Smt`, `SmtLeaf`, `SimpleSmt`, `PartialSmt`, `LeafIndex`, `InnerNode` or `LineageId`. Enabling `miden-crypto/serde` does not bring them back: that feature now covers only the byte-digest type. `Felt` still implements serde.
 
-The `Word` impl lived in `miden-field`, which the contract SDK's host-side crates (`miden-tx-script-args`, `miden-field-repr`) also build on. Losing `Word` serde is the only source change in `miden-field`; its `Felt` also moves to the Plonky3 0.7 field traits (see [Imports & Dependencies](./imports-dependencies#direct-plonky3-dependencies-must-match)). VM types such as `Program` and `AdviceMap` lost serde in the same change; see [Imports & Dependencies](./imports-dependencies#serde-and-bus-debugger-features-removed-from-the-vm-crates).
+The `Word` impl lived in `miden-field`, which the contract SDK's host-side crates (`miden-tx-script-args`, `miden-field-repr`) also build on. Apart from `Felt` moving to the Plonky3 0.8 field traits (see [Imports & Dependencies](./imports-dependencies#direct-plonky3-dependencies-must-match)), losing `Word` serde is the only breaking change in `miden-field`. It also adds `Distribution<Word> for StandardUniform`, so `rng.random::<Word>()` works (see [below](#random-value-helpers-removed-falcon-rngs-must-implement-cryptorng)). VM types such as `Program` and `AdviceMap` lost serde in the same change; see [Imports & Dependencies](./imports-dependencies#serde-and-bus-debugger-features-removed-from-the-vm-crates).
 
 ### Affected Code
 
@@ -138,6 +146,68 @@ The VM changelog lists the change as "Removed unused Serde support", not marked 
 | --- | --- | --- |
 | `` error[E0277]: the trait bound `Word: serde::Serialize` is not satisfied `` (or `` `Word: serde::Deserialize<'de>` ``) | `Word` lost its serde impls | Add `#[serde(with = "word_hex")]` to the field. |
 | `error[E0277]` naming `MerklePath`, `Smt`, `Mmr`, ... and `Serialize` / `Deserialize` | Merkle types lost serde | Serialize with `to_bytes()` / `read_from_bytes()`. |
+
+---
+
+## Random-value helpers removed; Falcon RNGs must implement `CryptoRng`
+
+### Summary
+
+Two changes to how `miden-crypto` takes randomness, both compile errors:
+
+- **Random-value helpers.** `miden_crypto::rand::Randomizable`, `random_felt()` and `random_word()` are removed, and `miden_crypto::rand::test_utils` keeps only `seeded_rng`: `rand_value`, `rand_array`, `rand_vector`, `prng_value`, `prng_array`, `prng_vector` and `ContinuousRng` are gone (also under the `miden_protocol::crypto::rand` re-export). `test_utils` now needs the `testing` feature (0.16 compiled it with `std`). Use `rand` 0.10 distributions instead: `Felt` already implemented `StandardUniform`, and `Word` now does too, so `rng.random::<Word>()` works with `rand::RngExt` in scope.
+- **Falcon RNG bound.** `falcon512_poseidon2::SecretKey::with_rng` and `SecretKey::sign_with_rng` take `R: CryptoRng + Rng` instead of `R: Rng`, and so does `AuthSecretKey::new_falcon512_poseidon2_with_rng` in `miden-protocol`. `ChaCha20Rng`, `StdRng` and `rand::rng()` qualify; `miden_crypto::rand::RandomCoin` does not. `SecretKey::new()`, the deterministic `sign()`, `AuthSecretKey::with_scheme_and_rng` and the ECDSA and EdDSA constructors already required `CryptoRng` or take no RNG, and are unchanged. The `ClientRng` that `client.rng()` returns in `miden-client` 0.17 is a `CryptoRng`; see [Client Changes](./client-changes).
+
+### Affected Code
+
+```rust
+// Before (0.16)
+use miden_crypto::{
+    Word,
+    dsa::falcon512_poseidon2::SecretKey,
+    rand::{RandomCoin, random_word, test_utils::{prng_value, rand_value}},
+};
+
+let word: Word = rand_value();
+let other = random_word();
+let seeded: Word = prng_value([7; 32]);
+
+let mut coin = RandomCoin::new(seed_word);
+let secret_key = SecretKey::with_rng(&mut coin);
+let signature = secret_key.sign_with_rng(message, &mut coin);
+```
+
+```rust
+// After (0.17)
+use miden_crypto::{Word, dsa::falcon512_poseidon2::SecretKey};
+use rand::{RngExt, SeedableRng};
+use rand_chacha::ChaCha20Rng;
+
+let word: Word = rand::rng().random();
+let other = rand::random::<Word>();
+let seeded: Word = ChaCha20Rng::from_seed([7; 32]).random();
+
+let mut rng = ChaCha20Rng::from_seed(seed_bytes); // or rand::rng(), StdRng, ...
+let secret_key = SecretKey::with_rng(&mut rng);
+let signature = secret_key.sign_with_rng(message, &mut rng);
+```
+
+### Migration Steps
+
+1. Add `rand = "0.10"` (and `rand_chacha = "0.10"` for seeded values) to your dependencies, and import `rand::RngExt`.
+2. Replace `rand_value::<T>()`, `random_felt()` and `random_word()` with `rand::random::<T>()` or `rng.random::<T>()`; `rand_array::<T, N>()` with `rng.random::<[T; N]>()`; `rand_vector::<T>(n)` with `(0..n).map(|_| rng.random()).collect::<Vec<T>>()`.
+3. Replace `prng_value(seed)`, `prng_array(seed)`, `prng_vector(seed, n)` and `ContinuousRng::new(seed)` with `ChaCha20Rng::from_seed(seed)` (or `test_utils::seeded_rng(seed)` with the `testing` feature) and draw from it with `random()`.
+4. Replace your own `impl Randomizable for T` with `impl Distribution<T> for StandardUniform`.
+5. Pass Falcon `with_rng`, `sign_with_rng` and `AuthSecretKey::new_falcon512_poseidon2_with_rng` a cryptographic RNG, or use `SecretKey::new()` / `AuthSecretKey::new_falcon512_poseidon2()` (OS randomness). For reproducible test keys, use `ChaCha20Rng::from_seed(seed)`.
+
+### Common Errors
+
+| Error Message | Cause | Solution |
+| --- | --- | --- |
+| `error[E0432]: unresolved import` naming `miden_crypto::rand::Randomizable`, `random_felt`, `random_word`, `test_utils::rand_value`, `prng_value` or `ContinuousRng` | Helpers removed | `rng.random::<T>()` with `rand::RngExt`; `ChaCha20Rng::from_seed(seed)` for seeded values. |
+| `error[E0432]: unresolved import` naming `miden_crypto::rand::test_utils` | `test_utils` needs the `testing` feature | Enable `miden-crypto/testing` in dev-dependencies, or use `ChaCha20Rng::from_seed`. |
+| `` error[E0277]: the trait bound `RandomCoin: rand_core::CryptoRng` is not satisfied `` (or your own RNG type) | Falcon key generation and signing require `CryptoRng` | Pass `ChaCha20Rng`, `StdRng` or `rand::rng()`. |
+| `` error[E0599]: no method named `random` found for struct `ThreadRng` in the current scope `` | `RngExt` not in scope | `use rand::RngExt;` |
 
 ---
 
@@ -391,7 +461,7 @@ let last: InOrderIndex = forest.rightmost_in_order_index_unchecked();
 
 None of these enums is `#[non_exhaustive]`, and each gained variants:
 
-- `IesScheme` gained `K256AeadEidos = 4` and `X25519AeadEidos = 5`, with matching `SealingKey` / `UnsealingKey` variants (Eidos-based IES, VM 0.33).
+- `IesScheme` gained `K256AeadEidos = 4` and `X25519AeadEidos = 5`, with matching `SealingKey` / `UnsealingKey` variants (Eidos-based IES, added in VM 0.33).
 - `EncryptionError` gained `InputTooLong` and `MalformedCiphertext`.
 - `MmrError` gained `InvalidNodeCount { expected, actual }`.
 
@@ -450,7 +520,10 @@ The VM changelog marks "Added `Mmr::from_nodes_unchecked`" as `[BREAKING]`. Addi
 - The `persistent-forest` feature no longer enables the `serde` feature.
 - `falcon512_poseidon2::Polynomial::karatsuba` now panics on operands of unequal length, on empty operands, and on lengths that reach an odd value above eight while being halved (any power of two is fine).
 - ECDSA k256/Keccak gained `PublicKey::recover_from_prehash` (additive). The MASM recovery procedures are on [MASM Changes](./masm-changes).
-- The Plonky3 version behind `Felt`'s field traits moved to `0.7`, and `miden_crypto::stark::dft::NaiveDft` is no longer re-exported: see [Imports & Dependencies](./imports-dependencies#direct-plonky3-dependencies-must-match).
+- Falcon512-Poseidon2 key generation no longer panics when an NTRU solution has coefficients too large to encode; it discards the candidate and samples again.
+- `SmtLeaf::new_multiple` and `SmtLeaf` decoding reject entries whose keys are not in strictly increasing `Word` order, which also rejects repeated keys. `SmtLeafError` (not `#[non_exhaustive]`) gained `UnsortedMultipleLeafKeys { previous, next }`, and decoding fails with `invalid value: multiple leaf requires strictly increasing keys but key {next} does not follow key {previous}`. Sort with `entries.sort_by_key(|(key, _)| *key)` and drop duplicates; leaves the library wrote itself are already sorted.
+- With the default `concurrent` feature, `Smt::with_entries`, `Smt::with_sorted_entries` and `LargeSmt::with_entries` no longer keep an entry with the empty value in a leaf it shares with other keys. The root of such a tree changes to the one `insert` produces. A leaf with more than `MAX_LEAF_ENTRIES` (1024) entries now returns `MerkleError::TooManyLeafEntries` instead of panicking.
+- The Plonky3 version behind `Felt`'s field traits moved to `0.8`, and `miden_crypto::stark::dft::NaiveDft` is no longer re-exported: see [Imports & Dependencies](./imports-dependencies#direct-plonky3-dependencies-must-match).
 
 ---
 
@@ -459,10 +532,13 @@ The VM changelog marks "Added `Mmr::from_nodes_unchecked`" as `[BREAKING]`. Addi
 | Error Message | Cause | Solution |
 | --- | --- | --- |
 | `` error[E0277]: the trait bound `Word: serde::Serialize` is not satisfied `` | `Word` lost serde | `#[serde(with = "word_hex")]`, see [above](#word-and-merkle-types-no-longer-implement-serde). |
+| `error[E0432]: unresolved import` naming `Randomizable`, `random_word`, `rand_value` or another `miden_crypto::rand` helper | Helpers removed | `rng.random::<T>()` with `rand::RngExt`, see [above](#random-value-helpers-removed-falcon-rngs-must-implement-cryptorng). |
+| `` error[E0277]: the trait bound `RandomCoin: rand_core::CryptoRng` is not satisfied `` | Falcon `with_rng` / `sign_with_rng` require `CryptoRng` | Pass `ChaCha20Rng`, `StdRng` or `rand::rng()`. |
 | `error[E0432]: unresolved import` naming `SmtForest` or `NodeValue` | Types removed | Use `LargeSmtForest`; omit empty nodes from `UniqueNodes`. |
 | `` error[E0599]: no method named `push` found for struct `MerklePath` in the current scope `` | Deref target is `[Word]` | Rebuild through `Vec::from(path)` and `MerklePath::new`. |
 | `error[E0308]: mismatched types` (expected `InOrderIndex`, found `Option<InOrderIndex>`) | `Forest` accessors return `Option` | Unwrap or use the `_unchecked` variant. |
-| `error[E0004]: non-exhaustive patterns` | New IES, AEAD or MMR enum variants | Add the arms or a wildcard. |
+| `error[E0004]: non-exhaustive patterns` | New IES, AEAD, MMR or `SmtLeafError` enum variants | Add the arms or a wildcard. |
 | `invalid value: value not in the appropriate range` | `PartialSmt` bytes written by 0.16 | Rebuild the partial tree from source data. |
 | `invalid value: Mmr contains a parent node inconsistent with its children` | Corrupted or hand-built `Mmr` bytes | Regenerate the MMR. |
 | `invalid value: InOrderIndex must be nonzero` | Invalid in-order index in stored bytes | Regenerate the data. |
+| `invalid value: multiple leaf requires strictly increasing keys but key {next} does not follow key {previous}` | `SmtLeaf` bytes with unsorted or repeated keys | Sort the entries by key and drop duplicates. |

@@ -7,7 +7,7 @@ description: "Local state that does not survive the upgrade, client and node pai
 # Client Changes
 
 :::danger Your local store must be recreated
-A 0.16 SQLite store is not rejected up front. The SQL schema did not change, so the store opens, and the 0.17 client fails the first time it decodes a protocol object that 0.16 wrote: `failed to deserialize data from the store`. For a store that has ever synced this happens inside `ClientBuilder::build`, before the client exists. There is no migration path: delete the database and re-sync. Browser applications are handled automatically, as in 0.16: the IndexedDB store detects the version bump and deletes the whole database on first open. **The default browser keystore keeps its secret keys in that database, so the reset deletes every key it holds.** Back the keys up on 0.16.3 before upgrading (see the Web SDK steps in [(Store)](#store-every-016-sqlite-store-must-be-recreated)); only an app with an external keystore (`keystore` callbacks) keeps its keys. In both cases **any state that existed only locally is lost**, including private account state and notes not yet on chain.
+A SQLite store written by 0.16, or by any 0.17 release candidate, is rejected when it opens, inside `ClientBuilder::build`: `store is at schema version 2, which is newer than the highest version this client supports (1)` (3 for a 0.17.0-rc.5 store). The store is older, not newer: 0.17.0 squashed its migrations into one. There is no migration path: delete the database together with its `-wal` and `-shm` files, and re-sync. Browser applications upgrading from 0.16.3 are handled automatically, as in 0.16: the IndexedDB store detects the version bump and deletes the whole database on first open. **The default browser keystore keeps its secret keys in that database, so the reset deletes every key it holds.** Back the keys up on 0.16.3 before upgrading (see the Web SDK steps in [(Store)](#store-every-016-sqlite-store-must-be-recreated)); only an app with an external keystore (`keystore` callbacks) keeps its keys. An IndexedDB store created by a 0.17 release candidate is **not** reset: 0.17.0 keeps it, fails to decode it, and no later 0.17.x resets it either, so delete it yourself after backing up its keys. In every case **any state that existed only locally is lost**, including private account state and notes not yet on chain.
 :::
 
 :::danger 0.16 account and note files do not import
@@ -15,21 +15,35 @@ A 0.16 SQLite store is not rejected up front. The SQL schema did not change, so 
 :::
 
 :::warning Client, node, remote prover and note transport move together
-A 0.17 client talks only to a 0.17 node: the node matches major.minor, so a 0.16 node rejects every 0.17 client. The remote prover wire format and the note transport gRPC service changed as well, so both services must be upgraded to 0.17. See [(Node) Client, node, remote prover and note transport must all be 0.17](#node-client-node-remote-prover-and-note-transport-must-all-be-017).
+A 0.17.0 client talks only to a stable 0.17 node: the node matches major.minor and the pre-release label, so a 0.16 node and any 0.17 release-candidate node reject it. The remote prover and note transport gRPC services changed as well, so both services must be upgraded to 0.17. See [(Node) Client, node, remote prover and note transport must all be 0.17](#node-client-node-remote-prover-and-note-transport-must-all-be-017).
 :::
 
 ## Quick Fix
 
 ```bash
-# CLI: delete the 0.16 store and refresh the bundled packages; miden-client.toml and the keystore carry over
-rm ~/.miden/store.sqlite3
-( cd "$(mktemp -d)" && miden-client init --local >/dev/null \
-  && rm -rf ~/.miden/packages && cp -R .miden/packages ~/.miden/packages )
-# point [rpc] endpoint AND [note_transport] endpoint in miden-client.toml at 0.17 services, then
+# CLI: delete the old store of the ACTIVE config and refresh its bundled packages; miden-client.toml
+# and the keystore carry over. Run it where you normally run miden-client: the CLI uses
+# ./.miden/miden-client.toml if it exists, else $MIDEN_CLIENT_HOME, else ~/.miden
+if [ -f .miden/miden-client.toml ]; then dir="$PWD/.miden"; else dir="${MIDEN_CLIENT_HOME:-$HOME/.miden}"; fi
+cfg="$dir/miden-client.toml"
+store=$(sed -n 's/^store_filepath *= *"\(.*\)"$/\1/p' "$cfg")
+pkgs=$(sed -n 's/^package_directory *= *"\(.*\)"$/\1/p' "$cfg")
+case "$store" in /*) ;; *) store="$dir/$store";; esac
+case "$pkgs" in /*) ;; *) pkgs="$dir/$pkgs";; esac
+echo "$cfg | $store | $pkgs"     # check before deleting
+rm -f "$store" "$store-wal" "$store-shm"
+tmp=$(mktemp -d) && (cd "$tmp" && miden-client init --local >/dev/null) \
+  && mkdir -p "$pkgs" && cp -R "$tmp/.miden/packages/." "$pkgs/" && rm -rf "$tmp"
+# point [rpc] endpoint AND [note_transport] endpoint in "$cfg" at 0.17 services, then
 miden-client sync
 ```
 
+To confirm which directory the CLI loads: on 0.16, before upgrading, `miden-client info` prints `Config directory: <dir> (Local)` or `(Global)`. With 0.17.0, `RUST_LOG=miden_client_cli=debug miden-client keys --list` prints `Loaded configuration from <dir> (Local|Global)` without opening the store.
+
 ```rust
+// Rust: relay a private note only with its inclusion proof, after its transaction committed and synced
+client.send_private_note_with_proof(note, &address, inclusion_proof).await?;
+
 // Rust: the fee faucet comes from the synced protocol configuration, not the block header
 client.sync_state().await?;
 let header = client.get_latest_block_header().await?;
@@ -50,6 +64,8 @@ npm install @miden-sdk/miden-sdk@0.17.0 @miden-sdk/react@0.17.0
 const client = await MidenClient.create({ rpcUrl: "devnet", noteTransportUrl: "devnet" });
 await client.sync();
 const feeFaucet = await client.feeFaucetId(); // replaces header.feeFaucetId()
+// Private notes: sendPrivate takes inclusionProof instead of scanAfterBlockNum, and
+// sendPrivateOutput({ noteId, to }) works only once the note's commit is synced
 ```
 
 If you encounter errors, continue reading for detailed migration steps.
@@ -58,7 +74,7 @@ If you encounter errors, continue reading for detailed migration steps.
 
 ## Summary
 
-The client changes fall into five groups. **Local state does not survive the upgrade**: the SQLite store, the IndexedDB store (with the default browser keystore's secret keys), exported `.mac` / `.mno` files and the CLI's bundled `.miden/packages` all have to be recreated or backed up first, and only the package failure names a version. **Deployment pairing** is stricter: client, node, remote prover and note transport service must all be 0.17, and a 0.17 node may require an invitation code before it creates a new account. **The fee faucet left the block header**: both the Rust client and the Web SDK now read it from the protocol configuration the node delivers on sync, so sync before executing. **Rename churn** (`ValidatorKeys` → `ValidatorConfig`, `ProvingOptions` → `Prover`, `AccountType.FungibleFaucet` → `FaucetType.FungibleFaucet`, `exec --script-path` → `exec --package`, new trait methods and error variants) fails to compile or fails loudly. And several **silent behavioural changes** will not fail your build: multisig requests built with `fee_conversion_salt` fail at execution, `expiration_delta` now expires consume-only requests, a note stranded by a discarded transaction is refused, a broken note transport no longer fails `sync_state`, the keystore returns an empty set instead of an error, and the Web SDK drops block-locked notes from "available" lists.
+The client changes fall into five groups. **Local state does not survive the upgrade**: the SQLite store (rejected at open with a misleading "schema version ... newer" error), the IndexedDB store (with the default browser keystore's secret keys), exported `.mac` / `.mno` files and the CLI's bundled `.miden/packages` all have to be recreated or backed up first. **Deployment pairing** is stricter: client, node, remote prover and note transport service must all be stable 0.17, and a 0.17 node may require an invitation code before it creates a new account. **The fee faucet left the block header**: both the Rust client and the Web SDK now read it from the protocol configuration the node delivers on sync, so sync before executing. **API churn** (`ValidatorKeys` → `ValidatorConfig`, `ProvingOptions` → `Prover`, `AccountType.FungibleFaucet` → `FaucetType.FungibleFaucet`, `exec --script-path` → `exec --package`, private notes relayed only with an inclusion proof, a test-only `ClientBuilder::rng`, new `Store` and transport trait methods, removed and added error variants) fails to compile or fails loudly. And several **silent behavioural changes** will not fail your build: multisig requests built with `fee_conversion_salt` fail at execution, `expiration_delta` now expires consume-only requests, a note stranded by a discarded transaction is refused, a broken note transport or one bad delivery no longer fails `sync_state` but stalls private notes, the keystore returns an empty set instead of an error, the same Web SDK `seed` draws different randomness, and the Web SDK drops block-locked notes from "available" lists.
 
 ---
 
@@ -66,37 +82,34 @@ The client changes fall into five groups. **Local state does not survive the upg
 
 ### Summary
 
-The 0.17 client cannot read data a 0.16 client wrote. Block headers, accounts and notes are stored in the protocol's binary encoding, which changed: for example `BlockHeader` replaced `tx_kernel_commitment` / `validator_keys` with `validator_config`, `protocol_config_commitment` and `next_protocol_config`, and `FeeParameters` lost the fee faucet. The SQL migrations are byte-identical between the two releases, so the migration layer accepts a 0.16 store and reports nothing to do, and nothing checks the store version. The failure comes from decoding the first stored protocol object.
+0.17.0 rejects every SQLite store written by 0.16 or by a 0.17 release candidate when it opens. Its migrations were squashed into one, so it knows schema version 1 only, while stores from 0.16.x and 0.17.0-rc.1 to rc.4 are at version 2 and a 0.17.0-rc.5 store at version 3. The migration layer reports such a store as too new, and `SqliteStore::new` fails before anything is read. The data could not be read anyway: block headers, accounts and notes are now stored as Protobuf (the new `miden-client-proto` crate), and the protocol objects themselves changed, for example `BlockHeader` replaced `tx_kernel_commitment` / `validator_keys` with `validator_config`, `protocol_config_commitment` and `next_protocol_config`, and `FeeParameters` lost the fee faucet.
 
 ### Affected Code
 
-The 0.17.0 CLI on a store written and synced by the 0.16 CLI fails on every command that builds a client (`account`, `notes`, `tx`, `info`, `sync`, `new-wallet`) with exit code 1:
+The 0.17.0 CLI on a 0.16 store fails on every command that builds a client (`account`, `notes`, `tx`, `info`, `sync`, `new-wallet`) with exit code 1:
 
 ```text
 Error: cli::client_error
 
   × client error
   ├─▶ storage error
-  ├─▶ failed to deserialize data from the store
-  ╰─▶ invalid value: validator set must contain at least one key
+  ╰─▶ database-related non-query error: store is at schema version 2, which is newer than the highest version this client supports (1)
 ```
 
-In Rust the same store makes `ClientBuilder::build().await` return `ClientError::StoreError(StoreError::DataDeserializationError(_))`. The innermost message depends on the bytes being decoded; only the first three lines are stable.
+In Rust the same store makes `ClientBuilder::build().await` return `ClientError::StoreError(StoreError::DatabaseError(_))` with that message, and `SqliteStore::new(path)` returns the `StoreError` directly. The check runs before any data is read, so a store that never synced fails the same way.
 
-A 0.16 store that never synced (no genesis header stored) gets past `build`, and even `account -l` works, but the first read of a full account fails the same way, for example `account -s <ID>` (or `account --inspect <ID>` once `.miden/packages` is refreshed) with `invalid value: account code procedures following the authentication procedure are not sorted in ascending order`. Either way the store is unusable.
-
-:::note There is no migration or schema error to look for
-The changelog says a new client database is required, which is true, but not how an old one fails. Unlike the 0.15 to 0.16 upgrade, which failed in the migration layer, there is no schema or migration error to match on: look for `failed to deserialize data from the store`, with a cause underneath that depends on the bytes being decoded.
+:::note The version in the message is misleading
+The store is older than the client, not newer: 0.17.0 numbers its schema from 1 again. Expect `2` for a store from 0.16.x or 0.17.0-rc.1 to rc.4, and `3` for one from 0.17.0-rc.5. The changelog says only that a new client database is required.
 :::
 
 ### Migration Steps
 
 **Rust and CLI (SQLite store)**
 
-1. Delete the store file (`store.sqlite3` in the `.miden` directory, or the path you pass to `sqlite_store(path)`) and let the client recreate it, then `sync`.
+1. Delete the store file together with its `-wal` and `-shm` files (the client opens SQLite in WAL mode) and let the client recreate it, then `sync`. In Rust that is the path you pass to `sqlite_store(path)` or `SqliteStore::new(path)`. For the CLI, delete the store of the configuration the CLI actually loads: `./.miden/miden-client.toml` when it exists, otherwise `$MIDEN_CLIENT_HOME/miden-client.toml` when the variable is set, otherwise `~/.miden/miden-client.toml`, with a relative `store_filepath` resolved against that directory. A fixed `~/.miden/store.sqlite3` can be another project's store. The [Quick Fix](#quick-fix) script resolves the path, and the line after it shows how to confirm the directory.
 2. Do not plan to carry private accounts over with `export`: 0.16 `.mac` / `.mno` files do not decode in 0.17 either. A 0.17 client also cannot talk to the 0.16 network the old store was synced against, so plan to recreate accounts on the 0.17 network.
 3. Keep the keystore directory. A 0.16 filesystem keystore (key files plus `key_index.json`) loads unchanged in 0.17, and `miden-client keys --list` shows the old keys and their account associations. A recreated account gets a new ID. The CLI can commit it to a kept ECDSA key's public key (`new-wallet --ecdsa <PUBLIC_KEY>`), but `--falcon` always generates a new key.
-4. Keep `miden-client.toml`. A 0.16 CLI config parses under 0.17 and the CLI creates a fresh store next to it. Point `[rpc] endpoint` at a 0.17 node **and `[note_transport] endpoint` at a transport that serves `note_transport.Api`**. With a transport that serves only the 0.16 service, `sync` keeps succeeding while private notes stop arriving. Then refresh `.miden/packages` (see [(CLI) Re-create `.miden/packages`](#cli-re-create-midenpackages-after-upgrading)).
+4. Keep `miden-client.toml`. A 0.16 CLI config parses under 0.17 and the CLI creates a fresh store next to it. Point `[rpc] endpoint` at a 0.17 node **and `[note_transport] endpoint` at a transport that serves `miden.note_transport.v1.NoteTransportService`**. With a transport that serves only the 0.16 service, `sync` keeps succeeding while private notes stop arriving. Then refresh `.miden/packages` (see [(CLI) Re-create `.miden/packages`](#cli-re-create-midenpackages-after-upgrading)).
 5. If you implement a custom `Store`, see the custom-store bullet in [(Rust) Other library changes](#rust-other-library-changes).
 
 **Web SDK (IndexedDB store)**
@@ -127,16 +140,25 @@ The changelog says a new client database is required, which is true, but not how
 
    Re-sync from scratch, and recover accounts from the keys you backed up, or from seeds, not from 0.16 exports.
 3. Do not carry a 0.16 `exportStore` dump into a 0.17 client with `importStore`: the import copies tables verbatim, including the stored `clientVersion`.
-4. Rolling back from 0.17 to 0.16 does **not** wipe the store (a stored version newer than the client only rewrites the version). Delete the `MidenClientDB_<network>` database, or your `storeName`, yourself.
-5. The reset fires only when the stored version is older and a different major.minor, so moving between 0.17 patch releases keeps the store.
+4. Rolling back from 0.17 to 0.16 does **not** wipe the store (a stored version newer than the client only rewrites the version). Delete the `MidenClientDB_<network ID>` database (`MidenClientDB_mtst` on testnet, `MidenClientDB_mdev` on devnet), or your `storeName`, yourself.
+5. The reset fires only when the stored version is older and a different major.minor, so moving between 0.17 patch releases keeps the store. **That includes a store created by a 0.17 release candidate, which 0.17.0 cannot read**: the first open records `0.17.0` as the store's version and client creation fails with `Failed to create client: storage error: failed to deserialize data from the store: ...` (the cause underneath depends on the bytes; for an rc.5 store it ends in `invalid tag value: 0`). No later 0.17.x resets it. On the rc build, back up the keys as in step 1, then delete the database before the first 0.17.0 open (or after the failure), re-sync and re-import the accounts from the backed-up keys:
+
+   ```typescript
+   await new Promise((resolve, reject) => {
+     const request = indexedDB.deleteDatabase("MidenClientDB_mtst"); // testnet default, or your storeName
+     request.onsuccess = () => resolve(undefined);
+     request.onerror = () => reject(request.error);
+   });
+   ```
 6. Point `noteTransportUrl` at a 0.17 transport as well as `rpcUrl` at a 0.17 node. `createTestnet()` and `noteTransportUrl: "testnet"` resolve to `https://transport.miden.io`.
-7. Node.js: the Node entry uses a SQLite store that the SDK does not version-check: `~/.miden/stores/<storeName>/<storeName>.db` when you pass `storeName`, and a fresh temporary directory otherwise. Delete the `.db` file yourself; the `keystore` directory next to it is a filesystem keystore and carries over, and the SQLite rules above apply.
+7. Node.js: the Node entry uses a SQLite store that the SDK never resets: `~/.miden/stores/<storeName>/<storeName>.db` when you pass `storeName`, and a fresh temporary directory otherwise. A 0.16 or 0.17 rc `.db` fails with the schema-version error above. Delete the `.db` file (and its `-wal` / `-shm` files) yourself; the `keystore` directory next to it is a filesystem keystore and carries over.
 
 ### Common Errors
 
 | Error Message | Cause | Solution |
 | --- | --- | --- |
-| `failed to deserialize data from the store` (followed by, for example, `invalid value: validator set must contain at least one key`) | A store written by a 0.16 client | Delete the store and re-sync. |
+| `database-related non-query error: store is at schema version 2, which is newer than the highest version this client supports (1)` (`3` for a 0.17.0-rc.5 store) | A SQLite store written by 0.16 or by a 0.17 release candidate | Delete the store with its `-wal` and `-shm` files and re-sync. |
+| `Failed to create client: storage error: failed to deserialize data from the store: ...` (Web) | An IndexedDB store created by a 0.17 release candidate | Delete the database and re-import accounts from backed-up keys. |
 
 ---
 
@@ -144,17 +166,19 @@ The changelog says a new client database is required, which is true, but not how
 
 ### Summary
 
-Every RPC call carries `accept: application/vnd.miden; version=<miden-client crate version>[; genesis=<hex>]`. The node accepts it only if major.minor match its own version; the patch is ignored.
+Every RPC call carries `accept: application/vnd.miden; version=<miden-client crate version>[; genesis=<hex>]`. The node accepts it only if major.minor match its own version **and** the pre-release label matches: a stable node accepts stable clients of any patch, and a release-candidate node accepts only release-candidate clients of its exact major.minor.patch (the rc number is ignored).
 
-| Client | 0.16.x node | 0.17.x node |
-| --- | --- | --- |
-| 0.16.1 | accepted | rejected |
-| 0.17.0 | rejected | accepted (any 0.17 patch) |
+| Client | 0.16.x node | 0.17.0-rc node | Stable 0.17.x node |
+| --- | --- | --- | --- |
+| 0.16.1 | accepted | rejected | rejected |
+| 0.17.0 | rejected | rejected | accepted (any 0.17 patch) |
+
+A client built on a 0.17 release candidate (for example Web SDK 0.17.0-rc.5) is rejected by a stable 0.17 node in the same way. The node's own gRPC service is now `miden.node.v1.NodeService` (was `rpc.Api`), which matters only to code calling `miden_client::rpc::generated` or raw gRPC-web paths.
 
 Two more services must match the client:
 
-- **Remote prover.** `remote_prover.ProofRequest` and `Proof` changed from a `proof_type` enum plus an opaque `bytes payload` to typed `oneof` messages. The remote prover has no version negotiation, so a 0.17 client talking to a 0.16 prover fails at decode time rather than with a version error. The endpoint constants (`TESTNET_PROVER_ENDPOINT`, `DEVNET_PROVER_ENDPOINT`, new `MAINNET_PROVER_ENDPOINT`) keep their URLs; the service behind them must match.
-- **Note transport.** The client now speaks `note_transport.Api` (defined in the node repository) instead of `miden_note_transport.MidenNoteTransport`. The endpoint URLs are unchanged, so the server behind them must be upgraded. A transport failure no longer fails `sync_state`, so a mismatched transport server is silent; see [(Rust) Note transport](#rust-note-transport-new-service-silent-failures-screening-and-a-new-cursor).
+- **Remote prover.** The service is `miden.remote_prover.v1.ProverService` with `ProveRequest` / `ProveResponse`, typed `oneof` messages, instead of `remote_prover.Api` with `ProofRequest` / `Proof` (a `proof_type` enum plus an opaque `bytes payload`). The remote prover has no version negotiation, so a 0.17.0 client calling an older prover fails with a gRPC error (typically `Unimplemented`) rather than a version error. The endpoint constants (`TESTNET_PROVER_ENDPOINT`, `DEVNET_PROVER_ENDPOINT`, new `MAINNET_PROVER_ENDPOINT`) keep their URLs; the service behind them must match.
+- **Note transport.** The client now speaks `miden.note_transport.v1.NoteTransportService` (`SendNoteWithProof`, `FetchNotes`; defined in the node repository) instead of `miden_note_transport.MidenNoteTransport`. The endpoint URLs are unchanged, so the server behind them must be upgraded. A transport failure no longer fails `sync_state`, so a mismatched transport server is silent; see [(Rust) Note transport](#rust-note-transport-sends-carry-an-inclusion-proof-new-service-silent-failures-and-a-new-cursor).
 
 ### Affected Code
 
@@ -172,17 +196,17 @@ The Web SDK surfaces the same rejection as `Failed to ensure genesis in place: .
 
 ### Migration Steps
 
-1. Point a 0.17 client at a 0.17 node, public or a local node from the matching release. A 0.16 node rejects it.
-2. Upgrade every client in the graph together (Rust client, CLI, Web SDK, any prover crate pinning `miden-client`). A mixed graph fails at the first RPC.
-3. For a local node, run node `0.17.0`.
-4. Use a remote prover from the 0.17 node release, and a note transport server that serves `note_transport.Api`. Switch the transport endpoint together with the RPC endpoint: the CLI's `[note_transport] endpoint` (`init --network devnet` or `--note-transport-endpoint <URL>` sets it), the Web SDK's `noteTransportUrl`, or in Rust `ClientBuilder::for_devnet()` or `ClientBuilder::note_transport(..)`.
+1. Point a 0.17.0 client at a stable 0.17 node, public or a local node from the matching release. A 0.16 node and a 0.17 release-candidate node reject it.
+2. Upgrade every client in the graph together (Rust client, CLI, Web SDK, any prover crate pinning `miden-client`), and move every client off release candidates. A mixed graph fails at the first RPC.
+3. For a local node, run node `0.17.0`, not a 0.17.0-rc.
+4. Use a remote prover from the 0.17 node release (it serves `miden.remote_prover.v1.ProverService`), and a note transport server that serves `miden.note_transport.v1.NoteTransportService`. Switch the transport endpoint together with the RPC endpoint: the CLI's `[note_transport] endpoint` (`init --network devnet` or `--note-transport-endpoint <URL>` sets it), the Web SDK's `noteTransportUrl`, or in Rust `ClientBuilder::for_devnet()` or `ClientBuilder::note_transport(..)`.
 5. The node still keeps account state for only 50 blocks; that window did not change.
 
 ### Common Errors
 
 | Error Message | Cause | Solution |
 | --- | --- | --- |
-| `server rejected request - please check your version and network settings (client version: 0.17.0, genesis commitment: ...)` | Client and node differ in major.minor | Use a node and client from the same 0.17 line. |
+| `server rejected request - please check your version and network settings (client version: 0.17.0, genesis commitment: ...)` | Client and node differ in major.minor, or one of them is a release candidate and the other is not | Use a stable 0.17 node with a stable 0.17 client. |
 | `Failed to ensure genesis in place: ... accept header validation failed` (Web) | Same | Same. |
 
 ---
@@ -289,8 +313,8 @@ Client-specific details:
 - `MultisigAuthArgs` and `FeeConversionInfo` resolve from `miden_client::account::component`. `SequentialCommit` (for `to_commitment` / `to_elements`) is not re-exported by `miden-client`, so it needs a direct `miden-protocol` dependency.
 - Setting any non-empty auth arg makes the client skip its own fee commitment. Set one on a fee-free chain too: the component asserts the preimage is present whatever the base fee.
 - Nothing derives the bound block from the auth args: add it with `.block_numbers([bound_block])`. The client fetches that header from the node if it is not in the store.
-- `TransactionRequest` now always serializes `block_numbers` first, so stored request bytes from any 0.16 client do not deserialize. Rebuild and re-serialize them.
-- `chain_anchor_for_request` and `execute_transaction_at` still exist and now also track the blocks in `block_numbers`, but do not re-execute a multisig proposal at an old anchor: the node keeps account state for only 50 blocks, and foreign accounts, the fee faucet included, are loaded at the reference block.
+- `TransactionRequest` now always serializes `block_numbers` first and the new code of an account code upgrade last, so stored request bytes from any 0.16 client, or from 0.17.0-rc.4 or earlier, do not deserialize (typically `unexpected end of file`). Rebuild and re-serialize them.
+- `chain_anchor_for_request` and `execute_transaction_at` still exist and now also track the blocks in `block_numbers`. Executing at the tip is the 0.17 flow. Re-executing a proposal at an old anchor needs the state of every foreign account the transaction loads, the fee faucet included, at that block, while the node keeps account state for only 50 blocks: supply it as [`ForeignAccount::Prefetched`](#rust-foreignaccountprefetched-and-get_foreign_account_inputs-are-unchanged-from-0161) inputs fetched before the node pruned that block.
 - Take the fee faucet from `get_protocol_config`, not from the block header.
 
 :::note `fee_conversion_info` in the 0.16 guide
@@ -357,7 +381,7 @@ The changelog says `NoteSyncHint` "likewise exposes `after_block_num()` and `tag
 
 ### Summary
 
-The client dropped or renamed several re-exports. The token helpers moved into the CLI crate as private functions, so there is no public replacement.
+The client dropped or renamed several re-exports, and made a custom client RNG test-only. The token helpers moved into the CLI crate as private functions, so there is no public replacement.
 
 ### Affected Code
 
@@ -367,19 +391,23 @@ The client dropped or renamed several re-exports. The token helpers moved into t
 - use miden_client::transaction::ProvingOptions;
 + use miden_client::transaction::Prover;
 - use miden_client::asset::{FungibleAssetDelta, NonFungibleAssetDelta, NonFungibleDeltaAction};
-- use miden_client::crypto::SmtForest;
+- use miden_client::crypto::{RandomCoin, SmtForest};
+- use miden_client::ClientFeltRng;
++ use miden_client::ClientCryptoRng;
 - use miden_client::notes::NoteFile;
 + use miden_client::note::NoteFile;
-- use miden_client::transaction::AccountInputs;
 - use miden_client::utils::{base_units_to_tokens, tokens_to_base_units, TokenParseError};
 ```
 
 ```rust
 // Before (0.16)
 let prover = LocalTransactionProver::new(ProvingOptions::new(Poseidon2));
+let builder = builder.rng(Box::new(RandomCoin::new(seed)));
 
-// After (0.17): the same configuration is the default
+// After (0.17): the same prover configuration is the default
 let prover = LocalTransactionProver::default();
+// ClientBuilder::rng exists only with the `testing` feature and takes a CryptoRng
+let builder = builder.rng(Box::new(ChaCha20Rng::seed_from_u64(42)));   // rand_chacha 0.10
 ```
 
 ### Migration Steps
@@ -387,8 +415,8 @@ let prover = LocalTransactionProver::default();
 1. `ValidatorKeys` → `ValidatorConfig`. See [(Rust) State sync authenticates the chain tip](#rust-state-sync-authenticates-the-chain-tip-with-validatorconfig).
 2. `ProvingOptions` → `Prover` (from `miden-prover`). Use `LocalTransactionProver::default()` for the standard configuration.
 3. The vault delta types are gone because `AccountVaultDelta` now tracks whole assets (see [Assets, Vault & Faucet](./asset-vault-faucet)); `AccountVaultDelta` itself is still re-exported. `SmtForest` has no client re-export.
-4. `AccountInputs` went with prefetched foreign accounts; see [(Rust) `ForeignAccount::Prefetched`](#rust-foreignaccountprefetched-and-get_foreign_account_inputs-are-gone).
-5. Token formatting: copy `tokens_to_base_units` / `base_units_to_tokens` from 0.16.1 into your code if you need them. 0.17 keeps them only as `pub(crate)` in the CLI.
+4. Token formatting: copy `tokens_to_base_units` / `base_units_to_tokens` from 0.16.1 into your code if you need them. 0.17 keeps them only as `pub(crate)` in the CLI.
+5. Custom RNG: outside tests drop the `ClientBuilder::rng(..)` call; the client always uses an OS-seeded `ChaCha20Rng`. With the `testing` feature it takes a `Box<dyn ClientCryptoRng>` (`CryptoRng + Send + Sync`, renamed from `ClientFeltRng`) instead of a `FeltRng` such as `RandomCoin`. Where you drew a `Felt` or `Word` from a `RandomCoin`, use a `rand` 0.10 generator with the new `miden_client::rng::{draw_felt, draw_word}`. `ClientRng::new` is no longer public.
 
 :::warning `Prover::default()` is not the old default
 `Prover::default()` and `Prover::new()` select `Blake3_256`. `LocalTransactionProver::default()` uses `Prover::new().with_hash_fn(Poseidon2)`, which is what 0.16's `LocalTransactionProver::default()` used. Do not translate `ProvingOptions::default()` to `Prover::default()` without checking the hash function.
@@ -401,48 +429,16 @@ let prover = LocalTransactionProver::default();
 | ``error[E0432]: unresolved import `miden_client::block::ValidatorKeys` `` | Renamed | `ValidatorConfig` |
 | ``error[E0432]: unresolved import `miden_client::transaction::ProvingOptions` `` | Replaced | `Prover`, or `LocalTransactionProver::default()` |
 | ``error[E0432]: unresolved import `miden_client::utils::tokens_to_base_units` `` (a braced import of several missing items reports them in one `unresolved imports` error) | Moved into the CLI | Copy the helper. |
+| ``error[E0432]: unresolved import `miden_client::crypto::RandomCoin` `` | Re-export removed | A `rand` generator plus `miden_client::rng::{draw_felt, draw_word}`. |
+| ``error[E0599]: no method named `rng` found`` on `ClientBuilder` | `rng` is behind the `testing` feature | Drop the call, or enable `testing` in tests. |
 
 ---
 
-## (Rust) `ForeignAccount::Prefetched` and `get_foreign_account_inputs` are gone
+## (Rust) `ForeignAccount::Prefetched` and `get_foreign_account_inputs` are unchanged from 0.16.1
 
-:::caution 0.16.1-only features, replaced in 0.17
-`ForeignAccount::Prefetched(AccountInputs)` and `Client::get_foreign_account_inputs` shipped in `miden-client` 0.16.1 only and were deliberately not carried forward: 0.17 executes a multisig proposal at the chain tip, with the proposal's block added through `block_numbers`, instead of re-executing it at an old block. Code written against 0.16.0 is unaffected.
-:::
+0.16.1's prefetched foreign accounts carry over to 0.17.0 unchanged: `ForeignAccount::Prefetched(AccountInputs)`, `From<AccountInputs> for ForeignAccount`, `Client::get_foreign_account_inputs(foreign_accounts, block_num) -> Result<Vec<AccountInputs>, ClientError>`, `TransactionRequestError::ForeignAccountNotAtReferenceBlock` and the `miden_client::transaction::AccountInputs` re-export. 0.16.1 code that uses them compiles unchanged. The inputs open against the account tree of `block_num` only, so execute at exactly that block (`execute_transaction_at` with an anchor at it, or the sync height without one, so do not sync in between), or fail with `inputs for foreign account <id> do not open against the account tree of the transaction's reference block <N>`. The 0.17.0 release candidates did not have these items, and Web SDK 0.17.0 still does not expose them (see [(Web) Prefetched foreign accounts removed](#web-prefetched-foreign-accounts-removed)).
 
-### Summary
-
-0.16.1 let a request carry a foreign account's state and witness, fetched with `Client::get_foreign_account_inputs`, so a transaction pinned to an old block could run after the node pruned that state. 0.17 has none of it: the variant, the method, `From<AccountInputs> for ForeignAccount`, `TransactionRequestError::ForeignAccountNotAtReferenceBlock` and the `miden_client::transaction::AccountInputs` re-export are all absent.
-
-### Affected Code
-
-```rust
-// Before (0.16.1)
-let inputs = client.get_foreign_account_inputs([ForeignAccount::public(id, reqs)?], anchor_block).await?;
-let request = TransactionRequestBuilder::new()
-    .foreign_accounts(inputs.into_iter().map(ForeignAccount::from))
-    .build()?;
-```
-
-```rust
-// After (0.17): declare the account and execute at the current tip
-let request = TransactionRequestBuilder::new()
-    .foreign_accounts([ForeignAccount::public(id, reqs)?])
-    .build()?;
-```
-
-### Migration Steps
-
-1. Declare foreign accounts as `ForeignAccount::Public` / `ForeignAccount::Private` and execute at the current tip. The node still keeps account state for 50 blocks.
-2. If you used prefetching to re-execute a multisig proposal at an old block, use the 0.17 flow instead: bind the block through `MultisigAuthArgs` and add it with `block_numbers` (see [(Rust) Multisig requests](#rust-multisig-requests-need-multisigauthargs-and-block_numbers)).
-3. Remove matches on `TransactionRequestError::ForeignAccountNotAtReferenceBlock`.
-
-### Common Errors
-
-| Error Message | Cause | Solution |
-| --- | --- | --- |
-| ``error[E0599]: no variant, associated function, or constant named `Prefetched` found for enum `ForeignAccount` `` | Removed | Declare the account as public or private. |
-| ``error[E0599]: no method named `get_foreign_account_inputs` found`` | Removed | Execute at the tip. |
+New in 0.17, and separate from prefetching: `Client::track_account_witness(account_id)` registers an account whose witness every sync refreshes in the store, so a transaction using it as a foreign account resolves the witness locally (`untrack_account_witness`, `tracked_account_witnesses`). A public foreign account must also be tracked by the client for its code and storage to come from the store. While a registered account has no witness the node can return, for example one not in the account tree, every sync fails until it is unregistered.
 
 ---
 
@@ -503,40 +499,64 @@ let records = client.get_transactions(TransactionFilter::Ids(vec![tx_id])).await
 
 ---
 
-## (Rust) Note transport: new service, silent failures, screening and a new cursor
+## (Rust) Note transport: sends carry an inclusion proof, new service, silent failures and a new cursor
 
 ### Summary
 
-Three behaviour changes and one API change:
+Two API changes and four behaviour changes:
 
-1. **New gRPC service.** The client speaks `note_transport.Api` instead of `miden_note_transport.MidenNoteTransport`, at unchanged URLs, so the server must be upgraded (see [(Node) Client, node, remote prover and note transport must all be 0.17](#node-client-node-remote-prover-and-note-transport-must-all-be-017)). The default endpoints are `NOTE_TRANSPORT_TESTNET_ENDPOINT = "https://transport.miden.io"`, `NOTE_TRANSPORT_DEVNET_ENDPOINT`, and the new `NOTE_TRANSPORT_MAINNET_ENDPOINT`.
-2. **Failures no longer fail `sync_state`.** A transport failure inside `Client::sync_state` is logged (`note transport fetch failed; syncing the chain without it`) and the chain sync still applies, so an incompatible or unreachable transport server is silent. Calling `Client::sync_note_transport` directly still returns the error.
-3. **Deliveries are screened.** Transport-delivered notes whose tag matches a tracked account's tag are screened, and notes no tracked account can consume are dropped instead of imported. Notes with other tags are kept as before.
-4. **Cursor and streaming API.** `NoteTransportCursor` is now a (nonce, sequence) pair, and `NoteTransportClient::stream_notes` and the `NoteStream` trait were removed.
+1. **Private notes are sent with their inclusion proof.** `Client::send_private_note` and `send_private_note_with_block_hint` are replaced by `Client::send_private_note_with_proof(note, &address, inclusion_proof)`. The transport verifies the proof against its node before it stores the note and gives the recipient the exact commitment block, so a note can be relayed only after the transaction that created it is committed and the sender has synced past that block. `NoteTransportClient::send_note` and `send_note_with_block_hint` are replaced by one required method, `send_note_with_proof(note: TransportNote, inclusion_proof)`. `TransportNote::new(header, details)` fails unless the header commits to the details; `TransportNote::from(note)` also works. A relay outbox entry written by an earlier version is dropped with the warning `dropping unreadable relay outbox; resetting to empty`.
+2. **Cursor and streaming API.** `NoteTransportCursor` is now a (nonce, sequence) pair, and `NoteTransportClient::stream_notes` and the `NoteStream` trait were removed.
+3. **New gRPC service.** The client speaks `miden.note_transport.v1.NoteTransportService` instead of `miden_note_transport.MidenNoteTransport`, at unchanged URLs, so the server must be upgraded (see [(Node) Client, node, remote prover and note transport must all be 0.17](#node-client-node-remote-prover-and-note-transport-must-all-be-017)). The default endpoints are `NOTE_TRANSPORT_TESTNET_ENDPOINT = "https://transport.miden.io"`, `NOTE_TRANSPORT_DEVNET_ENDPOINT`, and the new `NOTE_TRANSPORT_MAINNET_ENDPOINT`.
+4. **Failures no longer fail `sync_state`.** A transport failure inside `Client::sync_state` is logged (`note transport fetch failed; syncing the chain without it`) and the chain sync still applies, so an incompatible or unreachable transport server is silent. Calling `Client::sync_note_transport` directly still returns the error.
+5. **A bad delivery fails the fetch.** 0.16 dropped, with a warning, a delivery that did not decode or carried a tag the client had not requested. 0.17 returns `NoteTransportError::InvalidFetchedNote`, `NoteDetailsMismatch` or `UnrequestedTag` from `sync_note_transport` / `fetch_private_notes` and leaves the cursor on that page. Inside `sync_state` that error is only logged (item 4), so one bad delivery silently stops private notes from arriving.
+6. **Deliveries are screened.** Transport-delivered notes whose tag matches a tracked account's tag are screened, and notes no tracked account can consume are dropped instead of imported. Notes with other tags are kept as before.
 
 ### Affected Code
 
 ```rust
 // Before (0.16)
+client.send_private_note_with_block_hint(note, &address, block_hint).await?; // or send_private_note(note, &address)
 let cursor = NoteTransportCursor::new(42);   // also NoteTransportCursor::from(42u64)
 let raw: u64 = cursor.value();
 let stream = transport.stream_notes(tag, cursor).await?;
 ```
 
 ```rust
-// After (0.17)
+// After (0.17): once the transaction that created the note is committed
+client.sync_state().await?; // stores the note's inclusion proof
+let record = client.get_output_note(note_id).await?.expect("output note");
+let proof = record.inclusion_proof().cloned().expect("committed and synced");
+client.send_private_note_with_proof(record.try_into()?, &address, proof).await?;
+
 let cursor = NoteTransportCursor::from_parts(nonce, sequence); // or NoteTransportCursor::init()
 let parts: Option<(u64, u64)> = cursor.parts();              // None for the initial cursor
 let (notes, next) = transport.fetch_notes(&[tag], cursor).await?; // poll instead of streaming
 ```
 
+```rust
+// Custom NoteTransportClient: send_note(header, details: Vec<u8>) becomes the only send method
+async fn send_note_with_proof(&self, note: TransportNote, inclusion_proof: NoteInclusionProof)
+    -> Result<(), NoteTransportError>;
+```
+
 ### Migration Steps
 
-1. Check that your transport endpoint serves `note_transport.Api`.
-2. Do not rely on `sync_state` erroring to detect transport problems; call `sync_note_transport` or watch the logs if you need to know.
-3. Expect private notes addressed to another account with a colliding tag to no longer appear in the store.
-4. Replace `NoteTransportCursor::new(u64)`, `From<u64>` and `value()` with `from_parts(nonce, sequence)`, `init()` and `parts()`.
-5. Replace `stream_notes` with polling `fetch_notes`. Custom `NoteTransportClient` implementations: delete `stream_notes`.
+1. Relay a private note with `send_private_note_with_proof` after its transaction is committed and a sync has stored the proof: `OutputNoteRecord::inclusion_proof()` for a note this client created, `InputNoteRecord::inclusion_proof()` for one it received. The CLI's `notes --send` does this for you and now looks the ID up among output notes before input notes.
+2. Check that your transport endpoint serves `miden.note_transport.v1.NoteTransportService`.
+3. Do not rely on `sync_state` erroring to detect transport problems or bad deliveries; call `sync_note_transport` or watch the logs if you need to know.
+4. Expect private notes addressed to another account with a colliding tag to no longer appear in the store.
+5. Replace `NoteTransportCursor::new(u64)`, `From<u64>` and `value()` with `from_parts(nonce, sequence)`, `init()` and `parts()`.
+6. Replace `stream_notes` with polling `fetch_notes`. Custom `NoteTransportClient` implementations: replace `send_note` and `send_note_with_block_hint` with `send_note_with_proof`, and delete `stream_notes`.
+
+### Common Errors
+
+| Error Message | Cause | Solution |
+| --- | --- | --- |
+| ``error[E0599]: no method named `send_private_note_with_block_hint` found`` (or `send_private_note`) | Replaced | `send_private_note_with_proof` with the note's inclusion proof. |
+| ``error[E0046]: not all trait items implemented, missing: `send_note_with_proof` `` (with `error[E0407]` for the old `send_note`) | New required trait method | Implement `send_note_with_proof`; delete `send_note`. |
+| `input error: note <hex> has no inclusion proof yet; wait for its transaction to be committed, sync and retry` | CLI `notes --send` before the commit was synced | Wait for the commit, `sync`, retry. |
+| `note transport returned an invalid note: ...`, `note details commitment <hex> does not match the header commitment <hex>` or `note transport returned a note with tag <tag>, which the client did not request` | A bad delivery, from `sync_note_transport` / `fetch_private_notes` (only logged by `sync_state`) | Report it to the transport operator; private notes stall until it stops serving that note. |
 
 ---
 
@@ -626,45 +646,65 @@ let sync = StateSync::new(rpc, note_screener, tx_discard_delta, validator_config
 
 ---
 
-## (Rust) New error variants, and one rename
+## (Rust) Error enums: unused variants removed, new variants added
 
 ### Summary
 
-`TransactionScriptError` became `MastForestScriptError` upstream, and the client renamed its wrapping variants to match. The error enums also gained variants, and none of them is `#[non_exhaustive]`, so exhaustive matches stop compiling. The changelog lists only some of them.
+The client removed error variants it no longer constructs, including the `TransactionScriptError` wrappers, and added variants for new failures. None of these enums is `#[non_exhaustive]`, so both a match on a removed variant and an exhaustive match without a wildcard stop compiling. Several removed variants were `#[from]` conversions, so a `?` that relied on them no longer compiles either; custom `Store` code is the most likely to hit this.
 
 ### Affected Code
 
-```diff
-- ClientError::TransactionScriptError(e)
-+ ClientError::MastForestScriptError(e)
-- StoreError::TransactionScriptError(e)
-+ StoreError::MastForestScriptError(e)
-  TransactionRequestError::InvalidTransactionScript(e) // e: TransactionScriptError -> MastForestScriptError
+Removed:
+
+```text
+ClientError:                 AccountPatchError, HexParseError, MerkleError, MissingTransactionEncryptionKey,
+                             SendNotesTransactionScriptError, TransactionInputError, TransactionScriptError
+StoreError:                  AccountCodeDataNotFound, AccountDeltaError, AccountStorageIndexNotFound, AddressError,
+                             HexParseError, InvalidInt, NoteRecordError, NoteTagAlreadyTracked, SmtProofError,
+                             TransactionScriptError, VaultDataNotFound
+TransactionRequestError:     AssetVaultError, InvalidTransactionScript, NoteNotFound, UnsupportedAuthSchemeId
+RpcError:                    AccountUpdateForPrivateAccountReceived
+GetNotesByIdError:           NoteNotFound, NoteNotPublic
+GetNoteScriptByRootError:    ScriptNotFound
+GetBlockByNumberError:       DeserializationFailed
+SyncAccountStorageMapsError: AccountNotFound
+SyncTransactionsError:       AccountNotFound, WitnessError
+RemoteProverClientError:     InvalidEndpoint
 ```
 
-New variants:
+Added:
 
 ```text
 ClientError:              AccountNotAllowlisted, AccountAlreadyAllowed, AccountIsNetworkAccount, AccountIsNotNew,
-                          UnscreenedNoteBlocks
+                          UnscreenedNoteBlocks, AccountTagLimitExceeded
 StoreError:               DatabaseTransientError, DatabasePermanentError, ProtocolConfigNotFound,
                           ProtocolConfigCommitmentMismatch
-TransactionRequestError:  SwapNoteWithZeroAsset, InputNoteBeingProcessed   (ForeignAccountNotAtReferenceBlock removed; 0.16.1 only)
+TransactionRequestError:  SwapNoteWithZeroAsset, InputNoteBeingProcessed
 BatchBuilderError:        BatchSubmissionOutcomeUnknown
+NoteTransportError:       NoteDetailsMismatch, InvalidFetchedNote, UnrequestedTag
+AddTransactionError:      MissingFee, ConsumesInflightFeeNotes, InvalidFeeAsset, BatchIdMismatch, AuthenticationFailed
+NoteSyncError, SyncNullifiersError, SyncAccountVaultError, SyncAccountStorageMapsError,
+SyncTransactionsError:    FutureBlock
+SyncChainMmrError:        new enum (Internal, FutureBlock, Unknown), reached through EndpointError::SyncChainMmr
+EndpointError:            SyncChainMmr, RegisterAccount
 ```
+
+`FutureBlock` (`requested block is ahead of the node's chain tip`) means the request named a block the node has not reached yet, typically a follower node behind the chain tip. In 0.16 the same node code on note sync decoded as `NoteSyncError::DeserializationFailed`.
 
 ### Migration Steps
 
-1. Rename the `TransactionScriptError` arms. The payload type is `miden_protocol::MastForestScriptError`; `miden-client` does not re-export it.
-2. Add arms, or a wildcard, for the new variants.
+1. Delete arms for the removed variants. Where `?` relied on a removed `#[from]` (for example `HexParseError`, `MerkleError` or `AccountPatchError` into `ClientError`, or `TryFromIntError`, `NoteRecordError` or `SmtProofError` into `StoreError`), map the error explicitly.
+2. Add arms, or a wildcard, for the new variants. Treat `FutureBlock` as retryable: sync again after a delay.
 3. Code that retried on `StoreError::DatabaseError` for a busy or locked SQLite database must now match `StoreError::DatabaseTransientError`. Constraint violations and corrupt files are `DatabasePermanentError`.
 
 ### Common Errors
 
 | Error Message | Cause | Solution |
 | --- | --- | --- |
-| ``error[E0599]: no variant, associated function, or constant named `TransactionScriptError` found for enum `ClientError` `` | Renamed | `MastForestScriptError` |
+| ``error[E0599]: no variant, associated function, or constant named `TransactionScriptError` found for enum `ClientError` `` | Variant removed | Delete the arm. |
+| ``error[E0277]: `?` couldn't convert the error to `ClientError` `` (or `StoreError`) | A removed `#[from]` variant | Map the error explicitly. |
 | `error[E0004]: non-exhaustive patterns` | New variants | Add arms. |
+| `requested block is ahead of the node's chain tip` | The node is behind the requested block | Retry after a delay. |
 
 ---
 
@@ -709,7 +749,7 @@ let committed: CommittedNote = synced.into_committed_note(); // when you need th
 
 ### Summary
 
-Protocol object messages now come from the canonical `miden-objects` schemas. The client's own `From` / `TryFrom` conversions (modules `rpc::domain::{block, digest, merkle, smt}`) are gone, `RpcConversionError` lost five variants and gained `CanonicalConversion`, and the remote prover's `TryFrom<proto::Proof> for ProvenTransaction` now fails with `TransactionProverError`. This affects code using `miden_client::rpc::generated` (public only with the `testing` feature) or matching `RpcConversionError`.
+Protocol object messages now come from the canonical `miden-objects` schemas. The client's own `From` / `TryFrom` conversions (modules `rpc::domain::{block, digest, merkle, smt}`) are gone, `RpcConversionError` lost five variants and gained `CanonicalConversion`, and the remote prover's conversion is now `TryFrom<proto::ProveResponse> for ProvenTransaction` (was `TryFrom<proto::Proof>`) and fails with `TransactionProverError` instead of `DeserializationError`. The generated code follows the v1 gRPC packages (`miden.node.v1`, `miden.remote_prover.v1`, `miden.note_transport.v1`). This affects code using `miden_client::rpc::generated` (public only with the `testing` feature) or matching `RpcConversionError`.
 
 ### Affected Code
 
@@ -735,7 +775,7 @@ match err {
 
 1. Replace matches on the removed variants with `RpcConversionError::CanonicalConversion`. `ConversionError` is re-exported from `miden_client::rpc`.
 2. Drop imports of `rpc::domain::block`, `digest`, `merkle` and `smt`. If you handle raw protobuf messages, convert through `miden_objects` (`DecodeMessageExt::decode_and_verify` / `decode_and_build_unchecked`). `primitives.Digest` is now `primitives.Word`.
-3. Expect `TransactionProverError` from `ProvenTransaction::try_from(proto::Proof)`.
+3. Convert prover responses with `ProvenTransaction::try_from(proto::ProveResponse)` and expect `TransactionProverError`; requests are `proto::ProveRequest` (was `ProofRequest`).
 
 ---
 
@@ -801,14 +841,17 @@ if keystore.get_account_key_commitments(&account_id).await?.is_empty() { /* no l
 - **Zero-amount swaps are rejected when the request is built.** `TransactionRequestBuilder::build_swap` and `build_pswap_create` return `TransactionRequestError::SwapNoteWithZeroAsset("offered" | "requested")` for a zero-amount fungible asset on either side. In 0.16 they produced a note that paid or received nothing. The CLI `swap` and `pswap` commands are affected the same way.
 - **`TransactionRequest::incoming_assets`** returns `(BTreeMap<AccountId, u64>, Vec<Asset>)` instead of `Vec<NonFungibleAsset>` for the second element, because `Asset` is now a struct. Filter with `asset.is_non_fungible()`.
 - **`NoteExecutionHint`** (re-exported as `miden_client::note::NoteExecutionHint`) gained `Unknown(Felt)`, `into_parts()` returns `Option<(u8, u32)>`, and the `u64` conversions became `Felt` conversions. See [Note Changes](./note-changes).
-- **Custom `Store` implementations** must persist the protocol configuration a sync delivers: `StateSyncUpdate::from_parts` gained a trailing `protocol_config: Option<ProtocolConfig>` argument and `into_parts` a sixth element. Store it in client settings under `miden_client::protocol_config::protocol_config_setting_key(config.to_commitment())`; execution and screening read it from there. `TransactionFilter::to_query` was removed (the SQL moved into the SQLite store), and the stored note-transport cursor setting changed format (no longer eight big-endian bytes). The `Store` trait's method signatures did not change.
+- **Custom `Store` implementations** must persist the protocol configuration a sync delivers: `StateSyncUpdate::from_parts` gained a trailing `protocol_config: Option<ProtocolConfig>` argument and `into_parts` a sixth element. Store it in client settings under `miden_client::protocol_config::protocol_config_setting_key(config.to_commitment())`; execution and screening read it from there. `TransactionFilter::to_query` was removed (the SQL moved into the SQLite store), and the stored note-transport cursor setting changed format (no longer eight big-endian bytes). The `Store` trait also gains five required methods with no default body, for account witness caching: `track_account_witness`, `untrack_account_witness`, `tracked_account_witnesses`, `get_account_witness` and `update_account_witness` (``error[E0046]: not all trait items implemented, missing: `track_account_witness`, ...``). `apply_state_sync` must write each witness in `update.account_updates().account_witnesses()` for the accounts registered with `track_account_witness`, as the SQLite store does.
 - **`miden-client-sqlite-store`**: `column_value_as_u64`, `u64_to_value` and the `SqliteStore::{apply_transaction, apply_transaction_batch, prune_account_history, prune_irrelevant_blocks, upsert_foreign_account_code}` associated functions are no longer public. This is not in the changelog.
 - **Testing helpers** (`testing` feature): the loose functions in `miden_client::testing::common` (`execute_tx_and_sync`, `wait_for_tx`, `mint_note`, ...) are now methods on `TestClient`, `insert_new_wallet` and its `_with_seed` / `_unfunded` variants are replaced by `TestClient::insert_wallet(account_type)`, and `TestClient::keystore()` exposes the keystore. `ClientConfig::into_client` / `into_unsynced_client` (in `miden-client-integration-tests`) return `TestClient` instead of `(TestClient, FilesystemKeyStore)`.
 - **`DapProgramExecutor`** (`dap` feature): its `ProgramExecutor::new` now returns `Result<Self, AdviceError>`. This is not in the changelog.
 - **`AccountReader::get_balance`** now errors, instead of returning `AssetAmount::ZERO`, when the stored value under the fungible asset ID cannot be decoded as a fungible asset. In practice only a corrupt store hits this.
+- **Account tag limit.** `Client::add_account` (for a native account) and `Client::add_address` fail with `ClientError::AccountTagLimitExceeded` (`client already tracks maximum number of account tags possible: 128`) once the client tracks `Client::MAX_ACCOUNT_TAGS` (128) distinct account tags, the most the note transport accepts in one request. Watched accounts are exempt. The CLI's `new-wallet`, `new-account` and `import` hit it at the 129th distinct tag.
+- **Account code upgrades.** `TransactionRequestBuilder::account_code_upgrade(code)` gives a transaction the new code for a script that upgrades the executing account, `build_account_code_upgrade(code)` builds a request that upgrades an account with `UpgradeManager` and `Authority::AuthControlled`, and `TransactionRequest::account_code_upgrade()` reads it back. For a network account, build an `UpgradeNote` and add it with `own_output_notes` (see [Note Changes](./note-changes#new-upgradenote-upgrades-network-account-code) and [Account Changes](./account-changes)). The new field is serialized last, so `TransactionRequest` bytes from 0.16 or from 0.17.0-rc.4 or earlier fail to deserialize.
+- **Removed unused items:** `ClientBuilder::tx_graceful_blocks` (deprecated; use `tx_discard_delta`), `NoteTransportUpdate`, the `AccountProofs` alias, `AcceptHeaderContext::unknown()`, and the CLI's `CliError::{Internal, AccountId, MissingFlag, InvalidAccount}`.
 - **`block_numbers` adds blocks the transaction authenticates** beyond its reference block. Multisig uses it for the bound block; a MASM script that reads an older block with `tx::get_block_commitment` also needs that block in the transaction inputs (see [MASM Changes](./masm-changes)).
 
-New in 0.17, no migration needed: `Endpoint::mainnet()`, `ClientBuilder::for_mainnet()`, `MAINNET_PROVER_ENDPOINT`, `NOTE_TRANSPORT_MAINNET_ENDPOINT`, `Client::get_validator_config`, `Client::get_protocol_config`, `Client::register_account`, `Client::is_account_allowed`, `Client::retry_proven_batch`, `TransactionRequestBuilder::block_numbers`, `SyncedNote::into_committed_note`, `Client::fetch_chain_updates` / `apply_chain_updates` with `ChainSyncData`, the keystore helpers `FilesystemKeyStore::{store_key, list_keys, associate_key, disassociate_key, account_ids_for_key}` with `StoredKeyInfo`, and pricing re-exports (`NetworkNotePricer`, `NotePricingError`, `NoteCheckerError`, `transaction::{TransactionFee, TransactionFeeError}`, `note::{NoteCost, NoteConsumptionCost}`) that remove the need for a direct `miden-tx` dependency to price note consumption.
+New in 0.17, no migration needed: the `miden-client-proto` crate (Protobuf encoding of client types, as the SQLite store uses), `Client::track_account_witness` / `untrack_account_witness` / `tracked_account_witnesses`, `Client::MAX_ACCOUNT_TAGS`, `miden_client::rng::{draw_felt, draw_word}`, `Endpoint::mainnet()`, `ClientBuilder::for_mainnet()`, `MAINNET_PROVER_ENDPOINT`, `NOTE_TRANSPORT_MAINNET_ENDPOINT`, `Client::get_validator_config`, `Client::get_protocol_config`, `Client::register_account`, `Client::is_account_allowed`, `Client::retry_proven_batch`, `TransactionRequestBuilder::block_numbers`, `SyncedNote::into_committed_note`, `Client::fetch_chain_updates` / `apply_chain_updates` with `ChainSyncData`, the keystore helpers `FilesystemKeyStore::{store_key, list_keys, associate_key, disassociate_key, account_ids_for_key}` with `StoredKeyInfo`, and pricing re-exports (`NetworkNotePricer`, `NotePricingError`, `NoteCheckerError`, `transaction::{TransactionFee, TransactionFeeError}`, `note::{NoteCost, NoteConsumptionCost}`) that remove the need for a direct `miden-tx` dependency to price note consumption.
 
 ---
 
@@ -833,7 +876,7 @@ All 20 published `@miden-sdk/*` packages share one version, and every first-part
 2. Install `0.17.0` (`npm install <package>@0.17.0`). Do the same for every other `@miden-sdk/*` package you depend on (vite plugin, wallet adapters, Para, Turnkey, telemetry).
 3. The 0.16 guide pinned `miden-sdk 0.16.1` with `react 0.16.0`; since 0.16.2 the two ship in lockstep at the same version.
 4. Node.js: the Node entry still resolves its native binary through the `optionalDependencies` `@miden-sdk/node-darwin-arm64`, `node-darwin-x64` and `node-linux-x64-gnu`, pinned to the exact same version. Do not install them directly.
-5. Rust crates published from the Web SDK repository (`miden-client-web`, `miden-idxdb-store`, `js-export-macro`, `miden-mobile-prover`) are at `0.17.0`. `miden-client-web` requires `miden-client` `0.17.0` and `miden-protocol` `0.17.0`; `miden-idxdb-store` and `miden-mobile-prover` require `miden-client` `0.17.0`.
+5. Rust crates published from the Web SDK repository (`miden-client-web`, `miden-idxdb-store`, `js-export-macro`, `miden-mobile-prover`) are at `0.17.0`. `miden-client-web` requires `miden-client` `0.17.0` and `miden-protocol` `0.17.0`; `miden-idxdb-store` requires `miden-client` `0.17.0` and, new in 0.17, `miden-client-proto` `0.17.0`; `miden-mobile-prover` requires `miden-client` `0.17.0`.
 
 ---
 
@@ -955,10 +998,50 @@ const nowOnly = records.filter((r) => isConsumableNow(r, accountIdHex));
 
 ---
 
+## (Web) Private note relay takes an inclusion proof
+
+### Summary
+
+`notes.sendPrivate` takes the note's `inclusionProof` instead of `scanAfterBlockNum`, and the transport verifies the proof before it stores the note. A proof exists only once the transaction that created the note is committed and the client has synced past that block. `notes.sendPrivateOutput({ noteId, to })` keeps its signature but now reads the proof sync stored on the output note: in 0.16.3 it worked right after submit, in 0.17 it throws until the commit is synced. React's `useTransaction({ privateNoteTarget })` already waits for the commit, so React apps change nothing.
+
+### Affected Code
+
+```typescript
+// Before (0.16.3)
+await client.notes.sendPrivate({ note: noteId, to, scanAfterBlockNum: submitHeight });
+```
+
+```typescript
+// After (0.17): commit and sync first
+const r = await client.transactions.send({
+  account, to, token, amount, type: "private", returnNote: true, waitForConfirmation: true,
+});
+await client.notes.sendPrivateOutput({ noteId: r.note.id(), to });
+
+// Any other note: pass the proof from its record
+const record = await client.notes.get(noteId);
+await client.notes.sendPrivate({ note: noteId, to, inclusionProof: record!.inclusionProof()! });
+```
+
+### Migration Steps
+
+1. Replace `scanAfterBlockNum` with `inclusionProof`. Proofs come from `InputNoteRecord.inclusionProof()`, `OutputNoteRecord.inclusionProof()` and `NoteFile.inclusionProof()`.
+2. Call `sendPrivateOutput` only after the creating transaction is committed and synced, for example with `waitForConfirmation: true` or `transactions.waitFor(txId)`.
+3. Tests against a mock note transport can build a proof with the test-only `NoteInclusionProof.mockAtBlock(blockNum)`; a real transport rejects it.
+
+### Common Errors
+
+| Error Message | Cause | Solution |
+| --- | --- | --- |
+| `sendPrivate requires inclusionProof: a NoteInclusionProof the transport verifies. ...` | JavaScript still passing `scanAfterBlockNum` (TypeScript rejects it at compile time) | Pass `inclusionProof`. |
+| `output note has no inclusion proof; sync past the block that committed it` | `sendPrivateOutput` before the commit was synced | Wait for confirmation, then retry. |
+
+---
+
 ## (Web) Prefetched foreign accounts removed
 
 :::caution 0.16.x-only feature, replaced in 0.17
-Prefetched foreign accounts came with `miden-client` 0.16.1 and are exposed by Web SDK 0.16.1 through 0.16.3. 0.17 removes them deliberately, as the Web SDK changelog records, in favour of executing against a recent block or at the tip.
+Prefetched foreign accounts came with `miden-client` 0.16.1 and are exposed by Web SDK 0.16.1 through 0.16.3. Web SDK 0.17 removes them deliberately, as its changelog records, in favour of executing against a recent block or at the tip. The Rust client 0.17.0 keeps them (see [(Rust) `ForeignAccount::Prefetched`](#rust-foreignaccountprefetched-and-get_foreign_account_inputs-are-unchanged-from-0161)), but Web SDK 0.17.0 does not expose them.
 :::
 
 ### Summary
@@ -1005,7 +1088,7 @@ const request = (await client.feeAwareTransactionRequestBuilder(account)).withFo
 - Do not call `withFeeConversionSalt` or `withAuthArg` on the builder it returns for a multisig: each clears the other and discards the auth args.
 - The `feeConversionSalt` option consumes the `Word` (it moves across the WASM boundary). Build a fresh `Word` per call: a spent handle is not rejected, it arrives as "no salt" and a random salt is drawn.
 - Stop passing `anchor` for multisig requests (`preview`, `executeRequest`, `submit`). Sync each party to at least the bound block (`Math.max(...request.blockNumbers())`) and execute at the tip.
-- `TransactionRequest.serialize()` now always carries block numbers, so bytes from 0.16 do not interoperate with 0.17. A dApp and its wallet exchanging a `CustomTransaction` through the wallet adapter must both be on 0.17.
+- `TransactionRequest.serialize()` now always carries block numbers and a trailing account-code-upgrade field, and embedded scripts are hashless, so bytes from 0.16 or from 0.17.0-rc.4 or earlier fail in `TransactionRequest.deserialize` (`failed to deserialize miden_client::transaction::request::TransactionRequest: ...`). A dApp, its wallet and every co-signer exchanging request bytes (for example a `CustomTransaction` through the wallet adapter) must all be on 0.17.0.
 - New: `TransactionRequestBuilder.withBlockNumbers()` and `TransactionRequest.blockNumbers()`.
 
 ---
@@ -1029,6 +1112,9 @@ const request = (await client.feeAwareTransactionRequestBuilder(account)).withFo
 | Network accounts cannot be deployed by an empty transaction, must use the chain's fee faucet, and always allowlist P2ID | See [Account Changes](./account-changes). |
 | Emitting a note to a network account caps the transaction at 20 blocks; `createNetworkNote` declares the target as a foreign account | See [Transaction Changes](./transaction-changes). |
 | New account creation can be gated by an allowlist | See [(Node) New accounts may need an invitation code](#node-new-accounts-may-need-an-invitation-code). |
+| The same `ClientOptions.seed` draws a different random stream: the seed now feeds a `StdRng` directly instead of seeding a `RandomCoin`. Note serial numbers in mint, send and swap requests, the multisig auth salt and Falcon signature randomness differ from 0.16.3; keys from `accounts.create` do not | Regenerate fixtures and recovery tests that hard-code note IDs or serial numbers from a seeded client. |
+| Clients sharing one IndexedDB database (a second tab, a wallet and dApp pair, two clients on one `storeName`) now see each other's account writes. Applying a transaction first checks the stored starting state and rejects the whole apply if another client changed the account: `transaction input account commitment does not match state for <id>` (or `... persisted state for <id>`) from `submit`, `send` or `apply()` | The network may already have the transaction: check its status before resubmitting. |
+| Node.js: `account.storage()` returns a `StorageView`, as the browser entry already did, instead of the raw `AccountStorage`. `getItem(slot)` returns a `StorageResult`, and on a map slot it returns the first entry's value, not the map root | Read a map root with `getCommitment(slot)` or `.raw.getItem(slot)`. |
 
 ```typescript
 // Raw WASM instance method, before (0.16)
@@ -1038,7 +1124,7 @@ await raw.createClientWithExternalKeystore(nodeUrl, noteTransportUrl, seed, stor
 await raw.createClientWithExternalKeystore(nodeUrl, noteTransportUrl, seed, storeName, undefined /* feeFaucetId */, getKey, insertKey, sign);
 ```
 
-New in 0.17, no migration needed: `client.feeFaucetId()`, `ClientOptions.feeFaucetId`, `MidenConfig.feeFaucetId`, the `feeAwareTransactionRequestBuilder` options, `TransactionRequestBuilder.withBlockNumbers()`, `TransactionRequest.blockNumbers()`, `notes.listConsumable()`, `NoteConsumptionStatus.isConsumableNow()`, the exported `isConsumableNow()`, `compile.component({ libraries })`, `accounts.register()` / `accounts.isAllowed()`, `WebClient.registerAccount` / `isAccountAllowed`, `RpcClient.registerAccount` / `isAccountAllowed`, `AccountVaultDelta.numAssets()`, `FaucetType`, `MultisigAuthOptions` and `RegisterAccountOptions`.
+New in 0.17, no migration needed: `client.feeFaucetId()`, `ClientOptions.feeFaucetId`, `MidenConfig.feeFaucetId`, the `feeAwareTransactionRequestBuilder` options, `TransactionRequestBuilder.withBlockNumbers()`, `TransactionRequest.blockNumbers()`, `notes.listConsumable()`, `NoteConsumptionStatus.isConsumableNow()`, the exported `isConsumableNow()`, `compile.component({ libraries })`, `accounts.register()` / `accounts.isAllowed()`, `WebClient.registerAccount` / `isAccountAllowed`, `RpcClient.registerAccount` / `isAccountAllowed`, `AccountVaultDelta.numAssets()`, `FaucetType`, `MultisigAuthOptions`, `RegisterAccountOptions`, the test-only `NoteInclusionProof.mockAtBlock(blockNum)` (accepted only by a mock note transport), and on the Node entry the exports `StorageView`, `StorageResult`, `wordToBigInt` and `MidenArrays`.
 
 ---
 
@@ -1091,16 +1177,21 @@ miden-client new-wallet
 # Error: account component error: failed to deserialize Package in .../.miden/packages/basic-wallet.masp
 #   invalid value: unsupported version. Got '[6, 0, 0]', but only '[7, 0, 0]' is supported
 
-# Refresh only the packages, keeping the config and keystore
-( cd "$(mktemp -d)" && miden-client init --local >/dev/null \
-  && rm -rf ~/.miden/packages && cp -R .miden/packages ~/.miden/packages )
+# Refresh only the packages of the ACTIVE config (./.miden, else $MIDEN_CLIENT_HOME, else ~/.miden),
+# keeping the config and keystore (the store still has to go; see the Quick Fix)
+if [ -f .miden/miden-client.toml ]; then dir="$PWD/.miden"; else dir="${MIDEN_CLIENT_HOME:-$HOME/.miden}"; fi
+pkgs=$(sed -n 's/^package_directory *= *"\(.*\)"$/\1/p' "$dir/miden-client.toml")
+case "$pkgs" in /*) ;; *) pkgs="$dir/$pkgs";; esac
+echo "$pkgs"     # check before copying
+tmp=$(mktemp -d) && (cd "$tmp" && miden-client init --local >/dev/null) \
+  && mkdir -p "$pkgs" && cp -R "$tmp/.miden/packages/." "$pkgs/" && rm -rf "$tmp"
 ```
 
 ### Migration Steps
 
-1. The simplest path, since the store has to be recreated anyway: move the old `.miden` directory aside and run `miden-client init` again, with `--network` pointing at a 0.17 node (`--network devnet` also sets devnet's note transport; a custom URL sets none, so add `--note-transport-endpoint`). This writes fresh packages. The keystore lives in `.miden/keystore` by default, so copy that directory into the new `.miden` if you want to keep your keys.
-2. To keep the directory, replace only `packages/`: run `init --local` in a temporary directory and copy its `.miden/packages` over the old one, as above.
-3. Rebuild any custom `.masp` component packages you pass with `-p`, `--extra-packages` or `--package` with a VM 0.33 toolchain; they fail with the same `unsupported version` error.
+1. The simplest path, since the store has to be recreated anyway: move the active `.miden` directory aside (see the [Quick Fix](#quick-fix) for which one the CLI loads) and run `miden-client init` again, with `--local` if it was a `./.miden` in your project, with `--network` pointing at a 0.17 node (`--network devnet` also sets devnet's note transport; a custom URL sets none, so add `--note-transport-endpoint`). This writes fresh packages. The keystore lives in `.miden/keystore` by default, so copy that directory into the new `.miden` if you want to keep your keys.
+2. To keep the directory, replace only the packages: run `init --local` in a temporary directory and copy its `.miden/packages` into the configured `package_directory`, as above. The copy overwrites the nine bundled packages only; any other `6.0.0` `.masp` left in that directory still breaks `account --inspect`, so rebuild or remove it.
+3. Rebuild any custom `.masp` component packages you pass with `-p`, `--extra-packages` or `--package` with a VM 0.35 toolchain; they fail with the same `unsupported version` error.
 4. The nine bundled package names are unchanged: `basic-wallet.masp`, `basic-fungible-faucet.masp`, `basic-non-fungible-faucet.masp`, `auth/basic-auth.masp`, `auth/ecdsa-auth.masp`, `auth/no-auth.masp`, `auth/multisig-auth.masp`, `auth/guarded-multisig-auth.masp`, `auth/network-account-auth.masp`.
 
 ### Common Errors
@@ -1114,7 +1205,7 @@ miden-client new-wallet
 
 ## (CLI) `init` still defaults to testnet
 
-`miden-client init` with no `--network` still configures `https://rpc.testnet.miden.io`, and `[note_transport] endpoint` defaults to `https://transport.miden.io`. A 0.17 CLI needs a 0.17 node: a 0.16 node rejects it at the accept header, so the first `sync` fails until the CLI is pointed at a 0.17 node. A note transport that serves only the 0.16 service does not fail `sync` at all. Point both at 0.17 services: pass `--network <0.17 endpoint>` with `--note-transport-endpoint <URL>`, or edit `[rpc] endpoint` and `[note_transport] endpoint`. See [(Node) Client, node, remote prover and note transport must all be 0.17](#node-client-node-remote-prover-and-note-transport-must-all-be-017).
+`miden-client init` with no `--network` still configures `https://rpc.testnet.miden.io`, and `[note_transport] endpoint` defaults to `https://transport.miden.io`. A 0.17.0 CLI needs a stable 0.17 node: a 0.16 node or a 0.17 release-candidate node rejects it at the accept header, so the first `sync` fails until the CLI is pointed at a stable 0.17 node. A note transport that serves only the 0.16 service does not fail `sync` at all. Point both at 0.17 services: pass `--network <0.17 endpoint>` with `--note-transport-endpoint <URL>`, or edit `[rpc] endpoint` and `[note_transport] endpoint`. See [(Node) Client, node, remote prover and note transport must all be 0.17](#node-client-node-remote-prover-and-note-transport-must-all-be-017).
 
 ```text
 $ miden-client init --local && miden-client sync
@@ -1158,7 +1249,7 @@ end
 
 ### Migration Steps
 
-1. Compile each script to a `.masp` library package with a toolchain on VM 0.33: the `midenc` 0.11 line. A `midenc` 0.10 writes package format `6.0.0`, which the 0.17 CLI rejects. See [Rust Contract SDK & Compiler](./rust-sdk-compiler).
+1. Compile each script to a `.masp` library package with a toolchain on VM 0.35: the `midenc` 0.11 line. A `midenc` 0.10 writes package format `6.0.0`, which the 0.17 CLI rejects. See [Rust Contract SDK & Compiler](./rust-sdk-compiler).
 2. Replace `--script-path <file>.masm` / `-s <file>.masm` with `--package <file>.masp` / `-p <file>.masp`. A path without an extension is looked up in the configured `package_directory`.
 3. `--inputs-path`, `--hex-words` and `-a` / `--account` are unchanged.
 4. DAP builds (`--features dap`): `--start-debug-adapter` now loads the package's debug info, and a DAP "restart" reloads the `.masp` file from disk instead of recompiling source. Rebuild the package before restarting to pick up source edits, and compile with debug info (`--debug full`) for source stepping.
@@ -1366,7 +1457,8 @@ miden-client keys --commitment 0x04...          # 65-byte uncompressed SEC1 acce
 - **`call` accepts bech32 addresses** for `account-id` arguments and for the faucet half of an `asset` argument. A result that does not decode as the declared return type now prints `The result is not a valid value of the procedure's return type: ...` plus the raw stack, instead of failing the command.
 - **Bundled packages named by bare name are read with the trusted reader** (resolved from `package_directory`); a path ending in `.masp` is still validated.
 - **`notes --show` prefix errors are reported as `input error:` instead of `import error:`.** This is not in the changelog, and only matters to scripts matching the prefix.
-- **DAP builds pin `miden-debug` 0.16** (0.10 in 0.16.1). Use a matching `miden-debug` to connect or replay.
+- **DAP builds pin `miden-debug` 0.18.0** (0.10 in 0.16.1). Use a matching `miden-debug` to connect or replay.
+- **`notes --send` needs the note's inclusion proof.** It looks the ID up among output notes first, then input notes, and fails with `input error: note <hex> has no inclusion proof yet; wait for its transaction to be committed, sync and retry` until the transaction that created the note is committed and the CLI has synced past it. In 0.16 it read input notes only and sent without a proof when there was none. See [(Rust) Note transport](#rust-note-transport-sends-carry-an-inclusion-proof-new-service-silent-failures-and-a-new-cursor).
 - **Zero-amount `swap` / `pswap`** are rejected when the request is built: `swap note assets must be non-zero: a zero offered asset makes the exchange one-sided` (or `requested`).
 
 ---
@@ -1375,8 +1467,9 @@ miden-client keys --commitment 0x04...          # 65-byte uncompressed SEC1 acce
 
 | Error Message | Cause | Solution |
 | --- | --- | --- |
-| `failed to deserialize data from the store` | A 0.16 SQLite store | Delete the store and re-sync. |
-| `server rejected request - please check your version and network settings (client version: ..., genesis commitment: ...)` | Client and node differ in major.minor | Run a 0.17 node with a 0.17 client. |
+| `store is at schema version 2, which is newer than the highest version this client supports (1)` (`3` for 0.17.0-rc.5) | A SQLite store written by 0.16 or a 0.17 release candidate | Delete the store with its `-wal` and `-shm` files and re-sync. |
+| `Failed to create client: storage error: failed to deserialize data from the store: ...` (Web) | An IndexedDB store created by a 0.17 release candidate | Delete the database; re-import accounts from backed-up keys. |
+| `server rejected request - please check your version and network settings (client version: ..., genesis commitment: ...)` | Client and node differ in major.minor, or only one of them is a release candidate | Run a stable 0.17 node with a stable 0.17 client. |
 | `Failed to ensure genesis in place: ... accept header validation failed` (Web) | Same | Same. |
 | `failed to decode the account file` / `failed to decode the note file` | A `.mac` / `.mno` file or `AccountFile` / `NoteFile` bytes written by 0.16 | Re-export with 0.17, or recreate the account or note. |
 | `invalid value: unsupported version. Got '[6, 0, 0]', but only '[7, 0, 0]' is supported` | Stale `.miden/packages` or a package built with a VM 0.29 toolchain | Refresh `.miden/packages`; rebuild custom packages. |
@@ -1392,3 +1485,8 @@ miden-client keys --commitment 0x04...          # 65-byte uncompressed SEC1 acce
 | ``input error: Address network `<hrp>` does not match configured network `<hrp>` `` | Address from another network | Use the configured network's address, or the hex ID. |
 | ``error[E0432]: unresolved import `miden_client::block::ValidatorKeys` `` | Renamed | `ValidatorConfig` |
 | ``error[E0046]: not all trait items implemented, missing: `register_account`, `is_account_allowed` `` | New `NodeRpcClient` methods | Implement or delegate them. |
+| ``error[E0046]: not all trait items implemented, missing: `track_account_witness`, ...`` | New `Store` methods | Implement the five account-witness methods. |
+| `input error: note <hex> has no inclusion proof yet; wait for its transaction to be committed, sync and retry` | `notes --send` before the commit was synced | Wait for the commit, `sync`, retry. |
+| `sendPrivate requires inclusionProof: ...` / `output note has no inclusion proof; sync past the block that committed it` (Web) | Relaying a private note without a proof, or before the commit was synced | Pass `inclusionProof`; sync past the commit first. |
+| `client already tracks maximum number of account tags possible: 128` | A 129th distinct account tag | Remove unused addresses (`remove_address`), or split accounts across client stores. |
+| `transaction input account commitment does not match state for <id>` (Web) | Another client sharing the IndexedDB database changed the account | Check the transaction's status before resubmitting. |

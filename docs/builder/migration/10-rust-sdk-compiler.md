@@ -56,7 +56,7 @@ If you encounter errors, continue reading for detailed migration steps.
 
 ## Summary
 
-This page covers the contract toolchain (`midenc`, `cargo-miden` and the `cargo miden new` templates) and the `miden` SDK crates. The toolchain change is mechanical but mandatory: every package is rebuilt, and the version skew between the compiler and the client that 0.16 had is gone. The SDK API changes (`Asset.id`, the reference-block accessors, `compute_commitment`, the attachment loaders, raw externs) fail to compile with a clear rustc error, and `is_fungible` / `amount` in host unit tests fail at link time. Five changes fail only at run time: custom auth components that hash the 0.16 summary layout (they compile again as soon as the block-commitment rename is fixed), hand-built P2ID recipients with two storage items or a 0.16 P2ID script root, raw FPI calls written for the old word reversal, hand-built asset ids with the 0.16 metadata byte, and `compute_commitment` reached through FPI. Read those sections even if your build is green.
+This page covers the contract toolchain (`midenc`, `cargo-miden` and the `cargo miden new` templates) and the `miden` SDK crates. The toolchain change is mechanical but mandatory: every package is rebuilt. The SDK API changes (`Asset.id`, the reference-block accessors, `compute_commitment`, the attachment loaders, raw externs) fail to compile with a clear rustc error, and `is_fungible` / `amount` in host unit tests fail at link time. Five changes fail only at run time: custom auth components that hash the 0.16 summary layout (they compile again as soon as the block-commitment rename is fixed), hand-built P2ID recipients with two storage items or a 0.16 P2ID script root, raw FPI calls written for the old word reversal, hand-built asset ids with the 0.16 metadata byte, and `compute_commitment` reached through FPI. Read those sections even if your build is green.
 
 ---
 
@@ -68,14 +68,13 @@ This page covers the contract toolchain (`midenc`, `cargo-miden` and the `cargo 
 | `miden` SDK crates (`miden`, `miden-base`, `miden-base-macros`, `miden-base-sys`, `miden-stdlib-sys`, `miden-sdk-alloc`, `miden-field-repr`, `miden-field-repr-derive`, `miden-tx-script-args`, `miden-sdk-build-script-support`, `midenc-frontend-wasm-metadata`) | 0.14.0 | 0.15.0 |
 | `cargo miden new` template bundle | 0.32.1 | 0.33.0 |
 | midenup channel (`miden-toolchain.toml`) | `0.16.0` | `0.17.0` |
-| Protocol it builds against (`miden-protocol`, `miden-standards`) | `0.16` | `0.17.0` |
+| Protocol it builds against (`miden-protocol`, `miden-standards`) | `0.16` | `0.17` |
 | VM crates it builds against | 0.29 | 0.33.0 |
 | `.masp` package format | 6.0.0 | 7.0.0 |
 | MSRV / nightly | 1.99 / `nightly-2026-09-01` | unchanged |
 
-- **The 0.16 version skew is gone.** Client `0.17.0` depends on protocol `0.17.0` and VM 0.33, exactly what compiler 0.11.0 pins, and the midenup `0.17.0` channel ships the same set (midenc / cargo-miden 0.11.0, protocol 0.17.0, core / VM 0.33.0).
 - **The MSRV is still 1.99 plus a nightly toolchain**, higher than the 1.98.1 of the protocol and client crates. Your toolchain must satisfy the highest requirement among the components you build.
-- **Host-side test and integration crates** move with the protocol. The project scaffold's `integration` crate pins:
+- **Host-side test and integration crates** move with the client. In the project scaffold's `integration` crate, or your own:
 
 ```toml title="integration/Cargo.toml"
 # Before (0.16)
@@ -90,7 +89,7 @@ miden-client              = { version = "0.17.0", features = ["tonic"] }
 miden-client-sqlite-store = { version = "0.17.0", package = "miden-client-sqlite-store" }
 miden-standards           = { version = "0.17.0", features = ["testing"] }
 miden-testing             = "0.17.0"
-miden-mast-package        = { version = "0.33.0", default-features = false }
+miden-mast-package        = { version = "0.35.0", default-features = false }   # the VM line of client 0.17.0
 ```
 
 ---
@@ -99,7 +98,7 @@ miden-mast-package        = { version = "0.33.0", default-features = false }
 
 ### Summary
 
-The 0.11 compiler links against VM 0.33 and protocol `0.17.0`, and the packages it writes use package format 7.0.0. Packages written by 0.10.x (format 6.0.0, VM 0.29, the protocol 0.16 kernel) cannot be loaded by a 0.17 client, by `midenc`, or by the SDK macros that read dependency packages.
+The 0.11 compiler links against VM 0.33 and the 0.17 protocol, and the packages it writes use package format 7.0.0. Packages written by 0.10.x (format 6.0.0, VM 0.29, the protocol 0.16 kernel) cannot be loaded by a 0.17 client, by `midenc`, or by the SDK macros that read dependency packages.
 
 ### Affected Code
 
@@ -111,7 +110,7 @@ components = ["midenc", "cargo-miden", "core", "protocol"]
 ```
 
 ```bash
-midenup install 0.17.0        # midenc + cargo-miden 0.11.0, protocol 0.17.0, core/vm 0.33.0
+midenup install 0.17.0        # midenc + cargo-miden 0.11.0, core/vm 0.35.0
 cargo miden build             # rebuild every contract; Miden path dependencies are rebuilt with it
 ```
 
@@ -130,7 +129,7 @@ The compiler changelog for 0.11 has no migration section and never says `.masp` 
 
 | Error Message | Cause | Solution |
 | --- | --- | --- |
-| `invalid value: unsupported version. Got '[6, 0, 0]', but only '[7, 0, 0]' is supported` | Loading a `.masp` built by midenc 0.10.x with VM 0.33 crates (client 0.17, midenc 0.11) | Rebuild the package with cargo-miden 0.11. |
+| `invalid value: unsupported version. Got '[6, 0, 0]', but only '[7, 0, 0]' is supported` | Loading a `.masp` built by midenc 0.10.x with 0.17 tooling (client 0.17, midenc 0.11) | Rebuild the package with cargo-miden 0.11. |
 | `failed to deserialize dependency package '<path>'` ... `The package may have been produced by a different Miden toolchain version` | An SDK macro (`#[account(..)]`, `generate!`) read a dependency package built by the old toolchain | Rebuild the dependency first. |
 
 ---

@@ -14,7 +14,7 @@ This guide covers all breaking changes you need to migrate an application to Mid
 - writing Rust smart contracts with the `miden` SDK
 - interacting with storage, auth, or RPCs
 
-this document is for you. It folds together the breaking changes from the protocol crates (`0.16.1` → `0.17.0`), the VM crates (`miden-vm` and `miden-crypto`, `0.29.2` → `0.33.0`), `miden-client` (`0.16.1` → `0.17.0`), the Web SDK (`@miden-sdk/*` `0.16.3` → `0.17.0`), and the `miden` Rust contract SDK / compiler (`0.14` → `0.15.0`, `midenc` `0.10` → `0.11.0`).
+this document is for you. It folds together the breaking changes from the protocol crates (`0.16.1` → `0.17.0`), the VM crates (`miden-vm` and `miden-crypto`, `0.29.2` → `0.35.0`), `miden-client` (`0.16.1` → `0.17.0`), the Web SDK (`@miden-sdk/*` `0.16.3` → `0.17.0`), and the `miden` Rust contract SDK / compiler (`0.14` → `0.15.0`, `midenc` `0.10` → `0.11.0`).
 
 ---
 
@@ -46,13 +46,13 @@ miden-standards           = "0.17.0"
 miden-tx                  = "0.17.0"
 miden-tx-batch            = "0.17.0"
 miden-objects             = "0.17.0"   # new: only for AccountFile / NoteFile or the Protobuf encodings
-miden-assembly            = "0.33.0"
-miden-core                = "0.33.0"
-miden-core-lib            = "0.33.0"
-miden-processor           = "0.33.0"
-miden-prover              = "0.33.0"
-miden-verifier            = "0.33.0"
-miden-crypto              = "0.33.0"
+miden-assembly            = "0.35.0"
+miden-core                = "0.35.0"
+miden-core-lib            = "0.35.0"
+miden-processor           = "0.35.0"
+miden-prover              = "0.35.0"
+miden-verifier            = "0.35.0"
+miden-crypto              = "0.35.0"
 ```
 
 ```json title="package.json (Web SDK)"
@@ -72,7 +72,7 @@ npm install @miden-sdk/miden-sdk@0.17.0 @miden-sdk/react@0.17.0
 If you encounter errors, continue reading for detailed migration steps.
 
 :::danger 0.16 artifacts, stores and exports do not carry over
-Packages move to format `7.0.0`, 0.16 proofs do not decode, and account and note files are now Protobuf, so **files exported by 0.16 do not import into 0.17**. A 0.16 SQLite store opens and then fails with `failed to deserialize data from the store`. The IndexedDB store deletes its whole database on first open, and **the default browser keystore keeps its secret keys in that database**, so back the keys up on 0.16.3 first (see [Client Changes](./client-changes#store-every-016-sqlite-store-must-be-recreated)). Consume private notes before you upgrade, re-assemble every package, and re-sync into a fresh store. See [0.16 artifacts do not carry over](./imports-dependencies#016-artifacts-do-not-carry-over).
+Packages move to format `7.0.0`, 0.16 proofs do not decode, and account and note files are now Protobuf, so **files exported by 0.16 do not import into 0.17**. A 0.16 SQLite store is rejected at open with `store is at schema version 2, which is newer than the highest version this client supports (1)`. The IndexedDB store deletes its whole database on first open, and **the default browser keystore keeps its secret keys in that database**, so back the keys up on 0.16.3 first (see [Client Changes](./client-changes#store-every-016-sqlite-store-must-be-recreated)). Consume private notes before you upgrade, re-assemble every package, and re-sync into a fresh store. Stores created by a 0.17 release candidate fail too: a SQLite one at open, an IndexedDB one is kept and then fails, so delete it. See [0.16 artifacts do not carry over](./imports-dependencies#016-artifacts-do-not-carry-over).
 :::
 
 :::warning Upgrade the client, node, remote prover and note transport together
@@ -108,7 +108,13 @@ Big themes in 0.17:
 | **Verification can return `Ok` with work outstanding** | The free `verify` is gone. `Verifier::new().verify(&claim, &proof)` returns a `VerificationOutcome`, and transaction proofs defer their precompile claims, so check `is_complete()`. `ProvingOptions` became a `Prover`. |
 | **Account and note files moved to `miden-objects`** | `AccountFile` and `NoteFile` live in the new `miden-objects` crate and are Protobuf-encoded. 0.16 `.mac` / `.mno` files and Web export bytes do not load. |
 | **Network accounts and network notes are stricter** | `AuthNetworkAccount::new` installs `BasicWallet` and allowlists P2ID, a network account cannot be deployed by an empty transaction and must use the chain's fee asset, and emitting a network note caps the transaction's expiration at 20 blocks. |
-| **Two 0.16.x additions are replaced** | The 0.16.x fee helpers (`fee::estimate_fee`, `fee::assert_fee_bound`, `multisig::pay_bounded_fee`) and the 0.16.1 prefetched foreign accounts are replaced by 0.17 designs: native 1/1 fee payment inside `fee::pay_fee`, and execution at the chain tip. |
+| **Accounts can upgrade their code** | `native_account::upgrade` now replaces the account's code (in 0.16 it was a no-op), validated like a new account's and switched after the auth procedure. Install `UpgradeManager`; network accounts are upgraded with an `UpgradeNote`. |
+| **Standard components link `miden-standards` dynamically** | The standard singlesig, multisig and network-account auth roots change, so those accounts get new code commitments and IDs. A custom `MastForestStore` / `DataStore` must also serve `StandardsLib`. |
+| **Code and scripts serialize without node hashes** | `AccountCode`, `NoteScript` and `TransactionScript` write the hashless MAST format and rebuild the hashes on read. Roots and commitments do not change; stored bytes and note-script felt encodings do. |
+| **Private notes are relayed with an inclusion proof** | The note transport accepts a private note only together with its inclusion proof, so relay it after the creating transaction commits and the client syncs. |
+| **Old stores fail at open** | SQLite stores from 0.16 and from any 0.17 release candidate are rejected with `store is at schema version N, which is newer than ...`, although they are older. A 0.16.3 IndexedDB store is reset; one from a 0.17 release candidate is kept and then fails. |
+| **VM and `miden-crypto` jump to 0.35** | Six minor releases (`0.29.2` → `0.35.0`): package format `7.0.0`, core library `0.35` (re-assemble every package that links it dynamically), and Plonky3 0.8. |
+| **0.16.x fee helpers are replaced** | `fee::estimate_fee`, `fee::assert_fee_bound` and `multisig::pay_bounded_fee` give way to native 1/1 fee payment inside `fee::pay_fee`. The Web SDK also drops the 0.16.1 prefetched foreign accounts; the Rust client keeps `ForeignAccount::Prefetched`. |
 
 If you only skim a few sections, skim **Transaction Changes**, **Client Changes**, **MASM Changes**, and **Note Changes**.
 
@@ -118,8 +124,8 @@ If you only skim a few sections, skim **Transaction Changes**, **Client Changes*
 
 | Component | Required | Tested With |
 |-----------|----------|-------------|
-| Miden VM crates | 0.33 | 0.33.0 |
-| miden-crypto | 0.33 | 0.33.0 |
+| Miden VM crates | 0.35 | 0.35.0 |
+| miden-crypto | 0.35 | 0.35.0 |
 | miden-protocol | 0.17.0 | 0.17.0 |
 | miden-standards | 0.17.0 | 0.17.0 |
 | miden-client | 0.17.0 | 0.17.0 |
@@ -131,10 +137,6 @@ If you only skim a few sections, skim **Transaction Changes**, **Client Changes*
 | Rust (VM) | 1.96.1+ | 1.98.1 |
 | Rust (contract SDK / compiler) | 1.99+ | `nightly-2026-09-01` |
 
-:::note The contract toolchain no longer lags
-Compiler `0.11.0` pins protocol `0.17.0` and VM `0.33.0`, the same set the client uses, so the 0.16 version skew between the contract toolchain and the client is gone.
-:::
-
 ---
 
 ## Migration Sections
@@ -143,15 +145,15 @@ Work through these sections in order for a complete migration:
 
 | Section | Topics |
 |---------|--------|
-| [1. Imports & Dependencies](./imports-dependencies) | Crate bumps, VM 0.29 → 0.33, the new `miden-objects` crate, artifacts that do not carry over |
-| [2. Hashing & Crypto Changes](./hashing-crypto) | `serde` removed from `Word` and Merkle types, `SmtForest` → `LargeSmtForest`, `PartialSmt` bytes, stricter decoders |
-| [3. Account Changes](./account-changes) | Versioned accounts, sorted procedures, network accounts, `from_package` by value, `StorageMap`, RBAC and `ApproverSet` |
-| [4. Note Changes](./note-changes) | P2ID with four storage items, new standard script roots, config notes |
+| [1. Imports & Dependencies](./imports-dependencies) | Crate bumps, VM 0.29 → 0.35, the new `miden-objects` and `miden-usdcx` crates, dynamic linking of `miden-standards`, artifacts and stores that do not carry over |
+| [2. Hashing & Crypto Changes](./hashing-crypto) | `serde` removed from `Word` and Merkle types, `SmtForest` → `LargeSmtForest`, `PartialSmt` bytes, stricter decoders, random-value helpers removed and Falcon RNGs needing `CryptoRng` |
+| [3. Account Changes](./account-changes) | Versioned accounts, sorted procedures, account code upgrades and `AccountCodePatch`, network accounts, `from_package` by value, `StorageMap`, RBAC and `ApproverSet` |
+| [4. Note Changes](./note-changes) | P2ID with four storage items, new standard script roots and costs, `UpgradeNote`, sealed PSWAP outputs, config notes |
 | [5. Assets, Vault & Faucet](./asset-vault-faucet) | `Asset` as a struct, `AccountVaultDelta` with whole assets, versioned asset IDs, new standard faucet IDs, callbacks and mint policies |
-| [6. Transaction Changes](./transaction-changes) | `ProtocolConfig`, `MultisigAuthArgs` and executing at the tip, native-asset fees, 20-block network-note cap, `VerificationOutcome` |
-| [7. Client Changes](./client-changes) | Store recreation, client and node pairing, fee faucet from sync, Rust/Web/React/CLI changes |
-| [8. MASM Changes](./masm-changes) | Procedures whose stack effect changed, renamed accessors, moved standards and core-library modules, `trace` is back |
-| [9. VM & Assembler Changes](./vm-assembler) | Package format `7.0.0`, `Verifier` and `VerificationOutcome`, `Prover`, `FastProcessor`, advice budget and `AdviceInputs` |
+| [6. Transaction Changes](./transaction-changes) | `ProtocolConfig`, `MultisigAuthArgs` and executing at the tip, native-asset fees, 20-block network-note cap, hashless `NoteScript` / `TransactionScript` bytes, `VerificationOutcome` |
+| [7. Client Changes](./client-changes) | Stores rejected at open, client and node pairing, private notes relayed with an inclusion proof, fee faucet from sync, Rust/Web/React/CLI changes |
+| [8. MASM Changes](./masm-changes) | Procedures whose stack effect changed, a working `upgrade`, output-note sealing, shifted kernel offsets, `miden-standards` linked dynamically, renamed accessors, moved standards and core-library modules, `trace` is back |
+| [9. VM & Assembler Changes](./vm-assembler) | Package format `7.0.0` and `miden-core` 0.35 manifests, `Verifier` and `VerificationOutcome`, `Prover` and the precompile memory budget, `FastProcessor`, advice budget and `AdviceInputs` |
 | [10. Rust Contract SDK & Compiler](./rust-sdk-compiler) | Rebuilding with `cargo-miden` 0.11, `Asset.id`, renamed `tx` accessors, silent auth and P2ID traps |
 
 ---
@@ -164,11 +166,13 @@ Complete these steps to verify your migration:
 - [ ] Bump every `@miden-sdk/*` package to `0.17.0` together
 - [ ] **Consume private notes on 0.16 before upgrading**: 0.16 account and note exports do not import into 0.17
 - [ ] **Back up browser-keystore secret keys on 0.16.3**: the 0.17 IndexedDB reset deletes them
-- [ ] **Delete and recreate your local SQLite store**, then re-sync (the IndexedDB store resets itself)
+- [ ] **Delete and recreate your local SQLite store** (with its `-wal` and `-shm` files), then re-sync. A 0.16.3 IndexedDB store resets itself; delete one created by a 0.17 release candidate
 - [ ] **Upgrade the client, node, remote prover and note transport service together**, and switch both the RPC and the note transport endpoint
 - [ ] Re-assemble every `.masp` package and rebuild every contract with `cargo-miden` 0.11; discard proofs and serialized requests from 0.16
 - [ ] Recreate the CLI's `.miden/packages`
 - [ ] Supply a `ProtocolConfig` wherever you build `TransactionInputs` or implement `DataStore`; in the Web SDK read the fee faucet with `client.feeFaucetId()`
+- [ ] Serve `StandardsLib` from any custom `MastForestStore` / `DataStore`
+- [ ] Relay private notes only after the creating transaction commits, with its inclusion proof
 - [ ] Pay fees in the native fee asset at rate 1/1
 - [ ] For multisig accounts, build `MultisigAuthArgs`, add the bound block with `block_numbers`, and execute at the tip rather than at a shared `ChainAnchor`
 - [ ] Drop the `serde` feature of `miden-core` and `bus-debugger` of `miden-processor`, serialize `Word` and Merkle types without serde, and replace `SmtForest` with `LargeSmtForest`

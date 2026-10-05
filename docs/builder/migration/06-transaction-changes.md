@@ -44,7 +44,7 @@ If you encounter errors, continue reading for detailed migration steps.
 
 ## Summary
 
-This page holds four groups of change. **Fees:** the fee asset moved from the block header into `ProtocolConfig` (compile errors wherever you assemble transaction inputs), fees must be paid in the native fee asset at 1/1, and several fee features from the 0.16.x releases are absent (neither shows up as a Rust compile error). **Multisig:** the auth args became a mandatory three-word `MultisigAuthArgs` preimage, and signing binds a caller-chosen block so every party executes at its own tip. Nothing about this fails to compile, which makes it the easiest change in the release to miss. **Building, proving and verifying transactions:** `TransactionSummary`, the script constructors, the prover, the verifier, the note consumption checker, the pricer, the program executor and `miden-testing` changed shape, mostly with compile errors; the exceptions are deferred precompile claims and the 20-block expiration cap, which change behaviour silently. **Node operators and block producers** get a compact section of their own at the end.
+This page holds four groups of change. **Fees:** the fee asset moved from the block header into `ProtocolConfig` (compile errors wherever you assemble transaction inputs), fees must be paid in the native fee asset at 1/1, and several fee features from the 0.16.x releases are absent (neither shows up as a Rust compile error). **Multisig:** the auth args became a mandatory three-word `MultisigAuthArgs` preimage, and signing binds a caller-chosen block so every party executes at its own tip. Nothing about this fails to compile, which makes it the easiest change in the release to miss. **Building, proving and verifying transactions:** `TransactionSummary`, the script constructors and the script byte format, the prover, the verifier, the note consumption checker, the pricer, the program executor, the transaction hosts and `miden-testing` changed shape, mostly with compile errors; the exceptions are deferred precompile claims and the 20-block expiration cap, which change behaviour silently, and a custom `DataStore` that does not serve the standards library, which now fails at execution. **Node operators and block producers** get a compact section of their own at the end.
 
 :::note Changelog heading
 The protocol CHANGELOG files several transaction changes on this page (the 20-block cap for policy-gated transfers, the foreign-procedure check, the `TransactionMeasurements` fix) under a heading `v0.16.0 (2026-08-06)`. None of them is in 0.16.1: they ship in 0.17.
@@ -393,7 +393,7 @@ The bound block arrives from the proposer. To check that it is a real block, com
 3. Sync each party to at least the bound block (`Math.max(...request.blockNumbers())` in the Web SDK) before preview or submit.
 4. Make sure every execution's partial blockchain tracks the bound block: `block_numbers([bound_block])` (Rust client), `withBlockNumbers([boundBlock])` (Web, hand-built requests), or a `DataStore` that includes it (`miden-tx`).
 5. If you used the transaction expiration delta to bound approvals, switch to the approval expiration delta.
-6. Re-serialize stored requests. `TransactionRequest` bytes now always carry the block numbers first, so bytes from 0.16 do not deserialize. A dApp and its wallet exchanging a `CustomTransaction` through the wallet adapter must both be on 0.17.
+6. Re-serialize stored requests. `TransactionRequest` bytes now start with the block numbers and end with an optional account code upgrade, so bytes from 0.16, or from a 0.17.0 release candidate up to rc.4, do not deserialize. A dApp and its wallet exchanging a `CustomTransaction` through the wallet adapter must both be on 0.17.
 7. Signing flows that reconstruct the summary (co-signers, guardians) must use the same bound block, salt, approval expiration and conversion info the proposer used.
 8. If you precompute the TX_FEE note of a multisig transaction, pass the bound block to `TxFeeNote::derive_serial_number(sender, initial_nonce, serial_number_block)` (the parameter was `ref_block_num`).
 
@@ -575,6 +575,8 @@ builder.withOwnOutputNotes(notes).withForeignAccounts(targets).build();
 
 Both script types now wrap a shared `MastForestScript`. `from_parts` returns a `Result` instead of panicking on a bad entrypoint. `from_package` accepts only **library** packages and finds the entrypoint by its `@note_script` / `@transaction_script` attribute. An executable package (one with a `begin .. end` program) is rejected with `MastForestScriptError::ExecutablePackage`; in 0.16 `TransactionScript::from_package` accepted executables. `miden_protocol::errors::TransactionScriptError` was removed. `CodeBuilder::compile_tx_script` and `compile_note_script` are unaffected: they already assemble a library.
 
+The byte format changed as well: both types serialize their MAST forest without node hashes, and a note script's `Vec<Felt>` encoding was replaced. See [Hashless serialization and the note script element encoding](#hashless-serialization-and-the-note-script-element-encoding).
+
 ### Affected Code
 
 ```rust
@@ -603,17 +605,43 @@ let tx_script: Result<_, MastForestScriptError> = TransactionScript::from_packag
 The changelog describes "moving `TransactionScript` into `transaction::script`". That module is private: `miden_protocol::transaction::TransactionScript` is still the public path. The changelog also does not mention that `TransactionScriptError` was deleted.
 :::
 
+### Hashless serialization and the note script element encoding
+
+`NoteScript`, `TransactionScript` and `AccountCode` now write their MAST forest in the hashless form and read it back with `UntrustedMastForest`, which recomputes the node hashes. Script roots, code commitments and note IDs do not change. A reader that parses the forest inside these bytes with the trusted `MastForest::read_from`, which is what 0.16 does, rejects them. `AccountCode` is covered in [Account Changes](./account-changes).
+
+When a transaction creates a note and the advice map holds its recipient, the host reads the note script from the advice map under the script root. `From<&NoteScript> for Vec<Felt>` and `TryFrom<&[Felt]> for NoteScript` (and their owned forms) are gone: `NoteScript::to_elements()` packs the script's full serialization at 7 bytes per element, and `NoteScript::try_from_elements` decodes it.
+
+```rust
+// Before (0.16): [entrypoint, len, 4 bytes per element]
+let elements = <Vec<Felt>>::from(&note_script);
+let decoded = NoteScript::try_from(elements.as_slice())?;
+tx_args.extend_advice_map([(Word::from(note_script.root()), elements)]);
+```
+
+```rust
+// After (0.17): the serialized script, 7 bytes per element
+let elements = note_script.to_elements();
+let decoded = NoteScript::try_from_elements(&elements)?;
+tx_args.extend_advice_map([(Word::from(note_script.root()), elements)]);
+```
+
 ### Migration Steps
 
 1. Add `?` (or handle the error) to every `NoteScript::from_parts` and `TransactionScript::from_parts` call.
 2. Replace `miden_protocol::errors::TransactionScriptError` with `miden_protocol::MastForestScriptError` (at the crate root, not under `errors`). Its variants are `EntrypointNotInForest`, `NoProcedureWithAttribute`, `MultipleProceduresWithAttribute`, `ProcedureNotFound`, `ProcedureMissingAttribute` and `ExecutablePackage`.
 3. Replace matches on `NoteError::NoteScriptNoProcedureWithAttribute`, `NoteScriptMultipleProceduresWithAttribute`, `NoteScriptProcedureNotFound` and `NoteScriptProcedureMissingAttribute` with `NoteError::MastForestScript(inner)`.
 4. If you ship transaction or note scripts as executable packages, rebuild them as library packages whose entry procedure carries `@transaction_script` / `@note_script`.
+5. Replace `Vec::<Felt>::from(&note_script)` with `note_script.to_elements()` and `NoteScript::try_from(elements)` with `NoteScript::try_from_elements(&elements)`. Where you only need the advice entries of an output note, let `TransactionArgs::add_output_note_recipient` or `NoteRecipient::to_advice_map_entries()` build them.
+6. In matches on `TransactionKernelError::MalformedNoteScript`, rename the `data` field to `script_elements`.
+7. Deserialize stored scripts and account code through their own types (`NoteScript::read_from_bytes`, `TransactionScript::read_from_bytes`, `AccountCode::read_from_bytes`). To read a bare hashless forest, use `UntrustedMastForest::read_from_bytes(&bytes)?.validate()?` (`miden_protocol::assembly::mast::UntrustedMastForest`). Every component that reads bytes written by 0.17 must itself run 0.17.
 
 ### Common Errors
 
 | Error Message | Cause | Solution |
 | --- | --- | --- |
+| `invalid value: HASHLESS flag is set; use UntrustedMastForest for untrusted input` | 0.17 `NoteScript`, `TransactionScript` or `AccountCode` bytes, or the forest inside them, read with the trusted `MastForest::read_from` (or by a 0.16 build) | Deserialize the 0.17 type itself, or use `UntrustedMastForest`; upgrade the reader to 0.17. |
+| ``note script elements `{script_elements:?}` extracted from the advice map by the event handler are not well formed`` | An advice-map entry built with the 0.16 note script encoding | Build it with `note_script.to_elements()`. |
+| `error[E0277]` on `Vec::<Felt>::from(&note_script)` or `NoteScript::try_from(elements)` | The conversions were removed | `to_elements()` / `try_from_elements()` |
 | `expected a library package, but the provided package is an executable` | `from_package` on an executable package | Build a library package with an attributed entry procedure. |
 | `error while creating note script: expected a library package, but the provided package is an executable` | Same, through `NoteScript::from_package` | Same. |
 | `package does not contain a procedure with '@transaction_script' attribute` | A library without the attribute | Add `@transaction_script` to the entry procedure. |
@@ -661,7 +689,8 @@ let prover = LocalTransactionProver::default();
 1. Replace `ProvingOptions::new(hash_fn)` with `Prover::new().with_hash_fn(hash_fn)`, and `ProvingOptions::default()` with `Prover::new()`.
 2. Import `Prover` from `miden_tx` (re-exported) or from `miden_prover`.
 3. If you execute with non-default `ExecutionOptions`, pass the same options through `with_execution_options`. In 0.16 proving always used `ExecutionOptions::default()`.
-4. If you call `TransactionProverHost::new` directly (rare), its third argument is now the map of authenticated block commitments (`tx_inputs.collect_block_commitments()`), not the reference block commitment.
+4. If you call `TransactionProverHost::new` directly (rare), its third argument is now the map of authenticated block commitments (`tx_inputs.collect_block_commitments()`), not the reference block commitment, and it returns `Result<Self, TransactionKernelError>` instead of `Self`.
+5. If you match exhaustively on `TransactionProverError` or `TransactionExecutorError`, handle the new `TransactionHostCreationFailed` variant. A new account whose partial storage lacks one of its storage maps now fails host creation with an error; 0.16 panicked with `storage map should be present in partial storage`.
 
 ### Common Errors
 
@@ -669,6 +698,7 @@ let prover = LocalTransactionProver::default();
 | --- | --- | --- |
 | `` error[E0432]: unresolved import `miden_tx::ProvingOptions` `` | Re-export removed | Use `miden_tx::Prover`. |
 | `` error[E0432]: unresolved import `miden_prover::ProvingOptions` `` | Removed from `miden-prover` | `Prover::new().with_hash_fn(..)` |
+| `failed to create transaction host` (source: `partial storage of a new account is missing the storage map of slot {0}`) | The `PartialAccount` of a new account omits a storage map | Return the new account's full storage, maps included, from your `DataStore`. |
 
 ---
 
@@ -843,7 +873,7 @@ fn execute<H: Host + Send>(self, program: &Program, host: &mut H)
 
 1. Return `Result<Self, AdviceError>` from `new`. For a `FastProcessor` wrapper, forward `FastProcessor::new_with_options`, which already returns that.
 2. Replace `execute_with_package_debug_info` with `with_debug_info` + `with_entrypoint_source_node`, store the values, and use them in `execute`.
-3. If you construct `TransactionExecutorHost` directly, its `ref_block_commitment: Word` parameter became `block_commitments: BTreeMap<BlockNumber, Word>`: pass a map of every authenticated block number to its commitment.
+3. If you construct `TransactionExecutorHost` directly, its `ref_block_commitment: Word` parameter became `block_commitments: BTreeMap<BlockNumber, Word>`: pass a map of every authenticated block number to its commitment. `new` now returns `Result<Self, TransactionKernelError>` instead of `Self`; it fails for a new account whose partial storage lacks one of its storage maps.
 
 ---
 
@@ -1078,6 +1108,8 @@ The changelog lists validating constructors for `BatchAccountUpdate`, `ProvenBat
 - **`TransactionMeasurements::note_execution` reports real note IDs.** In 0.16 the `NoteId` in each `(NoteId, usize)` pair was actually the note's details commitment. Lookups by `note.id()` now match, and workarounds keyed by the details commitment stop matching.
 - **EIP-712 approvals for multisig (additive).** An ECDSA approver of the multisig components may also sign `MidenTransaction(bytes32 txSummaryHash)` under the EIP-712 domain `{ name: "Miden Transaction", version: "1" }`, with no `chainId` and no `verifyingContract` (helpers `Eip712TransactionSummary` and `Eip712Digest`). Raw signatures over the summary commitment are unchanged, but the multisig components' code commitments change.
 - **`expiration_delta` now applies to consume-only and bare client requests**, so such requests can now expire. See [Client Changes](./client-changes).
+- **`TransactionArgs` can carry an account code upgrade.** `TransactionArgs::default().with_tx_script(script).with_account_code_upgrade(AccountCodeUpgrade::new(new_code))` supplies the new code for a transaction that upgrades the native account's code: the executor puts it in the advice map, and the host loads it when the kernel emits the new `TransactionEventId::AccountBeforeCodeUpgrade` event. `TransactionEventId` is not `#[non_exhaustive]`, so an exhaustive `match` needs an arm for it. `TransactionArgs::from_parts`, which 0.16 did not have, takes six arguments, the last an `Option<AccountCodeUpgrade>` (release candidates before rc.8 took five). `TransactionArgs` bytes gained that field too. Code upgrades themselves are covered in [Account Changes](./account-changes).
+- **A custom `DataStore` must serve the standards library.** The standard account components now link `miden-standards` dynamically (and the AggLayer components link `miden-agglayer` dynamically), so the library procedures they call are no longer inside the account's code. During execution the host looks such a procedure up in your `DataStore`, through its `MastForestStore::get`. `TransactionMastStore::new()` already holds `StandardsLib` and `agglayer_package()`, so a store that delegates `get` to one (and loads account code into it with `load_account_code`) needs no change. A store that resolves procedures some other way must also serve the procedures of `StandardsLib::default()` and, for AggLayer accounts, `miden_agglayer::agglayer_package()`. Otherwise execution fails with `procedure with root digest {root_digest} could not be found`, the same error a store built from another protocol release produces.
 - **Proofs, proven transactions, block headers and transaction inputs serialized by 0.16 do not load** (`invalid value: unsupported execution proof format {format}` for proofs). See [Imports & Dependencies](./imports-dependencies).
 
 ---
@@ -1098,5 +1130,7 @@ The changelog lists validating constructors for `BatchAccountUpdate`, `ProvenBat
 | `error[E0061]: this function takes 7 arguments but 6 arguments were supplied` | `TransactionSummary::new` gained the bound block number | Pass it. |
 | Transaction dropped as expired shortly after submit | It emitted a network note or moved a policy-gated asset (20-block cap) | Submit promptly; sync and retry. |
 | `expected a library package, but the provided package is an executable` | `from_package` on an executable package | Build a library package. |
+| `invalid value: HASHLESS flag is set; use UntrustedMastForest for untrusted input` | 0.17 script or account code bytes read with the trusted `MastForest::read_from` or by a 0.16 build | Deserialize the 0.17 type itself, or use `UntrustedMastForest`. |
+| `procedure with root digest {root_digest} could not be found` | A custom `DataStore` does not serve `StandardsLib` (or `agglayer_package()`), which the standard components now link dynamically | Delegate to `TransactionMastStore::new()` or serve those libraries. |
 | `` error[E0432]: unresolved import `miden_tx::ProvingOptions` `` | Replaced by `Prover` | `Prover::new().with_hash_fn(..)` |
 | `error[E0308]: mismatched types` (expected `Result<(), _>`, found `Result<VerificationOutcome, _>`) | `verify` returns an outcome | Map it; check `is_complete()`. |
