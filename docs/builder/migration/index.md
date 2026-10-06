@@ -1,12 +1,12 @@
 ---
-title: "v0.16 Migration Guide"
-description: "Complete guide for upgrading from Miden v0.15 to v0.16"
+title: "v0.17 Migration Guide"
+description: "Complete guide for upgrading from Miden v0.16 to v0.17"
 pagination_prev: null
 ---
 
-# Miden Testnet 0.16.0
+# Miden 0.17.0
 
-This guide covers all breaking changes you need to migrate an application to Miden 0.16.0. Like the 0.15 guide, it is intentionally user-facing: you do not need to know or care which internal crate (VM, protocol, client) a change came from. If you are:
+This guide covers all breaking changes you need to migrate an application to Miden 0.17.0. Like the 0.16 guide, it is intentionally user-facing: you do not need to know or care which internal crate (VM, protocol, client) a change came from. If you are:
 
 - building accounts, notes, or transactions
 - running a client, web client or React SDK
@@ -14,48 +14,51 @@ This guide covers all breaking changes you need to migrate an application to Mid
 - writing Rust smart contracts with the `miden` SDK
 - interacting with storage, auth, or RPCs
 
-this document is for you. It folds together the breaking changes from the protocol crates (`0.15.3` → `0.16.0`), the VM crates (`miden-vm`, `0.23` → `0.29.2`), `miden-client` (`0.15` → `0.16.0`), the Web SDK (`@miden-sdk/*` `0.15` → `0.16.0`), and the `miden` Rust contract SDK / compiler (`0.13` → `0.14`).
+this document is for you. It folds together the breaking changes from the protocol crates (`0.16.1` → `0.17.0`), the VM crates (`miden-vm` and `miden-crypto`, `0.29.2` → `0.35.0`), `miden-client` (`0.16.1` → `0.17.0`), the Web SDK (`@miden-sdk/*` `0.16.3` → `0.17.0`), and the `miden` Rust contract SDK / compiler (`0.14` → `0.15.0`, `midenc` `0.10` → `0.11.0`).
 
 ---
 
 ## Quick Upgrade
 
-Try upgrading first — most projects can start with a dependency update:
+Try upgrading first. Most projects can start with a dependency update:
 
 ```toml title="Cargo.toml"
 # Replace these
-miden-client              = "0.15"
-miden-client-sqlite-store = "0.15"
-miden-protocol            = "0.15.3"
-miden-standards           = "0.15.3"
-miden-tx                  = "0.15.3"
-miden-tx-batch-prover     = "0.15.3"
-miden-assembly            = "0.23"
-miden-core                = "0.23"
-miden-core-lib            = "0.23"
-miden-processor           = "0.23"
-miden-prover              = "0.23"
-miden-crypto              = "0.25"
-
-# With these
 miden-client              = "0.16.1"
 miden-client-sqlite-store = "0.16.1"
 miden-protocol            = "0.16.1"
 miden-standards           = "0.16.1"
 miden-tx                  = "0.16.1"
-miden-tx-batch            = "0.16.1"   # renamed from miden-tx-batch-prover
+miden-tx-batch            = "0.16.1"
 miden-assembly            = "0.29.2"
 miden-core                = "0.29.2"
 miden-core-lib            = "0.29.2"
 miden-processor           = "0.29.2"
 miden-prover              = "0.29.2"
+miden-verifier            = "0.29.2"
 miden-crypto              = "0.29.2"
+
+# With these
+miden-client              = "0.17.0"
+miden-client-sqlite-store = "0.17.0"
+miden-protocol            = "0.17.0"
+miden-standards           = "0.17.0"
+miden-tx                  = "0.17.0"
+miden-tx-batch            = "0.17.0"
+miden-objects             = "0.17.0"   # new: AccountFile / NoteFile and the Protobuf encodings
+miden-assembly            = "0.35.0"
+miden-core                = "0.35.0"
+miden-core-lib            = "0.35.0"
+miden-processor           = "0.35.0"
+miden-prover              = "0.35.0"
+miden-verifier            = "0.35.0"
+miden-crypto              = "0.35.0"
 ```
 
 ```json title="package.json (Web SDK)"
 {
-  "@miden-sdk/miden-sdk": "0.16.1",
-  "@miden-sdk/react": "0.16.0"
+  "@miden-sdk/miden-sdk": "0.17.0",
+  "@miden-sdk/react": "0.17.0"
 }
 ```
 
@@ -63,51 +66,57 @@ Then run:
 
 ```bash
 cargo update && cargo build
+npm install @miden-sdk/miden-sdk@0.17.0 @miden-sdk/react@0.17.0
 ```
 
 If you encounter errors, continue reading for detailed migration steps.
 
-:::warning 0.15 artifacts do not round-trip
-The MAST wire format moved `0.0.3` → `0.0.4`, the package format `4.0.0` → `6.0.0`, and the `.masl` library format was removed entirely. Several commitment preimages changed as well. **Re-assemble every package from source and re-sync into a fresh store.**
+:::danger 0.16 artifacts, stores and exports do not carry over
+Packages move to format `7.0.0`, 0.16 proofs do not decode, and account and note files are now Protobuf, so **files exported by 0.16 do not import into 0.17**. A 0.16 SQLite store is rejected at open with `store is at schema version 2, which is newer than the highest version this client supports (1)`. The IndexedDB store deletes its whole database on first open, and **the default browser keystore keeps its secret keys in that database**, so back the keys up on 0.16.3 first (see [Client Changes](./client-changes#store-every-016-sqlite-store-must-be-recreated)). Consume private notes before you upgrade, re-assemble every package, and re-sync into a fresh store. Stores created by a 0.17 release candidate fail too: a SQLite one at open, an IndexedDB one is kept and then fails, so delete it. See [0.16 artifacts do not carry over](./imports-dependencies#016-artifacts-do-not-carry-over).
 :::
 
-:::danger Your local store must be recreated, and your node must be upgraded with your client
-Every pre-0.16 SQLite store is rejected — there is no migration path. Browser applications reset their IndexedDB store automatically. Separately, 0.16 clients seal (encrypt) transaction inputs before submission, so a 0.16 client cannot talk to an older node and vice versa.
+:::warning Upgrade the client, node, remote prover and note transport together
+A `0.17.0` client is accepted only by a 0.17 node. A 0.16 node rejects it at the version check. The remote prover wire format and the note transport service changed as well: point the note transport endpoint at a 0.17 service together with the RPC endpoint, or private notes silently stop arriving while `sync` keeps succeeding. See [Client Changes](./client-changes#node-client-node-remote-prover-and-note-transport-must-all-be-017).
 :::
 
 ---
 
 :::info Who should read this?
 This guide is for:
-- **Rust client developers** migrating from v0.15 → v0.16
-- **Web SDK developers** using the JavaScript/TypeScript SDK
-- **Smart contract authors** writing MASM or using protocol APIs
+- **Rust client developers** migrating from v0.16 → v0.17
+- **Web SDK developers** using the JavaScript/TypeScript SDK or the React hooks
+- **Smart contract authors** writing MASM or Rust contracts, or using protocol APIs
 - **App developers** using the protocol, standards, or client crates
 
-If you're starting fresh on v0.16, you can skip this guide and go directly to the [Get Started guide](../get-started).
+If you're starting fresh on v0.17, you can skip this guide and go directly to the [Get Started guide](../get-started).
 :::
 
 ---
 
 ## At a Glance
 
-Big themes in 0.16:
+Big themes in 0.17:
 
 | Change | Summary |
 |--------|---------|
-| **Fees moved into the auth procedure** | The kernel no longer burns the fee automatically. The auth procedure reads `FeeConversionInfo` from the transaction's auth args and emits a `TX_FEE` note. On a fee-charging chain, requests signed by `AuthSingleSig`/`AuthMultisig` must call `TransactionRequestBuilder::fee_conversion_info(info, salt)`. |
-| **MASM gained an explicit module tree** | A `.masm` file is only included if its parent declares it with `mod`/`pub mod` — an undeclared file is *silently dropped*. `use` split into module imports and braced item imports, aliases moved from `->` to `as`, and imports resolve globally. |
-| **Account updates became absolute** | `AccountDelta` → **`AccountPatch`** for account updates (`ExecutedTransaction`, `AccountUpdateDetails`, client results). `TransactionSummary::account_delta()` deliberately stays relative. |
-| **Signed summaries bind their reference block** | A summary now only authorizes an execution at the block it was derived at, so multisig and offline co-signing flows break silently — every party derives a different summary at its own sync height. Capture a **`ChainAnchor`** and have all of them execute against it. Nothing fails to compile. |
-| **Auth is no longer a special builder slot** | `AccountBuilder::with_auth_component` is gone; auth components pass through `with_component(s)` and are found by their `@auth_script` attribute. Keys are wrapped in a new **`Approver`** / `ApproverSet`. `AuthMethod` and `AuthSingleSigAcl` are removed. |
-| **Asset identity renamed one level down** | `AssetVaultKey` → **`AssetId`**, and the old `AssetId` → **`AssetClass`**. Because `AssetId` survives with a new meaning, careless renaming compiles and is wrong. |
-| **`Library` is gone; `Package` is the only artifact** | `Library`/`KernelLibrary` were deleted, `link_*_library` collapsed into `link_package`, `*_from_dir` became `*_from_root`, and `.masl` no longer exists. MAST `0.0.4` / package `6.0.0` are not backward compatible. |
-| **Notes use typed builders, and carry fewer assets** | `XNote::create(..)` → `XNote::builder()…build()?` + `.into()`. **`MAX_ASSETS_PER_NOTE` dropped 64 → 16.** Mint and burn scripts were unified across faucet kinds, changing their roots. |
-| **Debug decorators removed** | `debug.*` and `trace` are gone from the language, replaced by `miden::core::debug` procedures — which, unlike the decorators, **print unconditionally**. The client and CLI debug-mode toggles were removed with them. |
-| **Commitment preimages changed** | ECDSA public-key commitments, MMR peak commitments, and domain-separated empty-input hashes all changed value. Nothing fails to compile; stored values simply stop matching. |
-| **Store and node compatibility both break** | Every pre-0.16 SQLite store must be recreated, and transaction inputs are now sealed, so client and node must be upgraded together. |
+| **The fee asset moved into `ProtocolConfig`** | The block header no longer names the fee faucet. It commits to a `ProtocolConfig` that every `DataStore` and `TransactionInputs::new` call must supply, and that clients obtain through sync. Fees are paid only in the native fee asset at rate 1/1. The Web SDK reads it with `client.feeFaucetId()`. |
+| **Multisig binds a caller-chosen block** | Multisig accounts need a `MultisigAuthArgs` preimage on every chain, fee-free ones included, and every party executes at its own tip with the bound block included via `block_numbers`. The 0.16 `ChainAnchor` pattern for multisig no longer applies. 0.16 multisig code compiles and then fails at run time. |
+| **Versions everywhere, so values change silently** | Accounts, asset IDs, note metadata and transaction summaries carry versions, and account procedures are sorted. Account commitments and IDs, asset IDs, note IDs, P2ID recipients and every standard note script root change without a compile error. |
+| **`Asset` is a struct** | `Asset` holds an `AssetId` and an `AssetValue` instead of being an enum, and `AccountVaultDelta` tracks whole assets. `match Asset::Fungible(..)` no longer compiles in Rust, and `fungible()` / `FungibleAssetDelta` are gone from both the Rust crates and the Web SDK. |
+| **P2ID storage has four items** | P2ID gained two salt elements. A P2ID recipient still built by hand with two items produces a note nobody can consume, and P2ID has no reclaim path. |
+| **MASM calls can change meaning without failing** | Several procedures kept their names but changed their stack effect, and the assembler does not check call sites against signatures. `tx::get_block_commitment` now takes a block number, and an old `guardian::verify_signature` call silently skips the guardian check. |
+| **Verification can return `Ok` with work outstanding** | The free `verify` is gone. `Verifier::new().verify(&claim, &proof)` returns a `VerificationOutcome`, and transaction proofs defer their precompile claims, so check `is_complete()`. `ProvingOptions` became a `Prover`. |
+| **Account and note files moved to `miden-objects`** | `AccountFile` and `NoteFile` live in the new `miden-objects` crate and are Protobuf-encoded. 0.16 `.mac` / `.mno` files and Web export bytes do not load. |
+| **Network accounts and network notes are stricter** | `AuthNetworkAccount::new` installs `BasicWallet` and allowlists P2ID, a network account cannot be deployed by an empty transaction and must use the chain's fee asset, and emitting a network note caps the transaction's expiration at 20 blocks. |
+| **Accounts can upgrade their code** | `native_account::upgrade` now replaces the account's code (in 0.16 it was a no-op), validated like a new account's and switched after the auth procedure. Install `UpgradeManager`; network accounts are upgraded with an `UpgradeNote`. |
+| **Standard components link `miden-standards` dynamically** | The standard singlesig, multisig and network-account auth roots change, so those accounts get new code commitments and IDs. A custom `MastForestStore` / `DataStore` must also serve `StandardsLib`. |
+| **Code and scripts serialize without node hashes** | `AccountCode`, `NoteScript` and `TransactionScript` write the hashless MAST format and rebuild the hashes on read. Roots and commitments do not change; stored bytes and note-script felt encodings do. |
+| **Private notes are relayed with an inclusion proof** | The note transport accepts a private note only together with its inclusion proof, so relay it after the creating transaction commits and the client syncs. |
+| **Old stores fail at open** | SQLite stores from 0.16 and from any 0.17 release candidate are rejected with `store is at schema version N, which is newer than ...`, although they are older. A 0.16.3 IndexedDB store is reset; one from a 0.17 release candidate is kept and then fails. |
+| **VM and `miden-crypto` jump to 0.35** | Six minor releases (`0.29.2` → `0.35.0`): package format `7.0.0`, core library `0.35` (re-assemble every package that links it dynamically), and Plonky3 0.8. |
+| **0.16.x fee helpers are replaced** | `fee::estimate_fee`, `fee::assert_fee_bound` and `multisig::pay_bounded_fee` give way to native 1/1 fee payment inside `fee::pay_fee`. The Web SDK also drops the 0.16.1 prefetched foreign accounts; the Rust client keeps `ForeignAccount::Prefetched`. |
 
-If you only skim a few sections, skim **Transaction Changes**, **Account Changes**, **MASM Changes**, and **Client Changes**.
+If you only skim a few sections, skim **Transaction Changes**, **Client Changes**, **MASM Changes**, and **Note Changes**.
 
 ---
 
@@ -115,25 +124,18 @@ If you only skim a few sections, skim **Transaction Changes**, **Account Changes
 
 | Component | Required | Tested With |
 |-----------|----------|-------------|
-| Miden VM crates | 0.29+ | 0.29.2 |
-| miden-crypto | 0.29+ | 0.29.2 |
-| miden-protocol | 0.16+ | 0.16.1 |
-| miden-standards | 0.16+ | 0.16.1 |
-| miden-client | 0.16+ | 0.16.1 |
-| Web SDK (`@miden-sdk/*`) | 0.16+ | 0.16.0 |
-| `miden` contract SDK | 0.14+ | 0.14.0 |
-| `midenc` compiler | 0.10+ | 0.10.1 |
+| Miden VM crates | 0.35 | 0.35.0 |
+| miden-crypto | 0.35 | 0.35.0 |
+| miden-protocol | 0.17.0 | 0.17.0 |
+| miden-standards | 0.17.0 | 0.17.0 |
+| miden-client | 0.17.0 | 0.17.0 |
+| Web SDK (`@miden-sdk/*`) | 0.17.0 | 0.17.0 |
+| Node | 0.17.0 | 0.17.0 |
+| `miden` contract SDK | 0.15.0 | 0.15.0 |
+| `midenc` / `cargo-miden` | 0.11.0 | 0.11.0 |
 | Rust (client / protocol) | 1.98.1+ | 1.98.1 |
-| Rust (VM) | 1.96.1+ | 1.96.1 |
-| Rust (contract SDK / compiler) | 1.99+ | 1.99 |
-
-:::note Use the stable v0.16 releases
-The protocol and client crates are now published as stable v0.16 releases. The examples above pin the patch versions used to validate this snapshot.
-:::
-
-:::note The contract toolchain lags the rest of the line
-Compiler v0.10.1 and the `miden` contract SDK still pin protocol `0.16.0-rc.4`, while the client and node use stable protocol v0.16.1. They use the same VM 0.29 line, but the compiler sees an earlier protocol API snapshot. Its MSRV is also higher, at 1.99.
-:::
+| Rust (VM) | 1.96.1+ | 1.98.1 |
+| Rust (contract SDK / compiler) | 1.99+ | `nightly-2026-09-01` |
 
 ---
 
@@ -143,16 +145,16 @@ Work through these sections in order for a complete migration:
 
 | Section | Topics |
 |---------|--------|
-| [1. Imports & Dependencies](./imports-dependencies) | Crate bumps, VM 0.23 → 0.29.2, MSRV 1.98.1, artifacts that must be rebuilt |
-| [2. Hashing & Crypto Changes](./hashing-crypto) | ECDSA public-key commitments, MMR peaks binding the leaf count, empty domain-separated hashing |
-| [3. Account Changes](./account-changes) | `with_auth_component` removed, `Approver`/`ApproverSet`, component name changes, `AccountPatch` |
-| [4. Note Changes](./note-changes) | Typed note builders, `MAX_ASSETS_PER_NOTE` 64 → 16, unified mint/burn scripts |
-| [5. Assets, Vault & Faucet](./asset-vault-faucet) | `AssetVaultKey` → `AssetId`, old `AssetId` → `AssetClass`, split faucet factories |
-| [6. Transaction Changes](./transaction-changes) | Fees paid by the auth procedure, sealed transaction inputs, `TransactionSummary`, `ChainAnchor` |
-| [7. Client Changes](./client-changes) | Store recreation, node compatibility, chain-anchored execution, Rust/Web/React/CLI changes |
-| [8. MASM Changes](./masm-changes) | `mod` declarations, new import syntax, debug decorators removed, protocol procedure moves |
-| [9. VM & Assembler Changes](./vm-assembler) | `Library` → `Package`, MAST `0.0.4`, `ExecutionClaim`, `miden-project.toml` |
-| [10. Rust Contract SDK & Compiler](./rust-sdk-compiler) | `#[account_procedure]`, `#[account(..)]` generating traits, toolchain version skew |
+| [1. Imports & Dependencies](./imports-dependencies) | Crate bumps, VM 0.29 → 0.35, the new `miden-objects` and `miden-usdcx` crates, dynamic linking of `miden-standards`, artifacts and stores that do not carry over |
+| [2. Hashing & Crypto Changes](./hashing-crypto) | `serde` removed from `Word` and Merkle types, `SmtForest` → `LargeSmtForest`, `PartialSmt` bytes, stricter decoders, random-value helpers removed and Falcon RNGs needing `CryptoRng` |
+| [3. Account Changes](./account-changes) | Versioned accounts, sorted procedures, account code upgrades and `AccountCodePatch`, network accounts, `from_package` by value, `StorageMap`, RBAC and `ApproverSet` |
+| [4. Note Changes](./note-changes) | P2ID with four storage items, new standard script roots and costs, `UpgradeNote`, sealed PSWAP outputs, config notes |
+| [5. Assets, Vault & Faucet](./asset-vault-faucet) | `Asset` as a struct, `AccountVaultDelta` with whole assets, versioned asset IDs, new standard faucet IDs, callbacks and mint policies |
+| [6. Transaction Changes](./transaction-changes) | `ProtocolConfig`, `MultisigAuthArgs` and executing at the tip, native-asset fees, 20-block network-note cap, hashless `NoteScript` / `TransactionScript` bytes, `VerificationOutcome` |
+| [7. Client Changes](./client-changes) | Stores rejected at open, client and node pairing, private notes relayed with an inclusion proof, fee faucet from sync, Rust/Web/React/CLI changes |
+| [8. MASM Changes](./masm-changes) | Procedures whose stack effect changed, a working `upgrade`, output-note sealing, shifted kernel offsets, `miden-standards` linked dynamically, renamed accessors, moved standards and core-library modules, `trace` is back |
+| [9. VM & Assembler Changes](./vm-assembler) | Package format `7.0.0` and `miden-core` 0.35 manifests, `Verifier` and `VerificationOutcome`, `Prover` and the precompile memory budget, `FastProcessor`, advice budget and `AdviceInputs` |
+| [10. Rust Contract SDK & Compiler](./rust-sdk-compiler) | Rebuilding with `cargo-miden` 0.11, `Asset.id`, renamed `tx` accessors, silent auth and P2ID traps |
 
 ---
 
@@ -160,40 +162,45 @@ Work through these sections in order for a complete migration:
 
 Complete these steps to verify your migration:
 
-- [ ] Bump all Miden crate versions per section 1 and rename `miden-tx-batch-prover` to `miden-tx-batch`
-- [ ] Bump `@miden-sdk/miden-sdk` and `@miden-sdk/react` together; drop any `miden-idxdb-store` dependency
-- [ ] Update the toolchain to Rust 1.98.1 (1.99 if you also build Rust contracts)
-- [ ] Re-assemble every `.masp` from source and delete cached `MastForest` blobs; `.masl` no longer exists
-- [ ] **Delete and recreate your local store**, then re-sync — export private note files first
-- [ ] **Upgrade your node together with your client** — sealed and plaintext submissions are mutually incompatible
-- [ ] Add `mod` / `pub mod` declarations so every `.masm` file is reachable from your project root
-- [ ] Rewrite `pub use a::b::c` as `pub use {c} from a::b`, and `use x->y` as `use x as y`
-- [ ] Replace `debug.*` / `trace` decorators with `miden::core::debug` procedures, and strip them from production code
-- [ ] Declare fee conversion info on transactions if your chain charges a fee, and fund the paying account with the fee asset
-- [ ] Move auth components out of `with_auth_component` and wrap keys in `Approver` / `ApproverSet`
-- [ ] Rename `AssetId` → `AssetClass` **first**, then `AssetVaultKey` → `AssetId`
-- [ ] Replace `account_delta()` with `account_patch()` — but leave `TransactionSummary::account_delta()` alone
-- [ ] If you collect signatures over a summary across clients, capture a `ChainAnchor` and derive, verify, and execute the transaction against it
-- [ ] Rewrite `XNote::create(..)` calls as builders, and cap notes at 16 assets
-- [ ] Recompute stored ECDSA public-key commitments, MMR peak commitments, and empty domain-separated hashes
-- [ ] Replace `Library`/`KernelLibrary` with `Package`, and `link_*_library` with `link_package`
-- [ ] Add an explicit `path` to every `[lib]` and `[[bin]]` in `miden-project.toml`
-- [ ] Build an `ExecutionClaim` and call `verify(proof, claim)`; discard proofs serialized under 0.15
-- [ ] CLI: rename `send` to `transfer`, `--with-code` to `--inspect`, and `id` to `address` in `token_symbol_map.toml`
-- [ ] CLI: re-check every `call` invocation — arguments are now counted in field elements
-- [ ] *(If you write Rust contracts)* mark component trait methods with `#[account_procedure]` and import the traits generated by `#[account(..)]`
-- [ ] Run `cargo build` — **no errors**
-- [ ] Run `cargo test` — **all tests pass**
+- [ ] Bump all Miden crates per section 1
+- [ ] Bump every `@miden-sdk/*` package to `0.17.0` together
+- [ ] **Consume private notes on 0.16 before upgrading**: 0.16 account and note exports do not import into 0.17
+- [ ] **Back up browser-keystore secret keys on 0.16.3**: the 0.17 IndexedDB reset deletes them
+- [ ] **Delete and recreate your local SQLite store** (with its `-wal` and `-shm` files), then re-sync. A 0.16.3 IndexedDB store resets itself; delete one created by a 0.17 release candidate
+- [ ] **Upgrade the client, node, remote prover and note transport service together**, and switch both the RPC and the note transport endpoint
+- [ ] Re-assemble every `.masp` package and rebuild every contract with `cargo-miden` 0.11; discard proofs and serialized requests from 0.16
+- [ ] Recreate the CLI's `.miden/packages`
+- [ ] Supply a `ProtocolConfig` wherever you build `TransactionInputs` or implement `DataStore`; in the Web SDK read the fee faucet with `client.feeFaucetId()`
+- [ ] Serve `StandardsLib` from any custom `MastForestStore` / `DataStore`
+- [ ] Check every call to `native_account::upgrade` (it now really upgrades the code), and move delta and patch code to `AccountCodePatch` / `try_to_new_account()`
+- [ ] Add match arms for `StandardNote::UPGRADE` and `TransactionEventId::AccountBeforeCodeUpgrade`, and switch note-script felt encoding to `NoteScript::to_elements()`
+- [ ] Do not modify PSWAP outputs after the script seals them
+- [ ] Relay private notes only after the creating transaction commits, with its inclusion proof
+- [ ] Pay fees in the native fee asset at rate 1/1
+- [ ] For multisig accounts, build `MultisigAuthArgs`, add the bound block with `block_numbers`, and execute at the tip rather than at a shared `ChainAnchor`
+- [ ] Drop the `serde` feature of `miden-core` and `bus-debugger` of `miden-processor`, serialize `Word` and Merkle types without serde, and replace `SmtForest` with `LargeSmtForest`
+- [ ] Replace `match` arms on `Asset::Fungible` / `Asset::NonFungible` and uses of `FungibleAssetDelta` / `fungible()`
+- [ ] Recompute every hard-coded account ID, code commitment, asset ID, note ID, P2ID recipient and standard note script root
+- [ ] Build P2ID recipients with four storage items, or through the standard builders
+- [ ] Deploy network accounts with a transaction that has an effect, using the chain's fee asset
+- [ ] Re-check every MASM call to a procedure whose stack effect changed, starting with `tx::get_block_commitment` and `guardian::verify_signature`
+- [ ] Rename `tx::get_fee_faucet_id` → `tx::get_fee_asset_id`, `active_account::compute_commitment` → `native_account::compute_commitment`, and `miden::precompiles::*` → `miden::core::precompiles::*`
+- [ ] Verify proofs with `Verifier::new().verify(&claim, &proof)` and check `is_complete()`
+- [ ] Replace `ProvingOptions` with a `Prover`, and free `execute` calls with `FastProcessor`
+- [ ] Move `AccountFile` / `NoteFile` imports to `miden-objects`
+- [ ] *(If you write Rust contracts)* rename `Asset.key` → `Asset.id`, and hash the versioned transaction summary in custom auth components
+- [ ] Run `cargo build` - **no errors**
+- [ ] Run `cargo test` - **all tests pass**
 
 :::tip You're done!
-If your project builds and all tests pass, you've successfully migrated to v0.16.
+If your project builds and all tests pass, you've successfully migrated to v0.17.
 :::
 
 ---
 
 ## Need Help?
 
-- **Telegram:** [Build on Miden](https://t.me/BuildOnMiden) — technical discussion and support.
-- **Forum:** [Miden discussions](https://github.com/0xMiden/miden-node/discussions) — longer-form questions and design discussion.
-- **GitHub issues:** file against the relevant repo — [`rust-sdk`](https://github.com/0xMiden/rust-sdk/issues), [`web-sdk`](https://github.com/0xMiden/web-sdk/issues), [`protocol`](https://github.com/0xMiden/protocol/issues), [`miden-vm`](https://github.com/0xMiden/miden-vm/issues), or [`compiler`](https://github.com/0xMiden/compiler/issues).
+- **Telegram:** [Build on Miden](https://t.me/BuildOnMiden) for technical discussion and support.
+- **Forum:** [Miden discussions](https://github.com/0xMiden/miden-node/discussions) for longer-form questions and design discussion.
+- **GitHub issues:** file against the relevant repo: [`rust-sdk`](https://github.com/0xMiden/rust-sdk/issues), [`web-sdk`](https://github.com/0xMiden/web-sdk/issues), [`protocol`](https://github.com/0xMiden/protocol/issues), [`miden-vm`](https://github.com/0xMiden/miden-vm/issues), or [`compiler`](https://github.com/0xMiden/compiler/issues).
 - **Changelogs:** the per-repo `CHANGELOG.md` files carry the full list of changes, including non-breaking features and fixes omitted from this guide.
