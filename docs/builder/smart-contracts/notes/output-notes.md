@@ -31,7 +31,23 @@ output_note::add_asset(asset, note_idx);
 
 `add_asset` only adds the asset to the output note; it does not remove it from the native account's vault. When funding a note from that vault, remove the asset first or use `BasicWallet::move_asset_to_note`.
 
-Call `add_asset` multiple times with the same `note_idx` to attach several assets to one note. A note can carry both fungible and non-fungible assets.
+Call `add_asset` multiple times with the same `note_idx` to attach several assets to one note, before it is sealed. A note can carry both fungible and non-fungible assets.
+
+## Seal a completed note
+
+Protocol v0.17 provides the MASM procedures `miden::protocol::output_note::seal` and `is_sealed`. Sealing freezes a note's assets and attachments so later code in the transaction cannot change its final note ID. Call it after adding everything the note needs. Sealing is idempotent and requires the native account context.
+
+```masm
+use miden::protocol::output_note
+
+# Inside a procedure, with the completed note's index on top of the stack:
+# [note_index, ...] -> [...]
+exec.output_note::seal
+```
+
+`output_note::is_sealed` takes `[note_index]` and returns `[is_sealed]`. After sealing, attempts to add assets or attachments fail with `sealed output notes cannot be modified`.
+
+Standard PSWAP scripts seal their payback and remainder notes. Put additional assets or attachments in a separate output note rather than modifying those outputs after the fill. A multisig account procedure with a threshold below the default should also seal its completed outputs, so the smaller group of approvers cannot alter them later in a transaction script.
 
 ## Query output note state
 

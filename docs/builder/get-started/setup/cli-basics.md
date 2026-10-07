@@ -34,6 +34,14 @@ You can unset it with `miden client account --default none`.
 
 The first command synchronizes the client with the latest network state. The second creates a basic wallet account with **private** storage locally. Its first successful transaction publishes the account onchain.
 
+On a network that requires invitations, register the account before its first transaction:
+
+```bash title=">_ Terminal"
+miden client account --register <ACCOUNT_ID> --invitation-code <CODE>
+```
+
+Use a valid, unused code from the network operator. Skip this step if the account is already allowed or the network does not require invitations.
+
 ### View Your Account
 
 List all your accounts:

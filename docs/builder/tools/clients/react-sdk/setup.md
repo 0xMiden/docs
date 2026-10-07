@@ -60,6 +60,7 @@ Every hook in the rest of this section assumes a `MidenProvider` is mounted some
 | --- | --- | --- |
 | `rpcUrl` | `"devnet" \| "testnet" \| "localhost" \| string` | Node RPC endpoint. Shorthands expand to hosted Miden endpoints; any other string is treated as a raw URL. |
 | `prover` | `"local" \| "devnet" \| "testnet" \| string \| ProverConfig` | Default prover. `"local"` runs in-browser. `ProverConfig` supports a `primary` + `fallback` pair if you want automatic fallback. |
+| `feeFaucetId` | `string` | Optional fee faucet ID before the first sync; subsequent reads use the synced protocol configuration. |
 | `autoSyncInterval` | `number` | Milliseconds between automatic sync pulls. `0` disables the loop (you can still call `sync()` manually). Default: 15000. |
 | `noteTransportUrl` | `string` | Full note transport service URL. Required for `sendPrivate` / `fetchPrivate`. |
 | `proverTimeoutMs` | `number` | Per-transaction prover timeout. |

@@ -9,7 +9,7 @@ sidebar_position: 6
 
 | Method | Produces | Used by |
 | --- | --- | --- |
-| `client.compile.component({ code, namespace?, slots?, supportAllTypes? })` | `AccountComponent` | [`accounts.create({ components: [...] })`](./accounts.md#contract) |
+| `client.compile.component({ code, namespace?, slots?, supportAllTypes?, libraries? })` | `AccountComponent` | [`accounts.create({ components: [...] })`](./accounts.md#contract) |
 | `client.compile.txScript({ code, libraries? })` | `TransactionScript` | [`transactions.execute({ script })`](./transactions.md#custom-transaction-scripts-execute) |
 | `client.compile.noteScript({ code, libraries? })` | `NoteScript` | `Note` construction utilities |
 
@@ -61,7 +61,8 @@ Options:
 - `code` — the MASM source for the component.
 - `namespace` — module path used to derive procedure identities. Reuse it when rebuilding the source as an inline library; linking `{ component }` preserves the exact compiled identity.
 - `slots` — initial storage slots. Use the `StorageSlot` helpers (`emptyValue`, etc.).
-- `supportAllTypes` — defaults to `true` and calls `withSupportsAllTypes()` for compatibility. In 0.16, components already apply to every account type; this option does not inject an auth-kernel invocation.
+- `libraries` — dependency source modules as `{ namespace, code }`. These are linked before compiling the component; there is no `linking` option for this field.
+- `supportAllTypes` — defaults to `true` and calls `withSupportsAllTypes()` for compatibility. Components already apply to every account type; this option does not inject an auth-kernel invocation.
 
 ## Transaction scripts
 
@@ -199,9 +200,15 @@ await client.sync();
 
 // 1. Compile the contract component
 const component = await client.compile.component({
-  code: counterCode,
+  code: contractCode, // counter source from the first example
   namespace: "external_contract::counter_contract",
   slots: [StorageSlot.emptyValue("miden::tutorials::counter")],
+});
+
+// Allow the contract to receive a standard P2ID funding note.
+const receiver = await client.compile.component({
+  code: "pub use {receive_asset} from miden::standards::wallets::basic",
+  namespace: "funding::receiver",
 });
 
 // 2. Create the contract account
@@ -211,12 +218,24 @@ const auth = AuthSecretKey.rpoFalconWithRNG(seed);
 const contract = await client.accounts.create({
   seed,
   auth,
-  components: [component],
+  components: [component, receiver],
 });
 
-await client.sync();
+console.log("Fund this account:", contract.id().toString());
+```
 
-// 3. Compile the transaction script
+Before continuing, send a public P2ID note containing the network's native fee asset to this account (for example, from the network faucet). Set `fundingNoteId` below to that note's hex ID after it is included onchain. Its amount must cover both the consumption transaction and the subsequent counter transaction. Creating the account and calling `sync()` do not fund it.
+
+```typescript
+// 3. Sync and consume the funding note into the contract's vault.
+await client.sync();
+await client.transactions.consume({
+  account: contract.id(),
+  notes: [fundingNoteId],
+  waitForConfirmation: true,
+});
+
+// 4. Compile the transaction script
 const script = await client.compile.txScript({
   code: `
     use external_contract::counter_contract
@@ -230,7 +249,7 @@ const script = await client.compile.txScript({
   libraries: [{ component }],
 });
 
-// 4. Execute
+// 5. Execute using the remaining native fee balance.
 const { txId } = await client.transactions.execute({
   account: contract.id(),
   script,

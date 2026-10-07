@@ -67,7 +67,7 @@ Each account that submits a transaction needs native fee tokens, including a fau
 
 Add the following shared helpers once, then use them with each program on this page. In the Rust project, add `pub mod funding;` to the existing `integration/src/lib.rs` file.
 
-Start a program and keep its terminal or browser tab running after it prints the account IDs. For each prompt, request a **public** native-fee funding note for that displayed account from a trusted faucet on the same network, then paste only the funding note ID. Do not consume the note with the CLI or another client store: the running program must discover and consume it. Request enough native tokens to cover this bootstrap transaction and the account's later transactions in the example; the required amount depends on network fees.
+Start a program and keep its terminal or browser tab running after it prints the account IDs. If the network requires account registration, enter a valid invitation code when prompted. For each funding prompt, request a **public** native-fee funding note for that displayed account from a trusted faucet on the same network, then paste only the funding note ID. Do not consume the note with the CLI or another client store: the running program must discover and consume it. Request enough native tokens to cover this bootstrap transaction and the account's later transactions in the example; the required amount depends on network fees.
 
 ```rust title="integration/src/funding.rs"
 use miden_client::{
@@ -90,6 +90,15 @@ pub async fn fund_account<AUTH>(
 where
     AUTH: TransactionAuthenticator + Sync + 'static,
 {
+    client.sync_state().await?;
+    if !client.is_account_allowed(account_id).await? {
+        print!("Enter an invitation code for {account_id}: ");
+        io::stdout().flush()?;
+        let mut invitation_code = String::new();
+        io::stdin().read_line(&mut invitation_code)?;
+        client.register_account(account_id, invitation_code.trim()).await?;
+    }
+
     println!("Request a public native-fee funding note for {account_id}.");
     print!("Paste its note ID here: ");
     io::stdout().flush()?;
@@ -168,6 +177,15 @@ export async function fundAccount(
     client: MidenClient,
     accountId: AccountId,
 ): Promise<void> {
+    await client.sync();
+    if (!(await client.accounts.isAllowed(accountId))) {
+        const invitationCode = window.prompt(`Enter an invitation code for ${accountId.toString()}:`)?.trim();
+        if (!invitationCode) {
+            throw new Error("An invitation code is required on this network");
+        }
+        await client.accounts.register({ account: accountId, invitationCode });
+    }
+
     console.log(
         `Request a public native-fee funding note for ${accountId.toString()}.`,
     );
@@ -377,7 +395,7 @@ async fn main() -> anyhow::Result<()> {
 ```
 
 ```typescript title="src/demo.ts"
-import { MidenClient } from "@miden-sdk/miden-sdk";
+import { FaucetType, MidenClient } from "@miden-sdk/miden-sdk";
 import { fundAccount } from "./funding";
 
 export async function demo() {
@@ -394,7 +412,7 @@ export async function demo() {
     const decimals = 8;
     const maxSupply = 10_000_000n * 10n ** BigInt(decimals);
     const faucet = await client.accounts.create({
-        type: 0, // Fungible faucet
+        type: FaucetType.FungibleFaucet,
         symbol: "TEST",
         decimals,
         maxSupply,
@@ -656,7 +674,7 @@ async fn main() -> anyhow::Result<()> {
 ```
 
 ```typescript title="src/demo.ts"
-import { MidenClient } from "@miden-sdk/miden-sdk";
+import { FaucetType, MidenClient } from "@miden-sdk/miden-sdk";
 import { fundAccount } from "./funding";
 
 export async function demo() {
@@ -673,7 +691,7 @@ export async function demo() {
     const decimals = 8;
     const maxSupply = 10_000_000n * 10n ** BigInt(decimals);
     const faucet = await client.accounts.create({
-        type: 0, // Fungible faucet
+        type: FaucetType.FungibleFaucet,
         symbol: "TEST",
         decimals,
         maxSupply,
@@ -1015,7 +1033,7 @@ async fn main() -> anyhow::Result<()> {
 ```
 
 ```typescript title="src/demo.ts"
-import { MidenClient } from "@miden-sdk/miden-sdk";
+import { FaucetType, MidenClient } from "@miden-sdk/miden-sdk";
 import { fundAccount } from "./funding";
 
 export async function demo() {
@@ -1031,7 +1049,7 @@ export async function demo() {
     const decimals = 8;
     const maxSupply = 10_000_000n * 10n ** BigInt(decimals);
     const faucet = await client.accounts.create({
-        type: 0, // Fungible faucet
+        type: FaucetType.FungibleFaucet,
         symbol: "TEST",
         decimals,
         maxSupply,

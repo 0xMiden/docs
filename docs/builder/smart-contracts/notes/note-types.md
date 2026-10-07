@@ -22,7 +22,7 @@ P2ID notes use the typed `P2idNote` builder from `miden_standards::note`. The sc
 
 ### How it works
 
-1. Creator creates a P2ID note containing the assets and the target account ID as a note storage item
+1. Creator creates a P2ID note with the assets attached and the target account ID plus a two-felt salt in note storage
 2. Consumer's transaction processes the note — the script verifies the consuming account's ID matches the target
 3. If the IDs match, all assets transfer to the consuming account; otherwise proof generation fails
 
@@ -31,6 +31,11 @@ P2ID notes use the typed `P2idNote` builder from `miden_standards::note`. The sc
 | Item | Type | Description |
 |------|------|-------------|
 | `target_account_id` | `AccountId` | The account allowed to consume this note |
+| `salt` | `[Felt; 2]` | Salt included in the storage commitment; defaults to `[0, 0]` |
+
+The encoded storage always contains four felts: target suffix, target prefix, and the two salt elements. Omitting `.salt(...)` from the builder uses `[0, 0]`. Use the builder to obtain the current script root and storage layout together.
+
+A uniformly random salt kept private prevents identifying the target by comparing storage commitments for candidate account IDs. The default zero salt does not provide this protection, and salt does not hide account-derived note tags. See the [v0.17 P2ID implementation](https://github.com/0xMiden/protocol/blob/v0.17.0/crates/miden-standards/src/note/p2id.rs).
 
 ### Builder API
 
@@ -52,6 +57,7 @@ let note: Note = P2idNote::builder()
 |-----------|------|-------------|
 | `sender` | `AccountId` | Account sending the note |
 | `target` | `AccountId` | The only account that can consume this note |
+| `salt` | `[Felt; 2]` | Optional builder setting for the storage salt; defaults to `[0, 0]` |
 | `assets` | `Vec<Asset>` | Assets to attach to the note |
 | `note_type` | `NoteType` | `Public` or `Private` |
 | `attachment` / `attachments` | `NoteAttachment` / iterator | Optional auxiliary data |

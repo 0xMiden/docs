@@ -71,6 +71,18 @@ The script performs these key operations:
 
 ### Running the Script
 
+Before running the generated script on a v0.17 network, add `.with_component(BasicWallet)` to the `AccountBuilder` in `create_account_from_package()` in `integration/src/helpers.rs`; the helper already imports `BasicWallet`. This lets the counter receive the native fee tokens it needs. Add the shared [native-fee funding helper](../notes#bootstrap-native-fee-funding) to `integration/src/funding.rs` and export it from `integration/src/lib.rs`. In `increment_count.rs`, import it and add these calls immediately after creating `sender_account`, before building or publishing the increment note:
+
+```rust
+use integration::funding::fund_account;
+
+// Register each new account if the network requires an invitation, then fund it.
+fund_account(&mut client, sender_account.id()).await?;
+fund_account(&mut client, counter_account.id()).await?;
+```
+
+Keep the script running while you follow its registration and funding prompts. Both accounts need native fee tokens for their transactions.
+
 From the workspace root, run the increment script:
 
 ```bash title=">_ Terminal"

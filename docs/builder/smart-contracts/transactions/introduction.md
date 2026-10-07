@@ -51,7 +51,7 @@ During execution, your code runs inside a **transaction context** that provides 
 - **Account state** — the executing account's storage, vault, and nonce
 - **Output notes** — the ability to create new notes and attach assets
 
-The transaction context is what connects your component code to the chain state. For example, you can implement time-based logic by comparing `tx::get_block_number()` against a stored value, or read note storage to determine what action to take.
+The transaction context is what connects your component code to the chain state. For example, you can implement time-based logic by comparing `tx::get_reference_block_number()` against a stored value, or read note storage to determine what action to take.
 
 ## What happens when execution fails
 

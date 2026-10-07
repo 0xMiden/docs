@@ -22,7 +22,7 @@ For note-level access control, note scripts can check who created the note using
 
 ## Rate limiting {#rate-limiting}
 
-Use `tx::get_block_number()` to enforce cooldown periods between actions. It returns a typed `BlockNumber`; convert it with `.as_u32()` before using integer arithmetic. Store the last action block number in a `Value` storage slot, then compare it with the current block number before allowing the next action.
+Use `tx::get_reference_block_number()` to enforce cooldown periods between actions. It returns a typed `BlockNumber`; convert it with `.as_u32()` before using integer arithmetic. Store the last action block number in a `Value` storage slot, then compare it with the current block number before allowing the next action.
 
 See [Transaction Context](./transactions/transaction-context) for the available block and transaction info functions.
 
@@ -55,7 +55,7 @@ current block, it returns zero. Ordinary unsigned subtraction can wrap to a larg
 value in a release build:
 
 ```rust
-let current_block = tx::get_block_number().as_u32();
+let current_block = tx::get_reference_block_number().as_u32();
 
 // Good — won't underflow
 let elapsed = current_block.saturating_sub(last_block);

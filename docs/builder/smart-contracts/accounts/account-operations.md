@@ -13,7 +13,7 @@ The `#[component]` macro automatically provides methods on `self` for interactin
 ```rust
 #[component]
 impl MyAccount for MyAccountStorage {
-    fn check_state(&self, asset_id: Word) {
+    fn check_state(&self, asset_id: AssetId) {
         // Account identity
         let id: AccountId = self.get_id();
         let nonce: Nonce = self.get_nonce();
@@ -25,7 +25,7 @@ impl MyAccount for MyAccountStorage {
         let root: Word = self.get_vault_root();
         let initial_root: Word = native_account::get_initial_vault_root();
 
-        // Commitment queries
+        // Commitment queries (compute_commitment requires the native account)
         let commitment: Word = self.compute_commitment();
         let initial_commit: Word = native_account::get_initial_commitment();
         let storage: Word = self.compute_storage_commitment();
@@ -63,6 +63,31 @@ impl MyAccount for MyAccountStorage {
 The nonce must be incremented for any transaction that modifies account state. Without it, the same transaction could be replayed.
 :::
 
+## Upgrade account code
+
+Protocol v0.17 can replace the code of an existing account. Install `UpgradeManager` (`miden_standards::account::upgrade`) and an `Authority` when creating an account that should support upgrades. The manager exposes the account procedure that starts the upgrade and checks authorization through the authority.
+
+For a deployed user account with `UpgradeManager` and `Authority::AuthControlled`, the Rust client can build the upgrade request from the new `AccountCode`:
+
+```rust
+use miden_client::transaction::TransactionRequestBuilder;
+
+// new_code is an AccountCode built for this account's existing storage layout.
+// The account's signer and native fee funds must be available to the client.
+let request = TransactionRequestBuilder::new().build_account_code_upgrade(new_code)?;
+client.submit_new_transaction(account_id, request).await?;
+```
+
+The old code authenticates the transaction; the new code takes effect after authentication. An account cannot be upgraded in its creation transaction, and only one upgrade may be pending per transaction.
+
+:::warning Preserve the storage layout
+Code upgrades leave storage untouched. The new code must use the existing slots and their layouts; the kernel does not check that compatibility. Keep `UpgradeManager`, or another authorized account procedure that calls `native_account::upgrade`, in the new code if future upgrades should remain possible.
+:::
+
+At the MASM level, `native_account::upgrade` takes `[NEW_CODE_COMMITMENT, STORAGE_UPGRADE_COMMITMENT]`; the storage word must be empty. The host must also receive the new code. The request builder above supplies it, while a custom request can use `.account_code_upgrade(new_code)` alongside its upgrade script.
+
+Owner- or role-controlled upgrades must arrive through a note whose sender has the required authority. For network accounts, use an [UpgradeNote](./network-accounts#upgrade-a-network-account) with owner- or role-controlled access.
+
 ## When proof generation fails
 
 Several operations cause proof generation to fail if preconditions aren't met:
@@ -88,7 +113,7 @@ The last row is enforced at end-of-execution by the VM kernel rather than mid-ex
 #![no_std]
 #![feature(alloc_error_handler)]
 
-use miden::{component, component_storage, output_note, Asset, NoteIdx, Word};
+use miden::{component, component_storage, output_note, Asset, AssetId, NoteIdx, Word};
 
 #[component_storage]
 struct ManagedWalletStorage;
@@ -100,7 +125,7 @@ trait ManagedWallet {
     #[account_procedure]
     fn send_asset(&mut self, asset: Asset, note_idx: NoteIdx);
     #[account_procedure]
-    fn asset_value(&self, asset_id: Word) -> Word;
+    fn asset_value(&self, asset_id: AssetId) -> Word;
 }
 
 #[component]
@@ -117,7 +142,7 @@ impl ManagedWallet for ManagedWalletStorage {
     }
 
     /// Read the value word stored under an asset ID.
-    fn asset_value(&self, asset_id: Word) -> Word {
+    fn asset_value(&self, asset_id: AssetId) -> Word {
         self.get_asset(asset_id)
     }
 }

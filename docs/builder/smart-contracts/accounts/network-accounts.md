@@ -30,8 +30,8 @@ The account example below installs owner-controlled access for this purpose.
 ## Prerequisites
 
 - The account must be `AccountType::Public`. A private account cannot be a network account.
-- You need the **script root of every application note type** the account should accept, computed from the compiled note script. Rust's `AuthNetworkAccount::new` accepts an empty application set because it adds the standard configuration and fee-sponsorship scripts. The Web SDK helper requires at least one application `NoteScriptFee`.
-- You need a `FeePolicyManager`, the ID of the fungible faucet used for fees, and an active policy that can price every allowed note script. A zero fee is valid but must still be scheduled explicitly by `BasicConstantFeePolicy`.
+- You need the **script root of every application note type** the account should accept, computed from the compiled note script. Rust's `AuthNetworkAccount::new` accepts an empty application set because it adds the standard configuration, fee-sponsorship, and P2ID scripts. It also installs `BasicWallet`. The Web SDK helper requires at least one application `NoteScriptFee`.
+- You need a `FeePolicyManager`, the chain's native fee-faucet ID, and an active policy that can price every allowed note script. A zero fee is valid but must still be scheduled explicitly by `BasicConstantFeePolicy`. The node will not execute notes for a network account configured with a different fee asset.
 
 ## Building a network account
 
@@ -47,7 +47,7 @@ use miden_client::account::{
     },
 };
 use miden_client::asset::AssetAmount;
-use miden_client::note::{FeeSponsorshipNote, NetworkAccountConfigNote};
+use miden_client::note::{FeeSponsorshipNote, NetworkAccountConfigNote, P2idNote};
 
 let note_script = client.code_builder().compile_note_script(note_code)?;
 let note_script_root = note_script.root();
@@ -60,13 +60,18 @@ Build an active fee policy, pass it to `AuthNetworkAccount`, then install every 
 ```rust
 let fee_policy = BasicConstantFeePolicy::new()
     .with_fee(note_script_root, AssetAmount::ZERO)
+    .with_fee(P2idNote::script_root(), AssetAmount::ZERO)
     .with_fee(
         NetworkAccountConfigNote::script_root(),
         AssetAmount::ZERO,
     )
     .with_fee(FeeSponsorshipNote::script_root(), AssetAmount::ZERO);
+let header = client.get_latest_block_header().await?;
+let protocol_config = client
+    .get_protocol_config(header.protocol_config_commitment())
+    .await?;
 let fee_policy_manager = FeePolicyManager::builder()
-    .fee_faucet_id(fee_faucet_id)
+    .fee_faucet_id(protocol_config.fee_asset_id().faucet_id())
     .active_fee_policy(fee_policy.into())
     .build();
 let auth = AuthNetworkAccount::new(
@@ -100,9 +105,9 @@ let auth = AuthNetworkAccount::new(
 
 Building the account and adding it to the client store is **not** enough to register it onchain — an account only exists to the network once a committed transaction has advanced its state (nonce `0` → `1`). Submit a transaction against it to deploy it.
 
-Because `AuthNetworkAccount` bumps the nonce itself, an **empty, scriptless transaction** can register the account on a **zero-fee development chain**. It needs no additional tx-script allowlist entry. A custom deployment script must be allowlisted as above.
+An **empty, scriptless transaction** cannot register the account, even on a zero-fee chain. Network authentication requires an input note, an output note, or an account state change before fee payment. A custom deployment script must be allowlisted as above and cause one of those effects.
 
-On testnet, the first transaction must also pay a fee. One way to bootstrap the account is to consume an allowed funding note in that transaction. The account needs a component that can receive its assets, and the funding script must be both allowlisted and priced by the fee policy. Consuming that note already deploys the account; do not submit another empty deployment transaction afterward. The example below is only the zero-fee path.
+One way to bootstrap the account is to consume a P2ID note carrying enough of the native fee asset for the first transaction. `AuthNetworkAccount::new` supplies its allowlist entry and receiving component; the policy above prices P2ID at zero. Consuming that note deploys and funds the account. The example assumes `funding_note` is a committed `Note` targeted at this account, available with its inclusion proof after synchronization.
 
 ```rust
 use miden_client::transaction::TransactionRequestBuilder;
@@ -110,7 +115,10 @@ use miden_client::transaction::TransactionRequestBuilder;
 client.add_account(&account, false).await?;
 
 let tx_id = client
-    .submit_new_transaction(account.id(), TransactionRequestBuilder::new().build()?)
+    .submit_new_transaction(
+        account.id(),
+        TransactionRequestBuilder::new().build_consume_notes(vec![funding_note])?,
+    )
     .await?;
 
 client.sync_state().await?; // repeat until `tx_id` is committed
@@ -119,7 +127,7 @@ client.sync_state().await?; // repeat until `tx_id` is committed
 Once the deploy transaction is committed, the network watches the account and will consume any allowlisted note addressed to it.
 
 :::note Deployment on testnet
-The [network transactions tutorial](../../tutorials/recipes/rust/network_transactions_tutorial.md) adds `BasicWallet` and permits a P2ID funding note. Its initial funding consumption publishes the network account with count zero. Subsequent increments come from notes consumed by the network transaction builder.
+The [network transactions tutorial](../../tutorials/recipes/rust/network_transactions_tutorial.md) uses a P2ID funding note. Its initial funding consumption publishes the network account with count zero. Subsequent increments come from notes consumed by the network transaction builder.
 :::
 
 ## Inspecting a network account
@@ -155,7 +163,7 @@ const { txId, note } = await client.transactions.createNetworkNote({
 
 Use `buildNetworkNote(...)` if you want the built note without submitting it.
 
-The Web SDK can also build and deploy the account. Pair every application script with its fee, pass the fee-faucet ID, and install **all** returned components. This example uses an empty deployment transaction on a **zero-fee development chain**. On testnet, replace that empty transaction with an initial funding consumption as described above.
+The Web SDK can also build and deploy the account. Pair every application script with its fee, pass the chain's fee-faucet ID after syncing, and install **all** returned components. Deploy by consuming a committed P2ID funding note as described above; `fundingNoteId` below identifies that note.
 
 ```typescript
 import {
@@ -163,12 +171,11 @@ import {
   AccountComponent,
   AccountStorageMode,
   NoteScriptFee,
-  TransactionRequestBuilder,
 } from "@miden-sdk/miden-sdk";
 
 const networkAuth = AccountComponent.createNetworkAuthComponents(
   [new NoteScriptFee(counterNoteScript.root(), 0n)],
-  feeFaucet.id(),
+  await client.feeFaucetId(),
 );
 
 const builder = new AccountBuilder(seed)
@@ -181,13 +188,46 @@ for (const component of networkAuth) {
 
 const { account } = builder.build();
 await client.accounts.insert({ account });
-await client.transactions.submit(
-  account.id(),
-  new TransactionRequestBuilder().build(),
-);
+await client.transactions.consume({
+  account: account.id(),
+  notes: [fundingNoteId],
+});
 ```
 
-`createNetworkAuthComponents` returns the auth component plus the components backing its fee policy. Omitting any of them creates an incomplete account. It also includes the standard configuration and fee-sponsorship note scripts in the allowlist. To use configuration notes to update the account, additionally install owner- or RBAC-controlled access components, as in the Rust example.
+`createNetworkAuthComponents` returns the auth component, `BasicWallet`, and the components backing its fee policy. Omitting any of them creates an incomplete account. It includes configuration, fee-sponsorship, and P2ID scripts in the allowlist, pricing P2ID at zero unless you supply its fee. To use configuration notes to update the account, additionally install owner- or RBAC-controlled access components, as in the Rust example.
+
+## Upgrade a network account
+
+An existing network account can consume the standard `UpgradeNote` to replace its code. Set up the account with:
+
+- `UpgradeManager` and owner- or role-controlled access, such as `AccessControl::Ownable2Step` or `AccessControl::Rbac`.
+- `UpgradeNote::script_root()` in its note-script allowlist. The default allowlist does not include it.
+- A fee schedule entry for that root, even if the application fee is zero.
+
+The sender must be the account's owner or hold the role authorized to call `upgrade`. **Do not use `Authority::AuthControlled` for network-account upgrades:** network authentication accepts allowlisted notes from any sender, so it cannot establish who is allowed to replace the code.
+
+Once the account is deployed, build the note in the authorized sender's client:
+
+```rust
+use miden_client::note::{Note, UpgradeNote};
+use miden_client::transaction::TransactionRequestBuilder;
+
+// new_code preserves the target's existing storage layout and access controls.
+let note: Note = UpgradeNote::builder()
+    .sender(owner_id)
+    .target(network_account_id)
+    .code(new_code)
+    .generate_serial_number(client.rng())
+    .build()?
+    .into();
+
+let request = TransactionRequestBuilder::new().own_output_notes([note]).build()?;
+client.submit_new_transaction(owner_id, request).await?;
+```
+
+The note is public, targets the network account through a `NetworkAccountTarget` attachment, and carries the new code in `AccountCodeUpgradeAttachment` chunks. Its builder enforces the attachment limits: at most four attachments and 512 words in total. The target uses one word, leaving at most 511 words for encoded code before any extra attachments. Code chunks use at most 256 words each.
+
+An upgrade preserves storage and takes effect after the old code authenticates the consuming transaction. Keep the upgrade procedure and its authorization components in the replacement code if the account should remain upgradeable. For the common constraints, see [Account code upgrades](./account-operations#upgrade-account-code).
 
 ## Surface support
 

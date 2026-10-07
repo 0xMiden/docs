@@ -34,7 +34,7 @@ For a client-executed transaction:
 
 - The Miden VM executes the note and transaction scripts locally
 - The resulting state transitions and execution trace are computed
-- During authentication, the account pays the protocol fee through a public `TX_FEE` note and authorizes the transaction summary
+- During authentication, the account pays the protocol fee in the native fee asset through a public `TX_FEE` note and authorizes the transaction summary
 
 ### 3. Proof Generation
 
@@ -92,4 +92,4 @@ faster quote-and-solve flow for test USDC. Both integrations are testnet-only.
 
 ## What does the gas fee model of Miden look like?
 
-Miden does not meter gas linearly. Its transaction fee grows logarithmically with the transaction's estimated VM cycles. During authentication, the account pays by creating a public `TX_FEE` note that the batch builder can collect. See [Transaction Fees](./smart-contracts/transactions/fees) for the formula, payment assets, and network-account sponsorship fees.
+Miden does not meter gas linearly. Its transaction fee grows logarithmically with the transaction's estimated VM cycles. During authentication, the account pays in the native fee asset by creating a public `TX_FEE` note that the batch builder can collect. See [Transaction Fees](./smart-contracts/transactions/fees) for the formula, native fee asset, and network-account sponsorship fees.

@@ -51,7 +51,10 @@ Full details for a single account, including per-asset balances decorated with s
 ```tsx
 import { useAccount } from "@miden-sdk/react";
 
-function AccountDetails({ id }: { id: string }) {
+function AccountDetails({ id, usdcFaucetId }: {
+  id: string;
+  usdcFaucetId: string; // canonical hex faucet ID, as returned by AccountId.toString()
+}) {
   const { account, assets, getBalance, isLoading, error } = useAccount(id);
 
   if (isLoading) return <p>Loading…</p>;
@@ -89,11 +92,11 @@ Return type (`AccountResult`):
 }
 ```
 
-`getBalance(assetId)` is a convenience for single-asset reads — returns `0n` when the account doesn't hold that asset.
+`getBalance(assetId)` returns the raw balance in base units, or `0n` when no matching asset is found. Pass the canonical hex faucet ID used in `assets[].assetId` (as returned by `AccountId.toString()`); this helper compares strings directly and does not normalize bech32 IDs.
 
 ## `useNotes(filter?)`
 
-Lists input notes (received) and consumable notes (ready to claim) with optional filtering.
+Lists input notes (received) and consumable notes (ready to claim) with optional filtering. `consumableNotes` and `consumableNoteSummaries` exclude notes locked until a later block; sync again after they unlock.
 
 ```tsx
 import { useNotes } from "@miden-sdk/react";
@@ -107,14 +110,14 @@ function NotesInbox({ account }: { account: string }) {
   return (
     <>
       <button onClick={refetch}>Refresh</button>
-      <h3>Received ({notes.length})</h3>
+      <h3>Tracked input notes, all accounts ({notes.length})</h3>
       {noteSummaries.map((s) => (
         <div key={s.id}>
           {s.assets.map((a) => `${a.amount} ${a.symbol ?? a.assetId}`).join(", ")}
         </div>
       ))}
 
-      <h3>Consumable ({consumableNotes.length})</h3>
+      <h3>Consumable by this account ({consumableNotes.length})</h3>
     </>
   );
 }
@@ -124,10 +127,10 @@ Filter options (`NotesFilter`):
 
 | Field | Values | Description |
 | --- | --- | --- |
-| `status` | `"all" \| "consumed" \| "committed" \| "expected" \| "processing"` | Filter by note lifecycle state |
-| `accountId` | `AccountRef` | Only notes relevant to this account |
-| `sender` | `string` | Account ID in any accepted format (hex or bech32) — normalised internally |
-| `excludeIds` | `string[]` | Skip these note IDs (useful for hiding notes your UI already rendered elsewhere) |
+| `status` | `"all" \| "consumed" \| "committed" \| "expected" \| "processing"` | Lifecycle filter for `notes` and `noteSummaries`; does not filter the consumable lists |
+| `accountId` | `AccountRef` | Restricts `consumableNotes` and `consumableNoteSummaries` to this account; does not filter `notes` or `noteSummaries` |
+| `sender` | `string` | Sender ID (hex or bech32, normalized internally); filters only `noteSummaries` and `consumableNoteSummaries` |
+| `excludeIds` | `string[]` | Excludes IDs only from `noteSummaries` and `consumableNoteSummaries`; raw records remain unchanged |
 
 Return type (`NotesResult`):
 
@@ -150,12 +153,14 @@ Return type (`NotesResult`):
 Temporal note tracking with first-seen timestamps and per-stream filtering. Useful for notification UIs that want to highlight new arrivals.
 
 ```tsx
+import { useState } from "react";
 import { useNoteStream } from "@miden-sdk/react";
 
 function NewNotesToast() {
+  const [since] = useState(() => Date.now());
   const { notes, latest, markHandled, markAllHandled } = useNoteStream({
     status: "committed",       // default "committed"
-    since: Date.now(),         // numeric timestamp; drop notes seen earlier
+    since,                    // fixed at mount; drop notes seen earlier
     amountFilter: (amount) => amount > 0n,
   });
 
@@ -224,7 +229,13 @@ Result (`TransactionHistoryResult`):
 }
 ```
 
-For account-scoped history use a `TransactionFilter` that targets the account — see the `@miden-sdk/miden-sdk` `TransactionFilter` API.
+In 0.17.0, `TransactionFilter` supports `all()`, `ids(...)`, and `uncommitted()`, but no account filter. Filter the returned records locally using `record.accountId().toString()` and a canonical hex account ID:
+
+```ts
+const accountRecords = records.filter(
+  (record) => record.accountId().toString() === accountIdHex,
+);
+```
 
 ## `useSyncState`
 

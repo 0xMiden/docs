@@ -122,8 +122,8 @@ let result = f.exp(felt!(3));  // 7^3 mod p = 343
 let square = f * f;       // 7^2 mod p = 49
 ```
 
-:::caution Squaring with SDK 0.14.0
-With `miden` 0.14.0 and `midenc` 0.10.0, `Felt::square()` is lowered to the VM's `pow2` operation, which computes `2^f`: `felt!(7).square()` returns 128. Use `f * f` to compute the square in this version.
+:::caution Squaring in contract code
+In the contract-target implementation of `miden-field` 0.35.0, `Felt::square()` calls the `pow2` intrinsic, which computes `2^f` rather than `f^2`. Use `f * f` as shown above: for `felt!(7)`, this gives 49 rather than 128.
 :::
 
 ## Word — Four field elements
@@ -193,11 +193,11 @@ let cooldown = config.b.as_canonical_u64();
 
 ## Asset
 
-`Asset` represents either a fungible or non-fungible asset. In contract code it is **two words** — a `key` (the asset ID used by the vault) and a `value` (encoding the fungible amount or non-fungible data).
+`Asset` represents either a fungible or non-fungible asset. In contract code it is **two words** — an `id: AssetId` (the asset ID used by the vault) and a `value` (encoding the fungible amount or non-fungible data).
 
 ```rust
 pub struct Asset {
-    pub key: Word,
+    pub id: AssetId,
     pub value: Word,
 }
 ```
@@ -208,34 +208,35 @@ pub struct Asset {
 
 | Word     | Field | Content |
 |----------|-------|---------|
-| `key`    | `a`   | `0` |
-| `key`    | `b`   | `0` |
-| `key`    | `c`   | Faucet ID suffix plus metadata byte |
-| `key`    | `d`   | Faucet ID prefix |
+| `id.inner` | `a`   | `0` |
+| `id.inner` | `b`   | `0` |
+| `id.inner` | `c`   | Faucet ID suffix plus metadata byte |
+| `id.inner` | `d`   | Faucet ID prefix |
 | `value`  | `a`   | Amount |
 | `value`  | `b`   | `0` |
 | `value`  | `c`   | `0` |
 | `value`  | `d`   | `0` |
 
-**Non-fungible assets** (NFTs):
+**Non-fungible assets** (the standard `NonFungibleAsset` encoding):
 
 | Word     | Field | Content |
 |----------|-------|---------|
-| `key`    | `a`   | Data hash element 0 |
-| `key`    | `b`   | Data hash element 1 |
-| `key`    | `c`   | Faucet ID suffix plus metadata byte |
-| `key`    | `d`   | Faucet ID prefix |
+| `id.inner` | `a`   | Data hash element 0 |
+| `id.inner` | `b`   | Data hash element 1 |
+| `id.inner` | `c`   | Faucet ID suffix plus metadata byte |
+| `id.inner` | `d`   | Faucet ID prefix |
 | `value`  | `a..d`| Data hash elements 0–3 |
 
-The low metadata byte in `key.c` encodes `AssetComposition` in bits 0-1. Whether assets invoke callbacks is encoded in the faucet account ID when that account is built. Use protocol helpers instead of hand-decoding the metadata.
+The low metadata byte in `id.inner.c` encodes version 1 in bits 0-3 and `AssetComposition` in bits 4-5; bits 6-7 are reserved and must be zero. Whether assets invoke callbacks is encoded in the faucet account ID when that account is built. Use the `AssetId` readers instead of hand-decoding the metadata.
 
 ### Working with assets
 
 ```rust
-use miden::{Asset, Word, felt};
+use miden::{Asset, AssetId, Word, felt};
 
-// Build a fungible asset from key + value words.
-// Fungible key = [0, 0, faucet_suffix_with_metadata, faucet_prefix],
+// Build a fungible asset from ID + value words supplied by the host.
+// Fungible ID = [0, 0, faucet_suffix_with_metadata, faucet_prefix],
+// with low metadata byte 0x11 (version 1, fungible composition).
 // fungible value = [amount, 0, 0, 0].
 let asset = Asset::new(
     Word::from([felt!(0), felt!(0), faucet_suffix_with_metadata, faucet_prefix]),
@@ -246,14 +247,16 @@ let asset = Asset::new(
 let amount: u64 = asset.value.a.as_canonical_u64();
 
 // Assets passed into contract procedures are already constructed by the host.
-// Read the ID word when querying the active account vault.
-let asset_id: Word = asset.key;
+// Use the typed ID when querying the active account vault.
+let asset_id: AssetId = asset.id;
 let is_present = miden::active_account::has_asset(asset_id);
 ```
 
 :::note Asset on the host side
-On the client / host side, `Asset` is an enum (`Asset::Fungible(_) | Asset::NonFungible(_)`) exposed from `miden-protocol`, with `id()` / `to_id_word()` / `to_value_word()` / `from_id_and_value_words()` helpers. Inside a Rust contract the SDK exposes the two-word `Asset` struct shown above.
+On the client / host side, `miden-protocol` exposes `Asset` as an `AssetId` plus an `AssetValue`, with `id()` / `value()` / `to_id_word()` / `to_value_word()` / `from_id_and_value_words()` helpers. Inside a Rust contract the SDK exposes the two-word struct shown above, with `value` still a `Word`.
 :::
+
+See the protocol v0.17 definitions of [Asset](https://github.com/0xMiden/protocol/blob/v0.17.0/crates/miden-protocol/src/asset/mod.rs) and [AssetId](https://github.com/0xMiden/protocol/blob/v0.17.0/crates/miden-protocol/src/asset/vault/asset_id.rs) for the host types and encoding rules.
 
 ## AccountId
 

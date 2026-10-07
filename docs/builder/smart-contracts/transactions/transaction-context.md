@@ -17,13 +17,13 @@ use miden::{BlockNumber, Word, tx};
 ### Block information
 
 ```rust
-// Current block number
-let block_num: BlockNumber = tx::get_block_number();
+// Transaction reference block number
+let block_num: BlockNumber = tx::get_reference_block_number();
 
-// Block commitment (hash of block header)
-let commitment: Word = tx::get_block_commitment();
+// Reference block commitment (hash of block header)
+let commitment: Word = tx::get_reference_block_commitment();
 
-// Block timestamp (seconds since epoch)
+// Reference block timestamp (seconds since epoch)
 let timestamp: u32 = tx::get_block_timestamp();
 ```
 
@@ -53,13 +53,13 @@ let delta: u16 = tx::get_expiration_block_delta();
 tx::update_expiration_block_delta(100);
 ```
 
-The expiration delta is measured from the transaction's reference block. A value of `0` means no expiration has been set; updates must be between `1` and `u16::MAX` and can only tighten an existing expiration limit.
+The expiration delta is measured from the transaction's reference block. A value of `0` means no expiration has been set; updates must be between `1` and `u16::MAX` and can only tighten an existing expiration limit. Creating a network note or invoking a token transfer policy tightens the limit to at most 20 blocks.
 
 ## Transaction scripts
 
 Transaction scripts use the `#[tx_script]` macro to define a top-level entry point for the transaction. See [Transaction Scripts](./transaction-scripts) for the full `#[tx_script]` API and examples.
 
-For signature verification using the transaction context, see [Authentication](../accounts/authentication). For time-based patterns using `tx::get_block_number()`, see [Patterns — Rate limiting](../patterns#rate-limiting).
+For signature verification using the transaction context, see [Authentication](../accounts/authentication). For time-based patterns using `tx::get_reference_block_number()`, see [Patterns — Rate limiting](../patterns#rate-limiting).
 
 :::info API Reference
 Full API docs on docs.rs: [`miden::tx`](https://docs.rs/miden/latest/miden/tx/)

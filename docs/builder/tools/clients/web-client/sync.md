@@ -9,7 +9,7 @@ Every operation the Web SDK performs reads from — or writes to — a local sto
 
 ## `client.sync()`
 
-Fetches private notes from the Note Transport Layer, then pulls onchain updates from the Miden node and applies them to the local store. Returns a `SyncSummary` describing what changed.
+Fetches private notes from the Note Transport Layer, then pulls onchain updates from the Miden node and applies them to the local store. Returns a `SyncSummary` describing what changed. A note-transport failure is logged and chain sync continues; call `client.notes.fetchPrivate()` directly when you need to detect a transport error.
 
 ```typescript
 import { MidenClient } from "@miden-sdk/miden-sdk";
@@ -60,6 +60,17 @@ Cheap check of the locally-known tip, no network call:
 const height: number = await client.getSyncHeight();
 console.log("Local tip:", height);
 ```
+
+## Fee faucet
+
+The chain's fee faucet comes from its synced protocol configuration:
+
+```typescript
+await client.sync();
+const feeFaucet = await client.feeFaucetId();
+```
+
+`BlockHeader` no longer exposes `feeFaucetId()`. Sync before querying it unless you supplied the optional `feeFaucetId` client option.
 
 ## Store backup and restore
 
