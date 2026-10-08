@@ -92,7 +92,7 @@ if (result.txId) {
 await client.transactions.consumeAll({ account: wallet, maxNotes: 5 });
 ```
 
-`result.remaining > 0` signals pagination — call `consumeAll` again to drain the rest.
+`result.remaining > 0` signals pagination — call `consumeAll` again to drain the rest. Both counts include only notes consumable at the last synced block; `remaining === 0` does not mean that there are no block-locked notes.
 
 ### `swap`
 
@@ -152,50 +152,55 @@ If the account already authorizes the request, execution succeeds without produc
 
 ### Keep a cross-client summary reproducible
 
-A transaction summary commits to its reference block. When one client proposes a transaction and another verifies or executes it later, capture a `ChainAnchor` and send it alongside the summary so every participant derives the transaction at the same block:
+A 0.17 multisig summary commits to the bound block in its auth arguments. Build the request with `feeAwareTransactionRequestBuilder`, send the serialized request with the summary, and let each participant preview or execute it at its current synced tip:
 
 ```typescript
-import { ChainAnchor, TransactionSummary } from "@miden-sdk/miden-sdk";
+import { TransactionRequest, TransactionSummary } from "@miden-sdk/miden-sdk";
 
-// Proposer: capture the request's reference block and derive the summary there.
-const anchor = await client.transactions.captureAnchor(request);
+// Proposer: build once, then share that exact request.
+await client.sync();
+const request = (
+  await client.feeAwareTransactionRequestBuilder(multisigAccount, {
+    approvalExpirationDelta: 100,
+  })
+)
+  .withCustomScript(txScript)
+  .build();
 const summary = await client.transactions.preview({
   operation: "custom",
   account: multisigAccount,
   request,
-  anchor,
 });
 
-const anchorBytes = anchor.serialize();
+const requestBytes = request.serialize();
 const summaryBytes = summary.serialize();
-await sendProposal(anchorBytes, summaryBytes);
+await sendProposal(requestBytes, summaryBytes);
 
-// Co-signer or executor: restore the proposal and re-derive it at the same block.
-const receivedAnchor = ChainAnchor.deserialize(anchorBytes);
+// Co-signer or executor: sync to at least the proposal's declared blocks.
+const receivedRequest = TransactionRequest.deserialize(requestBytes);
 const proposedSummary = TransactionSummary.deserialize(summaryBytes);
+await client.sync();
+if ((await client.getSyncHeight()) < Math.max(0, ...receivedRequest.blockNumbers())) {
+  throw new Error("The client has not synced to the proposal's bound block");
+}
 const derivedSummary = await client.transactions.preview({
   operation: "custom",
   account: multisigAccount,
-  request,
-  anchor: receivedAnchor,
+  request: receivedRequest,
 });
 
 if (derivedSummary.toCommitment().toHex() !== proposedSummary.toCommitment().toHex()) {
   throw new Error("The request does not match the proposed summary");
 }
 
-if (receivedAnchor.commitment().toHex() !== proposedSummary.blockCommitment().toHex()) {
-  throw new Error("The anchor does not match the proposed summary");
-}
-
-// After collecting the required authorization, replay at the anchored block.
-await client.transactions.submit(multisigAccount, request, { anchor: receivedAnchor });
-// Release WASM wrappers; Node's native objects do not expose free().
-receivedAnchor.free?.();
-anchor.free?.();
+// The application collects signatures and attaches the authorization advice.
+const authorizedRequest = await collectAuthorization(derivedSummary, receivedRequest);
+await client.transactions.submit(multisigAccount, authorizedRequest);
 ```
 
-An anchor makes the request reproducible; it does not prove that the transaction matches the signer's intent. Inspect the summary's account delta and input/output notes before signing. Also verify a received anchor's block against a trusted node when the proposer is not trusted. If `summary.expirationDelta()` is non-zero, the transaction expires at `anchor.blockNum() + summary.expirationDelta()`; if that deadline passes, capture a new anchor and collect authorization again.
+Do not pass an `anchor` for this multisig flow or call `withFeeConversionSalt` / `withAuthArg` on its builder: these setters replace the auth arguments it already carries. Inspect the summary's account delta and input/output notes before signing. If the approval expires, build a new proposal and collect authorization again.
+
+`ChainAnchor` still serves flows whose summary binds the execution reference block. Capture it with `captureAnchor(request)` and pass that same anchor to preview and submit; execute while the node still retains that block's account state.
 
 ## Custom transaction scripts (`execute`)
 

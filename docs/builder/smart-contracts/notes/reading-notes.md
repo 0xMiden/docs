@@ -44,8 +44,8 @@ let assets: Vec<Asset> = active_note::get_initial_assets();
 
 The name makes the semantics explicit: these are the assets the note carried when it was created, before any in-transaction movement. This is an inspection API; iterating over this vector does not remove assets from the note's current state.
 
-:::warning Rust SDK limitation
-The protocol exposes stateful `active_note::remove_asset` and `active_note::remove_all_assets` procedures in MASM, but the Rust SDK does not yet bind them. Do not implement asset consumption by passing values from `get_initial_assets()` directly to an account. Until the bindings land, use a standard note such as P2ID/P2IDE or write the removal flow in MASM.
+:::note Moving assets
+`active_note::remove_asset(asset) -> Word` removes the specified asset and returns its remaining value in the note, not the removed asset. The returned word is empty when the asset is fully removed. Remove the asset first, then pass the original `asset` to the account's receiving procedure. `get_asset(index)` reads the current asset state; `get_initial_assets()` always returns the creation-time list. The `remove_all_assets` helper remains MASM-only.
 :::
 
 ### Identity and metadata
@@ -167,6 +167,6 @@ pub fn run(_arg: Word) {
 }
 ```
 
-:::info API Reference
-Full API docs on docs.rs: [`miden::active_note`](https://docs.rs/miden/0.14.0/miden/active_note/), [`miden::input_note`](https://docs.rs/miden/0.14.0/miden/input_note/)
+:::info Protocol reference
+The underlying MASM APIs in protocol v0.17.0: [`active_note`](https://github.com/0xMiden/protocol/blob/v0.17.0/crates/miden-protocol/asm/protocol/src/active_note.masm), [`input_note`](https://github.com/0xMiden/protocol/blob/v0.17.0/crates/miden-protocol/asm/protocol/src/input_note.masm).
 :::

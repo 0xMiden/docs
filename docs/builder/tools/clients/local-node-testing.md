@@ -15,7 +15,7 @@ Use a local node when a test needs real node state: public accounts, block commi
 | Browser or app testing against a local network | The node repo Docker Compose stack |
 | Rust client integration tests | `TEST_MIDEN_NETWORK=localhost` against a running local node |
 | Private note delivery | The node Compose stack with the `note-transport` profile enabled |
-| Future one-command local dev | Track [node#1874](https://github.com/0xMiden/node/issues/1874) and [midenup#180](https://github.com/0xMiden/midenup/issues/180) |
+| Packaged local network | [Midenup 1.2.1 node commands](../midenup.md#run-a-local-node), with Docker Compose v2.34.0 or newer |
 
 Docker Compose is the supported default path for running the current local node stack. The rust-sdk repo also has a `make start-node` helper for its own integration tests, but that helper runs the test node directly with Cargo and is not the operator-facing Docker workflow.
 
@@ -32,14 +32,14 @@ On Linux, make sure your user can run Docker commands without `sudo`, or prefix 
 Clone the compatible node release into a directory named `miden-node`. The account export command below assumes this Compose project name, which gives the genesis volume the name `miden-node_node-data`.
 
 ```bash
-git clone --branch v0.16.0 --depth 1 https://github.com/0xMiden/node.git miden-node
+git clone --branch v0.17.1 --depth 1 https://github.com/0xMiden/node.git miden-node
 cd miden-node
 
 make local-network-build
 make local-network-up
 ```
 
-The stack starts the sequencer, three validators, transaction prover, network transaction builder, telemetry services, and network monitor. The RPC endpoint is:
+The stack starts the sequencer, three validators, transaction prover, network transaction builder, funding service, telemetry services, and network monitor. The RPC endpoint is:
 
 ```text
 http://localhost:57291
@@ -74,21 +74,21 @@ For the full node operator workflow, see the [local network development guide](.
 
 ## Export the genesis account
 
-The local genesis process writes account files into the Compose volume. Copy the faucet operator account into the repo root when you need an existing local account in a client:
+The local genesis process writes account files into the Compose volume. Copy the prefunded distributor account into the repo root to inspect an existing local account in a client:
 
 ```bash
 docker run --rm \
   -v miden-node_node-data:/data:ro \
   -v "$PWD":/out \
   alpine:3.20 \
-  cp /data/accounts/faucet_operator.mac /out/faucet_operator.mac
+  cp /data/usdcx/distributor.genesis.mac /out/distributor.genesis.mac
 ```
 
 Then configure the CLI for localhost and import the account:
 
 ```bash
 miden-client init --local --network localhost
-miden-client import faucet_operator.mac
+miden-client import distributor.genesis.mac
 miden-client sync
 miden-client account --list
 ```
@@ -161,7 +161,7 @@ If the frontend itself runs inside Docker, `localhost` is the frontend container
 The miden-client integration test binary uses the same local network preset:
 
 ```bash
-git clone --branch v0.16.0 --depth 1 https://github.com/0xMiden/rust-sdk.git miden-rust-sdk
+git clone --branch v0.17.2 --depth 1 https://github.com/0xMiden/rust-sdk.git miden-rust-sdk
 cd miden-rust-sdk
 
 TEST_MIDEN_NETWORK=localhost \

@@ -52,9 +52,9 @@ path = "tests/my_test.rs"
 [dependencies]
 anyhow = "1.0"
 tokio = { version = "1", features = ["rt-multi-thread", "macros"] }
-miden-protocol = "0.16"
-miden-standards = { version = "0.16", features = ["testing"] }
-miden-testing = "0.16"
+miden-protocol = "0.17"
+miden-standards = { version = "0.17", features = ["testing"] }
+miden-testing = "0.17"
 rand = "0.10"
 ```
 
@@ -220,7 +220,7 @@ let config = AccountCreationConfig {
 
 // Instantiate the component from the package and add an existing account.
 let component = AccountComponent::from_package(
-    &bank_package,
+    (*bank_package).clone(),
     &config.init_storage_data,
 )?;
 let account = builder.add_account_from_builder(
@@ -512,7 +512,7 @@ async fn counter_test() -> anyhow::Result<()> {
         0_u64,
     )?;
 
-    let counter_component = AccountComponent::from_package(&contract_package, &init_storage_data)
+    let counter_component = AccountComponent::from_package((*contract_package).clone(), &init_storage_data)
         .context("failed to build account component from counter package")?;
     let counter_account = builder.add_account_from_builder(
         Auth::BasicAuth {

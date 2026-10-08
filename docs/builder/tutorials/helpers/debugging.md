@@ -27,7 +27,7 @@ arguments, such as `miden::println!("balance: {}", balance)`. Formatted output r
 `extern crate alloc` and a configured global allocator; literal markers don't allocate.
 
 :::note Where Rust markers appear
-With SDK 0.14.0, `miden::println!` emits a `readonly::miden_debug::println` event.
+With the 0.17 toolchain, `miden::println!` emits a `readonly::miden_debug::println` event.
 The normal Rust client and MockChain transaction executors ignore that event. Attaching a DAP
 client preserves the transaction host's handlers, so the live DAP connection alone does not
 make these messages appear.

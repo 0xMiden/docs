@@ -36,6 +36,13 @@ This makes testing faster, more reliable, and easier to debug than testing again
 
 ## Running the Tests
 
+The example below imports `RandomCoin` from the protocol crate; the v0.17 client no longer re-exports it. Add this entry to the existing dev-dependencies in `integration/Cargo.toml`:
+
+```toml title="integration/Cargo.toml"
+[dev-dependencies]
+miden-protocol = "0.17"
+```
+
 Execute your tests from the integration directory using the standard Cargo test command:
 
 ```bash title="Terminal"
@@ -69,11 +76,11 @@ use miden_client::{
         component::InitStorageData, AccountBuilder, AccountComponent, AccountType, StorageMapKey,
     },
     auth::AuthSchemeId,
-    crypto::RandomCoin,
     note::NoteScript,
     transaction::RawOutputNote,
     Word,
 };
+use miden_protocol::crypto::rand::RandomCoin;
 use miden_standards::testing::note::NoteBuilder;
 use miden_testing::{AccountState, Auth, MockChain};
 
@@ -102,7 +109,7 @@ async fn counter_test() -> anyhow::Result<()> {
     let mut init_storage_data = InitStorageData::default();
     init_storage_data.insert_map_entry(counter_storage_slot.clone(), COUNTER_STORAGE_KEY, 0_u64)?;
 
-    let counter_component = AccountComponent::from_package(&contract_package, &init_storage_data)
+    let counter_component = AccountComponent::from_package(contract_package.as_ref().clone(), &init_storage_data)
         .context("failed to build account component from counter package")?;
     let counter_account = builder.add_account_from_builder(
         Auth::BasicAuth {
@@ -210,7 +217,7 @@ let counter_storage_slot = counter_storage_slot()?;
 let mut init_storage_data = InitStorageData::default();
 init_storage_data.insert_map_entry(counter_storage_slot.clone(), COUNTER_STORAGE_KEY, 0_u64)?;
 
-let counter_component = AccountComponent::from_package(&contract_package, &init_storage_data)
+let counter_component = AccountComponent::from_package(contract_package.as_ref().clone(), &init_storage_data)
     .context("failed to build account component from counter package")?;
 let counter_account = builder.add_account_from_builder(
     Auth::BasicAuth {

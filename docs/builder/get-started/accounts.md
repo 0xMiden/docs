@@ -123,7 +123,7 @@ If you already created `miden-app` during [installation](./setup/installation#ty
 ```bash title=">_ Terminal"
 npm create vite@latest miden-app -- --template vanilla-ts
 cd miden-app
-npm install @miden-sdk/miden-sdk@^0.16.0
+npm install @miden-sdk/miden-sdk@0.17.1
 ```
 
 For each code example, save the TypeScript snippet as `src/demo.ts` (overwriting the previous one as you progress):
@@ -349,7 +349,7 @@ async fn main() -> anyhow::Result<()> {
 ```
 
 ```typescript title="src/demo.ts"
-import { MidenClient } from "@miden-sdk/miden-sdk";
+import { FaucetType, MidenClient } from "@miden-sdk/miden-sdk";
 
 export async function demo() {
     // Initialize client to connect with the Miden Testnet.
@@ -361,7 +361,7 @@ export async function demo() {
 
     // Create a fungible token faucet.
     const faucet = await client.accounts.create({
-        type: 0, // Fungible faucet
+        type: FaucetType.FungibleFaucet,
         symbol: "TEST",
         decimals,
         maxSupply,

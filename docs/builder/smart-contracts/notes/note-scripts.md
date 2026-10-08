@@ -63,7 +63,7 @@ The `#[note_script]` method has specific signature constraints:
 
 | Constraint | Details |
 |------------|---------|
-| Receiver | `self` (by value only — not `&self` or `&mut self`) |
+| Receiver | `self` or `mut self` (by value only — not `&self` or `&mut self`) |
 | Return type | `()` |
 | Required arg | One `Word` argument (the note script argument) |
 | Account arg | `&AccountWrapper` or `&mut AccountWrapper`, where `AccountWrapper` is declared with `#[account(package::Interface)]` |

@@ -30,15 +30,13 @@ const client = await MidenClient.createMock();
 The mock chain does not create blocks automatically — advance it with `proveBlock()` after each transaction batch. Between `proveBlock()` and subsequent reads, call `client.sync()` to hydrate the store.
 
 ```typescript
-import { MidenClient, type AccountTypeValue } from "@miden-sdk/miden-sdk";
-
-const FUNGIBLE_FAUCET: AccountTypeValue = 0;
+import { MidenClient, FaucetType } from "@miden-sdk/miden-sdk";
 
 const client = await MidenClient.createMock();
 
 const wallet = await client.accounts.create();
 const faucet = await client.accounts.create({
-  type: FUNGIBLE_FAUCET,
+  type: FaucetType.FungibleFaucet,
   symbol: "TEST",
   decimals: 8,
   maxSupply: 10_000_000n,
@@ -119,21 +117,20 @@ const client = await MidenClient.createMock({
 
 ## Private-note transport
 
-The mock client ships its own in-memory note transport. The same `sendPrivate` / `fetchPrivate` flow works:
+The mock client ships its own in-memory note transport. The same `sendPrivate` / `fetchPrivate` flow works. `mockAtBlock()` supplies a proof for this mock-only example; a real transport requires the committed note's actual inclusion proof:
 
 ```typescript
 import {
   createP2IDNote,
+  NoteInclusionProof,
   MidenClient,
-  type AccountTypeValue,
+  FaucetType,
 } from "@miden-sdk/miden-sdk";
-
-const FUNGIBLE_FAUCET: AccountTypeValue = 0;
 
 const client = await MidenClient.createMock();
 const recipient = await client.accounts.create();
 const faucet = await client.accounts.create({
-  type: FUNGIBLE_FAUCET,
+  type: FaucetType.FungibleFaucet,
   symbol: "TEST",
   decimals: 8,
   maxSupply: 10_000_000n,
@@ -149,7 +146,7 @@ const note = createP2IDNote({
 await client.notes.sendPrivate({
   note,
   to: recipient,
-  scanAfterBlockNum: 0,
+  inclusionProof: NoteInclusionProof.mockAtBlock(0),
 });
 
 await client.notes.fetchPrivate();

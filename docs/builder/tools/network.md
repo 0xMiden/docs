@@ -50,7 +50,7 @@ Hard-coding testnet URLs in client configs is fine for demos, but the Miden ops 
 
 **Point the client at testnet** — default config targets the testnet RPC, so `miden new` projects work out of the box.
 
-**Top up with the faucet** — mint testnet assets to your account ID before attempting transactions.
+**Register and top up** — if the network requires an invitation, register the account with `miden client account --register <ACCOUNT_ID> --invitation-code <CODE>`. Then mint testnet assets to your account ID before attempting transactions.
 
 **Submit + verify** — send a proven transaction via the RPC; watch the account and transaction IDs land on [MidenScan](https://testnet.midenscan.com).
 

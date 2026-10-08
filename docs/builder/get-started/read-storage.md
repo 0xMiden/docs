@@ -329,7 +329,7 @@ async fn main() -> anyhow::Result<()> {
 ```
 
 ```typescript title="src/demo.ts"
-import { MidenClient } from "@miden-sdk/miden-sdk";
+import { FaucetType, MidenClient } from "@miden-sdk/miden-sdk";
 import { fundAccount } from "./funding";
 
 export async function demo() {
@@ -345,7 +345,7 @@ export async function demo() {
     const decimals = 8;
     const maxSupply = 10_000_000n * 10n ** BigInt(decimals);
     const faucet = await client.accounts.create({
-        type: 0, // Fungible faucet
+        type: FaucetType.FungibleFaucet,
         symbol: "TEST",
         decimals,
         maxSupply,

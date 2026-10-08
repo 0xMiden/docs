@@ -70,7 +70,7 @@ for (const record of records) {
 }
 ```
 
-Returns the input notes available for the specified account. Use this to drive "inbox" UIs.
+Returns input notes consumable by the specified account at the last synced block. Block-locked notes are excluded. To show those too, use `client.notes.listConsumable({ account: wallet })`, which retains each record's `noteConsumability()` and `consumptionStatus().consumableAfterBlock()`.
 
 ## Import and export
 
@@ -103,7 +103,7 @@ const details = await client.notes.export("0xnote...", { format: NoteExportForma
 
 Private note details can be delivered through the Miden note transport service. The sender must relay the note after creating it; setting `type: "private"` alone does not deliver the details.
 
-The standard v0.16 client transport path sends note details in plaintext; end-to-end encryption is not implemented in that path. Private onchain visibility does not hide these details from the transport service.
+The standard v0.17 client transport path sends note details in plaintext; end-to-end encryption is not implemented in that path. Private onchain visibility does not hide these details from the transport service.
 
 ```typescript
 // Relay an arbitrary private note. You can also pass an input note ID or
@@ -111,11 +111,14 @@ The standard v0.16 client transport path sends note details in plaintext; end-to
 await client.notes.sendPrivate({
   note: privateNote,
   to: "mtst1recipient...",
-  scanAfterBlockNum, // chain tip recorded when the transaction was submitted
+  inclusionProof, // NoteInclusionProof for the committed note
 });
 
-// For an applied output note created by this client, let the SDK derive the
-// scan-start block from its stored expected height.
+// For an output note created by this client, wait for its transaction to
+// commit, then sync so the SDK can read the stored inclusion proof.
+// txId is the transaction ID returned when creating the output note.
+await client.transactions.waitFor(txId.toHex());
+await client.sync();
 await client.notes.sendPrivateOutput({
   noteId: "0xnote...",
   to: "mtst1recipient...",
@@ -130,7 +133,7 @@ const notes = await recipientClient.notes.list();
 console.log(`Tracked ${notes.length} notes`);
 ```
 
-`scanAfterBlockNum` must be at or below the note's commitment block. A value above it is never scanned backward and can silently prevent delivery. `sendPrivateOutput()` avoids that footgun for applied output notes created by the same client. Newly tracked tags are backfilled by `client.sync()`; `fetchPrivate({ mode: "all" })` is no longer available.
+`sendPrivate()` requires an inclusion proof that the transport verifies; the recipient scans from the block it names. `sendPrivateOutput()` reads that proof from the stored output note and throws until the client has synced past its commitment. Newly tracked tags are backfilled by `client.sync()`; `fetchPrivate({ mode: "all" })` is no longer available.
 
 You need a note transport endpoint configured on the client — set `noteTransportUrl` in `ClientOptions`, or use a network factory (`createTestnet`, `createDevnet`) that preconfigures it.
 

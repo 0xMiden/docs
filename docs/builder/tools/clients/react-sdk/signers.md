@@ -9,8 +9,8 @@ The React SDK treats signing as a pluggable contract: `MidenProvider` accepts an
 
 ## Built-in signer providers
 
-:::warning React SDK 0.16 limitation
-`@miden-sdk/react` 0.16.0 cannot create a new account through an external signer. Para and Turnkey integrations must pass `importAccountId` for a pre-existing account whose auth component matches the connected signer. Importing an ID does not create an account or reconstruct private account state; the account must already be accessible to the client. The MidenFi adapter's normal path already imports its existing wallet account.
+:::warning React SDK 0.17.0 limitation
+`@miden-sdk/react` 0.17.0 cannot create a new account through an external signer. Para and Turnkey integrations must pass `importAccountId` for a pre-existing account whose auth component matches the connected signer. Importing an ID does not create an account or reconstruct private account state; the account must already be accessible to the client. The MidenFi adapter's normal path already imports its existing wallet account.
 :::
 
 ### Para (EVM wallets)
@@ -118,7 +118,7 @@ function Header() {
 
 ## Custom signer providers
 
-Connect your signing service through `SignerContext`. With React SDK 0.16.0, the service must provide a pre-existing account ID and ECDSA K256/Keccak signatures for that account, plus its public-key commitment serialized as an SDK word.
+Connect your signing service through `SignerContext`. With React SDK 0.17.0, the service must provide a pre-existing account ID and ECDSA K256/Keccak signatures for that account, plus its public-key commitment serialized as an SDK word.
 
 ```tsx
 import { MidenProvider, SignerContext, type SignerContextValue } from "@miden-sdk/react";
@@ -150,15 +150,15 @@ const signer: SignerContextValue = {
 
 Build this value inside your provider's render and update it when the connection changes. Use a unique `storeName` per signing identity to isolate each user's database.
 
-`importAccountId` must identify an account that was created for this signer and is already available from the network. It bypasses account construction; omitting it uses the unsupported 0.16.0 creation path. A public account ID alone cannot recover a private account's state.
+`importAccountId` must identify an account that was created for this signer and is already available from the network. It bypasses account construction; omitting it uses the unsupported 0.17.0 creation path. A public account ID alone cannot recover a private account's state.
 
 ## Custom `AccountComponent`s
 
-Do not use `SignerAccountConfig.customComponents` to create an external-signer account with React SDK 0.16.0. The creation path is unsupported, while the `importAccountId` path bypasses the account builder and does not attach supplied components. Create the account with its application-specific components first, then import that existing account.
+Do not use `SignerAccountConfig.customComponents` to create an external-signer account with React SDK 0.17.0. The creation path is unsupported, while the `importAccountId` path bypasses the account builder and does not attach supplied components. Create the account with its application-specific components first, then import that existing account.
 
 ## `MultiSignerProvider`
 
-Use `MultiSignerProvider` to switch signers at runtime. Register each provider with `<SignerSlot />` and place `MidenProvider` alongside them. On React SDK 0.16.0, each Para or Turnkey slot must import its own pre-existing account:
+Use `MultiSignerProvider` to switch signers at runtime. Register each provider with `<SignerSlot />` and place `MidenProvider` alongside them. On React SDK 0.17.0, each Para or Turnkey slot must import its own pre-existing account:
 
 ```tsx
 import { MultiSignerProvider, SignerSlot, MidenProvider } from "@miden-sdk/react";

@@ -5,7 +5,7 @@ sidebar_position: 5
 
 # Advanced hooks
 
-Hooks beyond the core send / mint / consume trio: custom scripts, anchored transaction previews, MASM compilation, session wallets, store backup, note serialization, and sync control.
+Hooks beyond the core send / mint / consume trio: custom scripts, transaction previews, MASM compilation, session wallets, store backup, note serialization, and sync control.
 
 ## `useTransaction`
 
@@ -13,7 +13,7 @@ General-purpose transaction runner that accepts either a prebuilt `TransactionRe
 
 ```tsx
 import { useTransaction } from "@miden-sdk/react";
-import { TransactionRequestBuilder } from "@miden-sdk/miden-sdk";
+import { AccountId } from "@miden-sdk/miden-sdk";
 
 const { execute, isLoading, stage } = useTransaction();
 
@@ -26,8 +26,8 @@ await execute({
 // Builder callback — receives the raw WebClient
 await execute({
   accountId: contractAccount,
-  request: (_client) =>
-    new TransactionRequestBuilder()
+  request: async (client) =>
+    (await client.feeAwareTransactionRequestBuilder(AccountId.fromHex(contractAccount)))
       .withCustomScript(txScript)
       .build(),
 });
@@ -43,25 +43,28 @@ await execute({
 | `request` | `TransactionRequest` or `(client: WebClient) => TransactionRequest \| Promise<TransactionRequest>` |
 | `skipSync` | Skip pre-send auto-sync (default `false`) |
 | `privateNoteTarget` | Deliver private output notes to this account after commit (any `AccountRef` form) |
-| `anchor` | Execute against a reference block captured with `useChainAnchor` |
+| `anchor` | Execute against a reference block captured with `useChainAnchor`; omit for 0.17 multisig requests |
 
 The `privateNoteTarget` field is the 4-step pipeline shortcut: execute the tx, commit onchain, then auto-deliver the private note through the note transport to the target. Useful for "send private note" UIs where the recipient already has the React SDK running.
 
 ## `useChainAnchor` and `usePreview`
 
-Use these hooks when a transaction summary is proposed on one client and authorized or executed on another, such as multisig and offline co-signing flows. `useChainAnchor` pins the request to one reference block; `usePreview` derives the summary awaiting authorization at that block.
+Use `usePreview` when a transaction summary is proposed on one client and authorized or executed on another. For a 0.17 multisig, build from `feeAwareTransactionRequestBuilder` and execute at the synced tip. The request carries the bound block that keeps its summary reproducible; no `ChainAnchor` is needed.
 
-Capture and preview in separate UI steps. `anchoredRequest` is React state, so it becomes available on the render after `captureAnchor()` completes:
+Build and preview in separate UI steps. The prepared request is React state, so it becomes available on the render after `prepare()` completes:
 
 ```tsx
 import { useState } from "react";
-import { useChainAnchor, usePreview, useTransaction } from "@miden-sdk/react";
-import type { TransactionRequest, TransactionSummary } from "@miden-sdk/miden-sdk";
+import { useMiden, usePreview, useTransaction } from "@miden-sdk/react";
+import { AccountId } from "@miden-sdk/miden-sdk";
+import type {
+  TransactionRequest, TransactionRequestBuilder, TransactionSummary,
+} from "@miden-sdk/miden-sdk";
 
 type MultisigProposalProps = {
-  accountId: string;
-  buildRequest: () => TransactionRequest | Promise<TransactionRequest>;
-  sendProposal: (anchor: Uint8Array, summary: Uint8Array) => Promise<void>;
+  accountId: string; // hex account ID
+  buildRequest: (builder: TransactionRequestBuilder) => TransactionRequest | Promise<TransactionRequest>;
+  sendProposal: (request: Uint8Array, summary: Uint8Array) => Promise<void>;
   collectAuthorization: (
     summary: TransactionSummary,
     request: TransactionRequest,
@@ -74,57 +77,65 @@ function MultisigProposal({
   sendProposal,
   collectAuthorization,
 }: MultisigProposalProps) {
-  const { captureAnchor, anchor, anchoredRequest, isCapturing } = useChainAnchor();
+  const { client, sync, runExclusive } = useMiden();
   const { preview, isPreviewing } = usePreview();
   const { execute, isLoading } = useTransaction();
+  const [request, setRequest] = useState<TransactionRequest | null>(null);
   const [authorizedRequest, setAuthorizedRequest] =
     useState<TransactionRequest | null>(null);
+  const [isPreparing, setIsPreparing] = useState(false);
   const [isAuthorizing, setIsAuthorizing] = useState(false);
-  const busy = isCapturing || isPreviewing || isAuthorizing || isLoading;
+  const busy = isPreparing || isPreviewing || isAuthorizing || isLoading;
 
-  const capture = async () => {
+  const prepare = async () => {
+    if (!client) return;
     setAuthorizedRequest(null);
-    await captureAnchor({ request: buildRequest });
+    setRequest(null);
+    setIsPreparing(true);
+    try {
+      await sync();
+      const builder = await runExclusive(() =>
+        client.feeAwareTransactionRequestBuilder(AccountId.fromHex(accountId)),
+      );
+      setRequest(await buildRequest(builder));
+    } finally {
+      setIsPreparing(false);
+    }
   };
 
   const previewAndShare = async () => {
-    if (!anchor || !anchoredRequest) return;
+    if (!client || !request) return;
     setAuthorizedRequest(null);
     setIsAuthorizing(true);
     try {
-      const summary = await preview({
-        accountId,
-        request: anchoredRequest,
-        anchor,
-      });
-      await sendProposal(anchor.serialize(), summary.serialize());
-      setAuthorizedRequest(await collectAuthorization(summary, anchoredRequest));
+      await sync();
+      const syncHeight = await runExclusive(() => client.getSyncHeight());
+      if (syncHeight < Math.max(0, ...request.blockNumbers())) {
+        throw new Error("The client has not synced to the proposal's bound block");
+      }
+      const summary = await preview({ accountId, request });
+      await sendProposal(request.serialize(), summary.serialize());
+      setAuthorizedRequest(await collectAuthorization(summary, request));
     } finally {
       setIsAuthorizing(false);
     }
   };
 
-  const executeAnchored = async () => {
-    if (!anchor || !authorizedRequest) return;
-    await execute({ accountId, request: authorizedRequest, anchor });
+  const executeAuthorized = async () => {
+    if (!authorizedRequest) return;
+    await execute({ accountId, request: authorizedRequest });
     setAuthorizedRequest(null);
   };
 
   return (
     <>
-      <button onClick={capture} disabled={busy}>
-        Capture reference block
+      <button onClick={prepare} disabled={!client || busy}>
+        Build proposal
       </button>
-      <button
-        onClick={previewAndShare}
-        disabled={!anchor || !anchoredRequest || busy}
-      >
+      <button onClick={previewAndShare} disabled={!request || busy}>
         Preview and share
       </button>
-      <button
-        onClick={executeAnchored}
-        disabled={!anchor || !authorizedRequest || busy}
-      >
+      <button onClick={executeAuthorized} disabled={!authorizedRequest || busy}>
         Execute authorized request
       </button>
     </>
@@ -132,14 +143,9 @@ function MultisigProposal({
 }
 ```
 
-`collectAuthorization` is supplied by your application. It collects the required
-signatures and returns the request with the authorization advice attached. Keep
-the proposed actions, fee conversion salt, and reference block unchanged. For a
-multisig account, `buildRequest` must declare a fresh salt with
-`withFeeConversionSalt`. The execute button becomes available after authorization
-has been collected.
+`buildRequest` adds the application's actions to the supplied builder. Keep its auth arguments intact: do not call `withFeeConversionSalt` or `withAuthArg`. `collectAuthorization` gathers signatures and returns the same request with authorization advice attached. Co-signers deserialize the received request, sync to its declared blocks, derive its summary without an anchor, and compare commitments before signing.
 
-`preview()` rejects with `TRANSACTION_ALREADY_AUTHORIZED` when the request needs no additional authorization; execute it directly in that case. A `ChainAnchor` owns a WASM allocation, so call `anchor.free()` when the proposal workflow no longer needs it.
+`preview()` does not sync automatically and rejects with `TRANSACTION_ALREADY_AUTHORIZED` when no additional authorization is needed; execute directly in that case. `useChainAnchor` remains available for other flows whose summary binds the execution reference block. Pass the same anchor to preview and execute, and free it when finished.
 
 ## `useExecuteProgram`
 
@@ -258,12 +264,15 @@ export function SessionWallet({
 }
 ```
 
-In 0.16.0, pass the raw numeric authentication enum explicitly, as above; the
+In React SDK 0.17.0, pass the raw numeric authentication enum explicitly, as above; the
 hook's default resolves to an undefined enum member. The `fund` callback belongs
-to your application. Its note must include the native fee asset so the new wallet
+to your application. It must register the account if the network requires an
+invitation, then supply a note containing the native fee asset so the new wallet
 can pay for its first consume transaction.
 
-The flow progresses through `idle` → `creating` → `funding` → `consuming` → `ready`.
+Funding notes must be consumable at the last synced block; the hook waits while they are block-locked.
+
+The flow progresses through `idle` → `creating` → `funding` → `consuming` → `ready`. The hook reaches `ready` after submitting the consumption transaction; it does not wait for on-chain confirmation.
 
 `UseSessionAccountReturn`:
 
@@ -271,7 +280,7 @@ The flow progresses through `idle` → `creating` → `funding` → `consuming` 
 | --- | --- |
 | `initialize()` | Kicks off the create → fund → consume flow |
 | `sessionAccountId` | Hex ID of the session wallet once created |
-| `isReady` | `true` after the funding note has been consumed |
+| `isReady` | `true` after the funding-note consumption transaction has been submitted |
 | `step` | `SessionAccountStep` — one of the five states above |
 | `error` | Non-null if any step failed |
 | `reset()` | Clears session data (and any persisted state under `storagePrefix`) |
@@ -280,7 +289,7 @@ Session state persists under the configurable `storagePrefix` (default `"miden-s
 
 ## `useExportStore` / `useImportStore`
 
-Back up and restore the entire local store as a JSON dump. Handy for wallet backup/restore UIs.
+Back up and restore the entire local store as a JSON dump. Handy for wallet backup/restore UIs. Use a dump from a compatible SDK version. Store import is not a migration from the v0.16 data format to v0.17.
 
 ```tsx
 import { useExportStore, useImportStore, useMidenClient } from "@miden-sdk/react";
@@ -304,7 +313,7 @@ await importStore(uploadedDump, storeName, { skipSync: false });
 
 Serialize notes to bytes for QR delivery or import notes handed over out-of-band. These complement the private-note transport layer — use the transport when the recipient is online, and QR/bytes when they aren't.
 
-In 0.16.0, `exportNote` requires an output-note ID tracked by this client. An
+`exportNote` requires an output-note ID tracked by this client. An
 imported input note alone is insufficient and returns `No output note found`.
 
 ```tsx

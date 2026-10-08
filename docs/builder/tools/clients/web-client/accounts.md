@@ -13,7 +13,7 @@ Account creation uses a few small option values. Wallets are the default shape; 
 
 | Kind | Accepted values | Meaning |
 | --- | --- | --- |
-| faucet `type` field | `0` \| `1` | Fungible or non-fungible faucet selector |
+| faucet `type` field | `FaucetType.FungibleFaucet` | Fungible faucet selector |
 | `auth` field | `"falcon"` \| `"ecdsa"` | Signing scheme — Falcon is the default |
 | `storage` field | `"public"` \| `"private"` | Account visibility mode |
 | low-level `AccountStorageMode` | `AccountStorageMode.public()` \| `AccountStorageMode.private()` | WASM builder visibility flag |
@@ -52,22 +52,20 @@ console.log(wallet.isRegularAccount());
 ```typescript
 import {
   MidenClient,
-  type AccountTypeValue,
+  FaucetType,
 } from "@miden-sdk/miden-sdk";
-
-const FUNGIBLE_FAUCET: AccountTypeValue = 0;
 
 const client = await MidenClient.createTestnet();
 
 const faucet = await client.accounts.create({
-  type: FUNGIBLE_FAUCET,
+  type: FaucetType.FungibleFaucet,
   symbol: "TEST",
   decimals: 8,
   maxSupply: 10_000_000n, // number | bigint
 });
 
 const faucet2 = await client.accounts.create({
-  type: FUNGIBLE_FAUCET,
+  type: FaucetType.FungibleFaucet,
   symbol: "DAG",
   decimals: 8,
   maxSupply: 10_000_000n,

@@ -6,7 +6,7 @@ description: "Define Miden account components using the #[component] macro — s
 
 # Components
 
-Components are the building blocks of Miden accounts. Each component defines a [storage](./storage) layout, exposes public methods, and can be composed with other components on the same account — for example, a wallet component + an auth component + custom logic. This modularity lets you reuse a wallet component across many accounts and test or upgrade components independently.
+Components are the building blocks of Miden accounts. Each component defines a [storage](./storage) layout, exposes public methods, and can be composed with other components on the same account — for example, a wallet component + an auth component + custom logic. This modularity lets you reuse a wallet component across many accounts and test components independently. Updating a deployed account replaces its complete account code and must preserve its storage layout; see [Account code upgrades](./account-operations#upgrade-account-code).
 
 ## The `#[component]` macro
 
@@ -186,11 +186,11 @@ self.get_id() -> AccountId
 // Get the account nonce
 self.get_nonce() -> Nonce
 
-// Get the value word stored under an asset key
-self.get_asset(asset_key: Word) -> Word
+// Get the value word stored under an asset ID
+self.get_asset(asset_id: AssetId) -> Word
 
 // Check fungible or non-fungible asset ownership
-self.has_asset(asset_id: Word) -> bool
+self.has_asset(asset_id: AssetId) -> bool
 
 // Compute commitment of account state changes
 self.compute_delta_commitment() -> Word
@@ -200,7 +200,7 @@ self.was_procedure_called(proc_root: Word) -> bool
 
 // Get storage and vault commitments
 self.get_vault_root() -> Word
-self.compute_commitment() -> Word
+self.compute_commitment() -> Word // native account only
 self.compute_storage_commitment() -> Word
 // ... and more (see API Reference)
 ```

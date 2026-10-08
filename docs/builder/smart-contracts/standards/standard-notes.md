@@ -1,11 +1,11 @@
 ---
 title: "Standard Notes"
-description: "Use standard Miden note scripts for transfers, expiring transfers, swaps, minting, and burning."
+description: "Use standard Miden note scripts for transfers, expiring transfers, swaps, minting, burning, and network-account upgrades."
 ---
 
 # Standard Notes
 
-Standard notes are prebuilt note scripts from `miden-standards`. They cover the common asset flows builders need before writing custom note scripts.
+Standard notes are prebuilt note scripts from `miden-standards`. They cover common asset flows and network-account administration before builders need custom note scripts.
 
 Use the Rust APIs to construct standard notes in client or transaction-building code. The scripts themselves are MASM modules, so direct MASM authors can inspect or import the same standard scripts when they need exact procedure behavior.
 
@@ -19,6 +19,7 @@ Use the Rust APIs to construct standard notes in client or transaction-building 
 | PSWAP | You need a partially fillable swap note. | `PswapNote` | `miden::standards::notes::pswap` |
 | MINT | You are requesting that a network faucet mint an asset and create a delivery note. | `MintNote` | `miden::standards::notes::mint` |
 | BURN | A faucet is burning an asset returned through a note. | `BurnNote` | `miden::standards::notes::burn` |
+| UPGRADE | An authorized owner or role holder is replacing a deployed network account's code. | `UpgradeNote` | `miden::standards::notes::upgrade` |
 
 For the note model itself, start with [What are Notes?](../notes/introduction). This page focuses on how the standards fit into builder workflows.
 
@@ -78,8 +79,19 @@ Standard notes assume the consuming account exposes the procedures the note scri
 | SWAP / PSWAP | `BasicWallet` and `NoteCreator`, exposing `receive_asset`, `move_asset_to_note`, and `create_note`. |
 | MINT | A network faucet exposing `CodeInspection::has_procedure` and a fungible or non-fungible `mint_and_send` procedure. |
 | BURN | The issuing faucet exposing `CodeInspection::has_procedure` and a fungible or non-fungible `receive_and_burn` procedure. |
+| UPGRADE | A deployed public network account with `UpgradeManager`, owner- or role-controlled `Authority`, and the upgrade script in both its note allowlist and fee schedule. |
 
 If you write a custom wallet or faucet component, test it against the standard notes you expect it to consume.
+
+## PSWAP output sealing
+
+PSWAP validates and [seals the payback P2ID note](../notes/output-notes#seal-a-completed-note). For a partial fill, it also validates and seals the remainder PSWAP note. Each output must hold exactly the expected assets. A later note or transaction script cannot add assets or attachments to a sealed output. Create a separate output note for anything extra.
+
+Asset callbacks run before sealing. A callback that adds an asset or increases the expected balance makes the fill fail with `PSWAP output was altered before sealing`. Public attachments added before sealing remain part of the final note ID. Attempts to modify either output after sealing fail with `sealed output notes cannot be modified`.
+
+## Network-account upgrades
+
+`UpgradeNote` carries the new code in public attachments and calls the target's `UpgradeManager`. The target must already exist and preserve its storage layout when replacing its code. Follow [Upgrade a network account](../accounts/network-accounts#upgrade-a-network-account) for authority, allowlist, fees, attachment limits, and a Rust example. Exhaustive matches on `StandardNote` must include `StandardNote::UPGRADE`.
 
 ## Attachments and execution hints
 

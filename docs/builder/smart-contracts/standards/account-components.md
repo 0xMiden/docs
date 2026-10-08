@@ -22,11 +22,13 @@ Use these components from Rust when you build accounts with the SDK, or import t
 | `Ownable2Step` | Access control for account owners. | `miden_standards::account::access` |
 | `RoleBasedAccessControl` | Role-based authorization for protected account procedures. | `miden_standards::account::access` |
 | `Authority` | Shared authority component for protecting administrative changes. | `miden_standards::account::access` |
+| `UpgradeManager` | Replacing an existing account's code, authorized through its `Authority`; the storage layout must remain compatible. | `miden_standards::account::upgrade` |
 | `TokenPolicyManager` | Registering and updating mint, burn, send, and receive token policies. | `miden_standards::account::policies` |
+| `TokenPolicyManagerV2` | Applying token policies while limiting the faucet's pause flag to mint and burn operations. Available in `miden-standards` 0.17.1. | `miden_standards::account::policies` |
 | `BasicBlocklist` | Blocking specific native accounts in send and receive transfer-policy checks. | `miden_standards::account::policies` |
 | `BasicAllowlist` | Allowing only specific native accounts in send and receive transfer-policy checks. | `miden_standards::account::policies` |
 
-These are building blocks. They do not prevent you from adding custom components to the same account.
+These are building blocks. They do not prevent you from adding custom components to the same account. For upgrade requirements and client requests, see [Account code upgrades](../accounts/account-operations#upgrade-account-code).
 
 ## Start with wallet and auth
 

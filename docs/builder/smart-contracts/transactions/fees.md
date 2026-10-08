@@ -8,7 +8,7 @@ description: "How to fund and pay for Miden transactions, understand fee calcula
 
 Miden transaction fees pay for verification and batch inclusion. The executing account pays from its vault by creating a public `TX_FEE` output note during authentication. The batch builder can collect that note when it includes the transaction.
 
-- The current clients pay in the network's native fee asset, identified by `fee_faucet_id` in the reference block.
+- Standard authentication pays in the network's native fee asset, identified by `ProtocolConfig::fee_asset_id()` for the reference block's protocol configuration.
 - The amount depends on the reference block's base fee and the logarithm of the transaction's estimated VM cycle count.
 - A new account can fund its first transaction by consuming a note containing the fee asset.
 - Payment takes effect when the transaction is included and its fee note becomes available onchain.
@@ -23,7 +23,7 @@ Creating a faucet for your own token does not supply native fee funds. The fauce
 
 To fund an empty account on a development network:
 
-1. Request a note containing the native fee asset from that network's faucet. Check that the issuing faucet matches the reference block's `fee_faucet_id`.
+1. Request a note containing the native fee asset from that network's faucet. Check that the issuing faucet matches `ProtocolConfig::fee_asset_id().faucet_id()` (or `await client.feeFaucetId()` after syncing the Web SDK).
 2. Synchronize the client until the funding note and its inclusion proof are available.
 3. Consume the funding note. Its script deposits the asset before authentication withdraws the fee, leaving the remainder in the account vault.
 4. Wait for confirmation and synchronize before using the remaining balance.
@@ -32,7 +32,7 @@ A standard P2ID funding note calls `BasicWallet::receive_asset`. A custom accoun
 
 ### Native payment with the Rust client
 
-This fragment uses `miden-client` `0.16.0`. It assumes an initialized `client`, a locally tracked single-signature `account_id` with its signer available, and a committed `funding_note` of type `Note` containing sufficient native fee funds. The account must be able to receive the note's assets.
+This fragment uses the `miden-client` 0.17.2 API. It assumes an initialized `client`, a locally tracked single-signature `account_id` with its signer available, and a committed `funding_note` of type `Note` containing sufficient native fee funds. The account must be able to receive the note's assets.
 
 ```rust
 use miden_client::transaction::TransactionRequestBuilder;
@@ -73,7 +73,7 @@ Authentication runs before the transaction has finished. Standard authentication
 
 ## Inspecting a transaction's fee
 
-With Web SDK `0.16.0`, the manual transaction lifecycle exposes the fee note after local execution and before proving or submission. This fragment assumes an initialized `client`, a tracked `account` with sufficient native funding and an available signer, and a prepared `request`:
+With Web SDK 0.17.1, the manual transaction lifecycle exposes the fee note after local execution and before proving or submission. This fragment assumes an initialized `client`, a tracked `account` with sufficient native funding and an available signer, and a prepared `request`:
 
 ```typescript
 const execution = await client.transactions.executeRequest(account, request);
@@ -108,34 +108,31 @@ flowchart TD
 
 The standard `AuthSingleSig` and `AuthMultisig` components perform these steps during authentication:
 
-1. Load the payment asset and conversion rate committed through the transaction's authentication arguments. The current client prepares the native asset at `1/1`.
+1. Load the payment asset and conversion rate committed through the transaction's authentication arguments. Nonzero fees require the native asset at `1/1`.
 2. Calculate the protocol fee from the reference block's base fee and the estimated cycle count.
-3. Round the converted payment amount up and withdraw it from the account vault.
+3. Withdraw that amount from the account vault.
 4. Create a public `TX_FEE` note containing the payment.
 5. Authorize the transaction summary, which commits to both the vault withdrawal and the fee note.
 
-The fee note is always public, uses the `0xFEE` tag, and has no target account. Its assets and amounts are public even when the application's notes are private. Any account with the basic wallet interface can consume it, allowing the batch builder to claim the payment. When processing output notes, use the SDK's fee-note accessor or identify the standard script; a tag alone does not establish that a note is a protocol fee payment.
+The fee note is always public, uses the `0xFEE` tag, and has no target account. Its assets and amounts are public even when the application's notes are private. Its script leaves assets in the note: the consuming account must collect them, for example through `AuthTxFeeCollector`. `BasicWallet` alone does not provide this collection logic. When processing output notes, use the SDK's fee-note accessor or identify the standard script; a tag alone does not establish that a note is a protocol fee payment.
 
 ## Choosing a payment asset
 
-The current Rust and Web clients prepare payment in the network's native fee asset at `1/1`. Use that path for ordinary transactions.
+The Rust and Web clients prepare payment in the network's native fee asset at `1/1`. Standard fee payment rejects any other asset or rate whenever the computed fee is nonzero.
 
-At the protocol level, fee conversion supports a payment in another fungible asset:
+`FeeConversionInfo::new(...)` still accepts other nonzero rates, but the fee-payment procedure rejects them during execution. Build the commitment with `FeeConversionInfo::one_to_one(protocol_config.fee_asset_id().faucet_id())` and fund the account with that asset.
 
-$$
-P_{\mathrm{asset}} = \left\lceil F_{\mathrm{native}} \times
-\frac{r_{\mathrm{num}}}{r_{\mathrm{den}}} \right\rceil
-$$
-
-Both rate components must be nonzero field elements. For signature-based authentication, the signer commits to the selected asset's faucet ID, the conversion rate, and a salt through the authentication arguments. These cannot change after authorization. The client uses a fixed default salt for standard single-signature accounts so their summaries remain reproducible; multisig accounts require a caller-chosen salt for replay protection when paying a nonzero protocol fee.
-
-The protocol validates the commitment and conversion arithmetic; it does not determine a market price. Alternative-asset payment needs a compatible integration and an asset and rate accepted by the intended batch builder. Protocol support does not imply that a deployed builder accepts your token. The current client's native-payment builder does not select alternative assets.
+For signature-based authentication, the signer commits to the native faucet ID, the `1/1` rate, and a salt through the authentication arguments. These cannot change after authorization. The client uses a fixed default salt for standard single-signature accounts so their summaries remain reproducible; multisig accounts need a fresh proposal salt, including on zero-fee chains.
 
 ### Multisig and custom authentication
 
-Standard `AuthMultisig` only accepts the native fee asset and caps the payment at twice the computed native fee. The protocol's alternative-asset conversion support does not override that restriction.
+Standard `AuthMultisig`, `AuthGuardedMultisig`, and `AuthMultisigSmart` pay the computed native fee at `1/1`.
 
-For a manually built multisig request, declare a fresh fee-conversion salt with Rust's `fee_conversion_salt(salt)`, or obtain a Web SDK builder with `await client.feeAwareTransactionRequestBuilder(account)`. Keep the request, salt, and reference-block anchor unchanged while collecting signatures for that proposal. Choose a new salt for a new proposal. The Web SDK's operations that build their own requests prepare the salt when needed.
+For a manually built Rust multisig request, construct `MultisigAuthArgs::new(bound_block, salt)` with a fresh random salt. On fee-charging chains, add native `FeeConversionInfo` with `.with_conversion_info(...)` before computing the commitment. Pass the commitment through `.auth_arg(...)`, insert its three-word preimage with `.extend_advice_map(...)`, and declare `.block_numbers([bound_block])`. The preimage contains the bound block and optional approval expiration, the salt, and the conversion info.
+
+In the Web SDK, use `await client.feeAwareTransactionRequestBuilder(account)`. When a cosigner rebuilds a proposal, supply the same `boundBlockNum` and `feeConversionSalt` options, and the same approval expiration if configured. The old `fee_conversion_salt` / `withFeeConversionSalt` path alone cannot build multisig auth args.
+
+Keep those auth arguments and the request unchanged while collecting signatures, including on zero-fee chains. Each party syncs to at least the bound block and executes at its current tip; the proposal no longer requires a reference-block anchor. Choose a new salt for a new proposal. The Web SDK's convenience operations prepare these arguments when needed.
 
 An explicit authentication argument makes the caller responsible for its contents. Custom authentication that reads conversion information must supply the matching commitment and advice data and invoke fee payment. Standard no-auth and network-account authentication pay natively without a caller-supplied conversion commitment. See [Authentication](../accounts/authentication.md#writing-a-custom-auth-component).
 
@@ -160,9 +157,9 @@ The account needs a compatible receiving interface and enough incoming funds to 
 </details>
 
 <details>
-<summary>A manual multisig request reports FeeConversionInfoRequired</summary>
+<summary>A manual multisig request has missing or invalid auth arguments</summary>
 
-Declare a fresh fee-conversion salt for the proposal.
+Supply the `MultisigAuthArgs` commitment and preimage, even on a zero-fee chain, or use the Web SDK's `feeAwareTransactionRequestBuilder`.
 
 </details>
 
@@ -174,9 +171,9 @@ Supply its expected commitment and advice data, and call the fee-payment procedu
 </details>
 
 <details>
-<summary>The builder rejects the payment asset or rate</summary>
+<summary>Fee payment rejects the asset or rate</summary>
 
-Use an asset and rate supported by that builder. A transaction that is never included transfers no fee.
+Use the chain's native fee asset at `1/1`. A transaction that is never included transfers no fee.
 
 </details>
 
@@ -204,13 +201,7 @@ Setting an application fee to zero does not fund the network account's protocol 
 
 ## Related
 
-- [Protocol fee implementation](https://github.com/0xMiden/protocol/blob/v0.16.0/crates/miden-protocol/asm/kernels/transaction-core/src/tx.masm): kernel-level fee calculation
+- [Protocol fee implementation](https://github.com/0xMiden/protocol/blob/v0.17.0/crates/miden-protocol/asm/kernels/transaction-core/src/tx.masm): kernel-level fee calculation
 - [Authentication](../accounts/authentication.md): fee payment in standard and custom auth procedures
 - [Network Accounts](../accounts/network-accounts.md): application fee policies and sponsorship
 - [What are Transactions?](./introduction.md): execution, proving, submission, and failure behavior
-
-:::info Source Reference
-Protocol: [`compute_fee`](https://github.com/0xMiden/protocol/blob/v0.16.0/crates/miden-protocol/asm/kernels/transaction-core/src/tx.masm), [`FeeConversionInfo`](https://github.com/0xMiden/protocol/blob/v0.16.0/crates/miden-standards/src/account/auth/fee.rs), [`TxFeeNote`](https://github.com/0xMiden/protocol/blob/v0.16.0/crates/miden-standards/src/note/tx_fee.rs).
-
-Clients: [Rust request preparation](https://github.com/0xMiden/rust-sdk/blob/v0.16.0/crates/rust-client/src/transaction/mod.rs), [Web SDK transaction lifecycle](https://github.com/0xMiden/web-sdk/blob/v0.16.0/crates/web-client/js/types/api-types.d.ts).
-:::

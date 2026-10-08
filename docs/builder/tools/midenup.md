@@ -59,23 +59,46 @@ Run `miden --version`. If you see "command not found," add `$CARGO_HOME/bin` (de
 
 ```bash
 midenup install testnet       # follows the release named by the testnet manifest
-midenup install 0.16.0        # pin to a specific release line
+midenup install 0.17.0        # pin to a specific release line
 ```
 
 ### Switch the active toolchain
 
 ```bash
-midenup set 0.16.0            # pin for the current project (writes miden-toolchain.toml)
-midenup override 0.16.0       # set the system-wide default
+midenup set testnet           # select for the current project (writes miden-toolchain.toml)
+midenup override testnet      # set the system-wide default
 midenup show active-toolchain # which one is active right now?
 ```
 
-A `miden-toolchain.toml` in the current directory always wins — otherwise the system default applies, falling back to `stable` if none is set.
+Midenup selects the toolchain in this order: an explicit `+<toolchain>` selector,
+the `MIDENUP_TOOLCHAIN` environment variable, a `miden-toolchain.toml` in the current
+directory or a parent directory, the system default, then `mainnet`.
+
+### Update a channel
+
+```bash
+midenup update testnet        # follow updates to the testnet toolchain
+```
+
+### Run a local node
+
+Use Docker with Compose v2.34.0 or newer to run a local network:
+
+```bash
+midenup install testnet --component node
+miden +testnet node up
+miden +testnet node logs
+miden +testnet node down
+```
+
+`up` starts the network in the background. `down` stops it and keeps its volumes.
+For instructions to build the node from source, export accounts, and configure
+clients, see [Local node testing](./clients/local-node-testing.md).
 
 ### Uninstall
 
 ```bash
-midenup uninstall 0.16.0
+midenup uninstall testnet
 ```
 
 Delete `$MIDENUP_HOME` to uninstall `midenup` itself. Find its location with `midenup show home`.
@@ -91,18 +114,18 @@ Removing toolchain directories manually corrupts the `midenup` environment. Use 
 | `miden` command | Delegates to | What it does |
 | --- | --- | --- |
 | `miden new` | `cargo miden new` | Create a new Miden Rust project |
-| `miden build` | `midenc miden-project.toml` | Build the current Miden project |
+| `miden build` | `midenc` | Build the current Miden project |
 | `miden new-wallet` | `miden-client new-wallet` | Create a local wallet account |
-| `miden account` | `miden-client new-account` | Create a local account |
-| `miden faucet` | `miden-client mint` | Mint your own asset from a faucet account you control |
+| `miden account` | `miden-client account` | Inspect and manage local accounts |
+| `miden client mint` | `miden-client mint` | Mint your own asset from a faucet account you control |
 | `miden mint` | `miden-faucet-client mint` | Request native test tokens from the public faucet |
 | `miden call` | `miden-client call` | Call a local account procedure |
-| `miden simulate` | `miden-client exec` | Dry-run a transaction without committing |
+| `miden exec` | `miden-client exec` | Execute a compiled script without submitting a transaction |
 | `miden transfer` | `miden-client transfer` | Transfer assets to another account |
 | `miden format` | `miden-format` | Format MASM source (install with `--component format`) |
 | `miden registry` | `miden-registry` | Manage the local registry (install with `--component local-registry`) |
 
-Use the component name to access commands that do not have an alias. The v0.16 channel has no `miden deploy` alias. `new-wallet` and `new-account` create accounts locally; fund and publish an account through its first successful transaction. Older channel aliases that add `--deploy` cannot be used with the stable v0.16 client.
+Use the component name to access commands that do not have an alias, such as `miden client new-account`. To register an account on a network that requires invitations, run `miden client account --register <ACCOUNT_ID> --invitation-code <CODE>`. The v0.17 channel has no `miden deploy` alias. `new-wallet` and `new-account` create accounts locally; register the account if required, then fund and publish it through its first successful transaction.
 
 ## Related
 

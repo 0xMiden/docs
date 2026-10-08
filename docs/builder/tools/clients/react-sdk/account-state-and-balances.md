@@ -22,7 +22,7 @@ The important boundary is:
 - **`useExecuteProgram()`** runs locally and does not prove, submit, or change state.
 
 For the full package README and source-level examples, see
-[`web-sdk/packages/react-sdk/README.md`](https://github.com/0xMiden/web-sdk/blob/v0.16.0/packages/react-sdk/README.md).
+[`web-sdk/packages/react-sdk/README.md`](https://github.com/0xMiden/web-sdk/blob/v0.17.0/packages/react-sdk/README.md).
 
 ## Provider setup
 

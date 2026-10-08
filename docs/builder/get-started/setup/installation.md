@@ -32,7 +32,7 @@ rustc --version
 <summary>Expected output</summary>
 
 ```text
-rustc 1.98.1 (...)  # or newer for client/protocol code
+rustc 1.99.0 (...)  # or newer to build the compiler from source
 ```
 
 </details>
@@ -91,8 +91,6 @@ The Miden toolchain installer makes it easy to manage Miden components:
 cargo install midenup
 ```
 
-This guide is verified with midenup **1.0.0**. To install that exact release, use `cargo install midenup --version 1.0.0`.
-
 :::info
 To install from source instead, name the package explicitly — the repository contains more than one binary: `cargo install --git https://github.com/0xMiden/midenup.git midenup`
 :::
@@ -123,30 +121,11 @@ which miden
 
 **Install Miden Toolchain**
 
-These v0.16 guides require a coherent v0.16 client, compiler, and protocol
-toolchain for the network you use. `midenup` resolves network names through the
-[published channel manifest](https://0xmiden.github.io/midenup/channel-manifest.json).
-
-:::warning Release prerequisite
-The stable v0.16 toolchain update is ready on midenup's `next` branch, but it
-has not yet been promoted to the published manifest. The published `testnet`
-channel still points to v0.15, while its explicit `0.16.0` channel is the older
-prerelease stack.
-
-Wait for the updated manifest to be published before using these
-network-dependent v0.16 guides against testnet.
-:::
-
-After the manifest meets that requirement, install the public testnet toolchain
-and make it the default:
+Install the public testnet toolchain and make it the default:
 
 ```bash title=">_ Terminal"
 midenup install testnet && midenup override testnet
 ```
-
-:::note
-You may see `No artifact found. Proceeding to install from source` during installation. This is expected — it means pre-built binaries aren't available for your platform, so midenup compiles components from source. This can take 15-30 minutes.
-:::
 
 ### Verify Installation
 
@@ -202,8 +181,11 @@ keystore paths before making transactions, especially if the previous file used
 custom paths.
 
 Regenerating this file does not migrate an older database or make state from one
-network usable on another. Keep the old files until you have confirmed the
-release's storage compatibility and recovered the accounts you need.
+network usable on another. The [v0.17 Rust SDK release](https://github.com/0xMiden/rust-sdk/releases/tag/v0.17.0)
+requires a new client database. Account and note export files now use Protobuf,
+so files exported by v0.16 cannot be decoded by the v0.17 client. Keep a backup
+of the old store and keystore while setting up the new client state, and rebuild
+your `.masp` packages with the matching toolchain.
 
 Do not use `miden client clear-config` for migration or configuration switching.
 It recursively removes the entire local `.miden/` directory, including the
@@ -235,7 +217,7 @@ The TypeScript examples use the [`@miden-sdk/miden-sdk`](https://www.npmjs.com/p
 ```bash title=">_ Terminal"
 npm create vite@latest miden-app -- --template vanilla-ts
 cd miden-app
-npm install @miden-sdk/miden-sdk@^0.16.0
+npm install @miden-sdk/miden-sdk@0.17.1
 ```
 
 Open `src/main.ts` and replace its contents with a simple entry point that calls your demo:

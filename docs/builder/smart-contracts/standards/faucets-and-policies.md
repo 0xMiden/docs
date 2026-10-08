@@ -93,7 +93,7 @@ A fungible asset is tied to its faucet account ID. The faucet's metadata describ
 | Optional metadata | Optional display fields such as description, logo URI, and external link. |
 | Faucet account ID | The issuer ID used when constructing fungible assets and checking balances. |
 
-When an account checks its balance for a fungible token at the protocol/client layer, it queries by the asset's `AssetId`, which is derived from the faucet account ID. Whether the asset invokes callbacks is encoded in the faucet account ID at construction time.
+When an account checks its balance for a fungible token at the protocol/client layer, it queries by the asset's `AssetId`, which is derived from the faucet account ID. Whether the asset invokes callbacks is encoded in the faucet account ID at construction time. The account builder enables callbacks automatically when a send or receive policy installs the reserved callback storage slots.
 
 ## Choose policy modules
 
@@ -108,7 +108,15 @@ Policy modules decide which operations are allowed for a token faucet.
 
 Use `BlocklistManager` alongside a basic blocklist when its entries must be updated at runtime.
 
-`TokenPolicyManager` owns the active policy roots and validates policy changes. Authority for changing policies comes from the account's access-control setup, such as owner-controlled or role-based authority.
+`TokenPolicyManager` owns the active policy roots and validates policy changes. Authority for changing policies comes from the account's access-control setup, such as owner-controlled or role-based authority. Faucet factories reject `owner_only()` mint or burn policies unless `Ownable2Step` is installed.
+
+In `miden-standards` 0.17.1, `TokenPolicyManagerV2::new(policies)` wraps an existing
+`TokenPolicyManager` configuration. Its send and receive callbacks still apply
+the active transfer policies, but do not check the faucet's pause flag. The pause
+flag only stops minting and burning. This lets a paused native-fee faucet's tokens
+remain usable for fee payments, including the transaction that unpauses the
+faucet. The example above uses the original `TokenPolicyManager`, whose pause
+flag also stops transfers.
 
 ## Mint with notes
 

@@ -61,6 +61,7 @@ All factories are async because they initialize the platform runtime and client 
 | `rpcUrl` | `"testnet" \| "devnet" \| "localhost" \| "local" \| string` | Node RPC endpoint. Shorthands expand to the hosted Miden endpoints; any other string is treated as a raw URL. |
 | `noteTransportUrl` | `"testnet" \| "devnet" \| string` | Note transport service endpoint. Required for private-note `sendPrivate` / `fetchPrivate`. |
 | `proverUrl` | `"local" \| "devnet" \| "testnet" \| string` | Default prover for transactions. `"local"` runs in the current environment; remote shorthands and URLs route to a remote / delegated prover. |
+| `feeFaucetId` | `string` | Optional fee faucet ID (hex or bech32) before the first sync. After syncing, the client reads it from the chain's protocol configuration. |
 | `autoSync` | `boolean` | When `true`, the client runs one sync pass before the promise resolves. |
 | `seed` | `string \| Uint8Array` | Seed for deterministic RNG. Strings are hashed to 32 bytes via SHA-256. |
 | `storeName` | `string` | Store isolation key (IndexedDB database name in browsers). Set this to keep multiple clients' data separate in the same origin. |

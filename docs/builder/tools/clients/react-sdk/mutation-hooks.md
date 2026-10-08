@@ -5,7 +5,7 @@ sidebar_position: 4
 
 # Mutation hooks
 
-Mutation hooks own the full transaction lifecycle — execute, prove, submit — and serialize under the Web SDK's concurrency lock so two components can't corrupt the WASM state.
+Transaction-producing hooks handle execution, proving, and submission. In React SDK 0.17.0, locking is not uniform across hooks: `useMultiSend` and `useImportAccount` do not use the provider's shared concurrency lock. Await these operations before starting other client operations.
 
 These examples assume the provider configuration from [Setup](./setup.md).
 For automatic delivery of private notes, configure its `noteTransportUrl` setting.
@@ -41,11 +41,13 @@ Polling helpers (`useWaitForCommit`, `useWaitForNotes`) are simpler still — th
 
 See [setup](./setup.md#hook-result-conventions) for the `TransactionStage` progression.
 
+A successful result or `stage: "complete"` does not generally mean the transaction has been confirmed onchain. Use `useWaitForCommit` when confirmation is required. Private sends through `useSend` (without `returnNote`) and `useMultiSend` wait for confirmation before delivering notes through the transport.
+
 ## `useCreateWallet`
 
 Creates a new wallet account. Returns the `Account` object.
 
-With the 0.16.0 packages, pass the low-level authentication enum explicitly.
+With the 0.17.0 packages, pass the low-level authentication enum explicitly.
 The React hooks' default refers to an enum member missing from the high-level
 SDK export, causing `invalid enum value passed`. Obtain the numeric enum from
 `getWasmOrThrow()` as shown below for wallets, faucets, and seed imports.
@@ -77,7 +79,7 @@ function NewWalletButton() {
 | Field | Default | Description |
 | --- | --- | --- |
 | `storageMode` | `"private"` | `"private"` / `"public"` |
-| `authScheme` | Pass explicitly in 0.16.0 | Numeric WASM signing scheme |
+| `authScheme` | Pass explicitly in 0.17.0 | Numeric WASM signing scheme |
 | `initSeed` | random | 32-byte seed for deterministic account-ID derivation |
 
 ## `useCreateFaucet`
@@ -114,10 +116,11 @@ function NewFaucetButton() {
 | Field | Default | Description |
 | --- | --- | --- |
 | `tokenSymbol` | required | Display symbol (e.g. `"USDC"`) |
+| `tokenName` | `tokenSymbol` | Human-readable token name |
 | `maxSupply` | required | `bigint \| number` |
 | `decimals` | `8` | Token decimals |
 | `storageMode` | `"private"` | Public faucets are discoverable/readable onchain |
-| `authScheme` | Pass explicitly in 0.16.0 | Numeric WASM signing scheme |
+| `authScheme` | Pass explicitly in 0.17.0 | Numeric WASM signing scheme |
 
 ## `useSend`
 
@@ -165,6 +168,8 @@ function SendForm({ from, to, usdcFaucetId }: Props) {
 | `returnNote` | — | Return the `Note` object in the result (for out-of-band delivery, QR codes, etc.) |
 
 `SendResult`: `{ txId: string; note: Note | null }`. `note` is non-null only when `returnNote: true`.
+
+In 0.17.0, `returnNote: true` creates a plain P2ID note and returns it for the application to deliver; it does not send it through the note transport. This path ignores `attachment`, `recallHeight`, and `timelockHeight`, so omit those options when requesting the note object. Combining an `attachment` with either height option is rejected, regardless of `returnNote`.
 
 ## `useMultiSend`
 
@@ -270,13 +275,6 @@ await swap({
 
 Imports an account by ID (fetches from network), by previously-exported file, or by seed.
 
-For seed recovery with the 0.16.0 browser packages, set `useWorker: false` in
-`MidenProvider`'s `config`. With the worker enabled, a subsequent transaction can
-reach the network but fail during local `applyTransaction` with `account data
-wasn't found`. The direct client path restores the account and confirms a signed
-transaction. If you encounter the worker error, check the account's onchain state
-before retrying the transaction.
-
 ```tsx
 import { useImportAccount } from "@miden-sdk/react";
 import { getWasmOrThrow } from "@miden-sdk/miden-sdk/lazy";
@@ -314,11 +312,13 @@ Polling helpers for transaction confirmation and note inbox arrivals. Both are m
 
 Signature: `waitForCommit(txId, options?)` — `txId` is positional (hex string or `TransactionId`), `options` are merged with defaults.
 
+Pass `result.txId` for `useSend`. The other transaction-producing hooks listed above return `result.transactionId`.
+
 ```tsx
 import { useWaitForCommit } from "@miden-sdk/react";
 
 const { waitForCommit } = useWaitForCommit();
-await waitForCommit(result.txId, {
+await waitForCommit(result.txId, { // result from useSend
   timeoutMs: 30_000,  // default 10_000
   intervalMs: 1_000,  // default 1_000
 });
