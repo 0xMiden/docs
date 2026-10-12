@@ -22,7 +22,7 @@ Key concepts you'll encounter:
 
 ## Getting started
 
-Follow these guides in order:
+Before creating or funding an account, [choose your network](../tools/network.md) and keep its client state separate. Then follow these guides in order:
 
 <CardGrid cols={2}>
   <Card title="Installation" href="./setup/installation" eyebrow="1. Set up">

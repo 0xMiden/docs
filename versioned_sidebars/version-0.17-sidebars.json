@@ -221,6 +221,7 @@
         "id": "builder/tools/index"
       },
       "items": [
+        "builder/tools/network",
         {
           "type": "category",
           "label": "Clients",
@@ -333,8 +334,7 @@
           ]
         },
         "builder/tools/midenup",
-        "builder/tools/playground",
-        "builder/tools/network"
+        "builder/tools/playground"
       ]
     },
     {
