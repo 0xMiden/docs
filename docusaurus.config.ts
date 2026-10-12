@@ -272,7 +272,7 @@ const config: Config = {
       },
     ],
     [
-      "@cmfcmf/docusaurus-search-local",
+      "./src/plugins/docs-search.ts",
       {
         indexDocs: true,
         indexBlog: false,
