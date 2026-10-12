@@ -9,13 +9,20 @@ Start with the existing counter. Explain its account storage, increment note and
 
 ## Build and test the counter
 
-After [setup](setup.md), compile from each contract directory so its toolchain applies:
+After [setup](setup.md), use midenup's `miden` command to compile from each contract directory so its toolchain applies:
 
 ```bash
-(cd project-template/contracts/counter-account && cargo miden build --release)
-(cd project-template/contracts/increment-note && cargo miden build --release)
-(cd project-template/integration && cargo test -p integration --release --locked)
+(cd project-template/contracts/counter-account && miden build --release)
+(cd project-template/contracts/increment-note && miden build --release)
+(
+  cd project-template/integration &&
+  MIDENUP_HOME="$(midenup show home)" &&
+  export MIDENUP_HOME &&
+  cargo test -p integration --release --locked
+)
 ```
+
+The pinned integration helper also builds the contracts. Setting `MIDENUP_HOME` makes it invoke `miden build`; without it, the helper falls back to `cargo miden`, which a midenup installation does not put on your shell's `PATH`. The subshell uses your existing midenup home and keeps this environment change local to the test run.
 
 The integration working directory matters: helpers resolve `../contracts`. Inspect `integration/tests/counter_test.rs`; the expected counter assertion is a committed MockChain transition from 0 to 1. A command exiting successfully with no relevant test executed is not evidence for that transition. Read [Test your contract](../get-started/your-first-smart-contract/test.md) for the test structure.
 
