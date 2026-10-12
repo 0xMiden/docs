@@ -372,3 +372,5 @@ resource is locked and which recovery transaction will be signed.
 - [Runnable bridging application](https://github.com/0xMiden/tutorials/tree/main/examples/bridging-app)
 - [Epoch SDK reference](https://docs.epochprotocol.xyz/integration-guides/sdk-reference)
 - [Supported chains and tokens](https://docs.epochprotocol.xyz/supported-chains-and-tokens)
+
+For wallet lending positions and withdrawal delivery boundaries, see [Earn integration boundaries](./earn.md).

@@ -78,3 +78,5 @@ identify the Miden-specific integration details. Continue in the provider's
 documentation for current SDK methods, deployment addresses, supported assets,
 fees, recovery operations, and production guidance.
 </Callout>
+
+For wallet lending positions and withdrawal delivery boundaries, see [Earn integration boundaries](./earn.md).

@@ -287,11 +287,13 @@ const sidebars: SidebarsConfig = {
           items: [
             "builder/tools/bridging/agglayer",
             "builder/tools/bridging/epoch",
+            "builder/tools/bridging/earn",
           ],
         },
         "builder/tools/midenup",
         "builder/tools/playground",
         "builder/tools/network",
+            { type: "doc", id: "builder/tools/wallet/spending-limits", label: "Bread spending limits" },
       ],
     },
 
