@@ -16,14 +16,14 @@ git rev-parse HEAD
 git submodule status --recursive
 ```
 
-Run tool version checks from the project directory so its toolchain overrides apply:
+From the `agentic-template/` root, run each version check in its subproject. The Rust and Miden toolchain overrides live in `project-template/`:
 
 ```bash
-rustc --version
-cargo --version
-midenup --version
-node --version
-yarn --version
+(cd project-template && rustc --version)
+(cd project-template && cargo --version)
+(cd project-template && midenup --version)
+(cd frontend-template && node --version)
+(cd frontend-template && yarn --version)
 ```
 
 Read [Installation](../get-started/setup/installation.md) for the toolchain setup and [Migration](../migration/index.md) when moving an older project to v0.17.
