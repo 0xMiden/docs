@@ -9,6 +9,11 @@ type OgImageRule = {
 
 const OG_IMAGE_RULES: OgImageRule[] = [
   {
+    pathPrefix: "/builder/agentic",
+    image: "agentic.png",
+    description: "Build with matching agent context and verify each development stage.",
+  },
+  {
     pathPrefix: "/builder/get-started/your-first-smart-contract",
     image: "first-smart-contract.png",
     description: "Create, test, and deploy a minimal Miden account component.",

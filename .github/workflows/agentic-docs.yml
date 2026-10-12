@@ -1,0 +1,23 @@
+name: Agentic docs checks
+on:
+  pull_request:
+    paths:
+      - 'docs/builder/agentic/**'
+      - 'versioned_docs/version-0.17/builder/agentic/**'
+      - 'sidebars.ts'
+      - 'versioned_sidebars/version-0.17-sidebars.json'
+      - 'scripts/agentic-docs.test.mjs'
+      - '.github/workflows/agentic-docs.yml'
+permissions:
+  contents: read
+jobs:
+  parity-and-content:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-node@v4
+        with:
+          node-version: 20
+          cache: npm
+      - run: npm ci --no-audit --no-fund
+      - run: node --test scripts/agentic-docs.test.mjs
