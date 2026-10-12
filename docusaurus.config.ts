@@ -272,6 +272,7 @@ const config: Config = {
         },
       },
     ],
+    "./src/plugins/home-docs-version.ts",
     [
       "./src/plugins/docs-search.ts",
       {

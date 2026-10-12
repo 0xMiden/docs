@@ -30,12 +30,23 @@
     "illustrations": "Three exact homepage privacy PNGs, reserved4:1 media region; 20px source media corner radius.",
     "motion": "Official .home_real-world-btn / .nav_link-icon transition:200ms cubic-bezier(.25,.46,.45,.94); opacity-only illustration state changes. No loops or automatic motion."
   },
+  "docs_layout": {
+    "purpose": "User-requested navbar/sidebar alignment correction; the homepage retains its centered brand container",
+    "desktop_gutter": "24px shared by the navbar logo, sidebar section labels/icons and article offset",
+    "sidebar": "256px at 997–1199px; 280px at wider desktop widths, with 16px internal padding and wrapping labels",
+    "mobile_breakpoint": "996px, matching Docusaurus for navbar/logo and homepage grid",
+    "navigation_transition": "Layout scope follows the mounted docs shell immediately, before deferred HTML route classes update"
+  },
   "accessibility_exception": {
-    "purpose": "Previously approved white normal-size CTA labels",
+    "purpose": "Previously approved white normal-size CTA labels; the same deeper orange keeps normal-size SDK captions readable on the light page",
     "source_orange": "#e65303",
     "button_background": "#c94600",
     "text": "#ffffff",
-    "contrast_ratio": 4.82
+    "contrast_ratio": 4.82,
+    "light_caption_text": "#c94600",
+    "light_caption_background": "#f9f9f9",
+    "light_caption_contrast_ratio": 4.58,
+    "theme_change": "Semantic link and navbar text switch immediately with their background to preserve contrast throughout system theme changes."
   },
   "functional_preservation": "Docusaurus navigation/version/search and the approved layout remain. Light palette/typography/assets follow the official site; dark mode reuses the existing docs dark surfaces, and system mode follows OS preference. The official SVG geometry and orange are unchanged; only its gray wordmark uses the theme text color.",
   "assets": [

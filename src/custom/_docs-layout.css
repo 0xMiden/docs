@@ -1,0 +1,41 @@
+/* Documentation uses a viewport-aligned reading shell. The homepage keeps
+   its approved centered brand container in _miden-brand.css. Match the mounted
+   docs shell directly so SPA navigation does not wait for deferred HTML classes. */
+@media (min-width: 997px) {
+  :root:has(.theme-doc-sidebar-container) {
+    --doc-sidebar-width: 17.5rem !important;
+  }
+
+  :root:has(.theme-doc-sidebar-container) .theme-layout-navbar {
+    padding-inline: 1.5rem;
+  }
+
+  :root:has(.theme-doc-sidebar-container) .theme-doc-sidebar-container .menu {
+    padding: 1rem;
+  }
+
+  :root:has(.theme-doc-sidebar-container) .theme-doc-sidebar-menu .sidebar-section {
+    padding-inline: .5rem;
+  }
+
+  :root:has(.theme-doc-sidebar-container) .theme-doc-sidebar-menu .menu__link {
+    padding-inline: .5rem;
+    overflow-wrap: anywhere;
+  }
+
+  :root:has(.theme-doc-sidebar-container) main > .container {
+    padding-inline: 1.5rem;
+  }
+}
+
+@media (min-width: 997px) and (max-width: 1199px) {
+  :root:has(.theme-doc-sidebar-container) {
+    --doc-sidebar-width: 16rem !important;
+  }
+}
+
+@media (max-width: 996px) {
+  :root:has(.theme-doc-sidebar-container) .theme-doc-sidebar-menu .menu__link {
+    overflow-wrap: anywhere;
+  }
+}
