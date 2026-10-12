@@ -19,6 +19,7 @@ const stableVersion = (
 const categoryIndexAutogenDirs = new Set([
   "builder/get-started",
   "builder/miden-guardian",
+  "builder/smart-contracts/masm",
 ]);
 
 const config: Config = {

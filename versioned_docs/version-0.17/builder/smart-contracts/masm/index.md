@@ -6,6 +6,8 @@ sidebar_position: 0
 
 # MASM Smart Contracts
 
+import DocCardList from "@theme/DocCardList";
+
 This section is the practical guide to authoring Miden smart contracts directly in **Miden Assembly (MASM)** — the path Miden mainnet supports for production deployments today. The Rust SDK is in active development and will become the default authoring path once it ships v1; until then, MASM is what you ship with.
 
 :::info Audience
@@ -30,18 +32,11 @@ The full Miden Assembly reference — every instruction, the stack semantics, co
 
 ## Guides
 
-Start with a local MASM project, then add account state and programmable notes. These guides use Rust on the host to assemble and execute MASM; they do not require the Rust guest-contract compiler.
+Follow the guides below to build, test, and debug MASM contracts. The examples use Rust host harnesses to assemble and execute MASM, with the execution boundaries stated in each guide.
 
-| Guide | Purpose or status |
-|---|---|
-| [Your first MASM project](./first-project.md) | Assemble and execute a standalone VM program. |
-| [MASM account components](./account-components.md) | Package procedures and named account storage. |
-| [MASM note scripts](./note-scripts.md) | Read committed note storage and call an account procedure. |
-| MASM transaction scripts | In progress |
-| Testing with MockChain | In progress |
-| Debugging MASM contracts | In progress |
+<DocCardList />
 
-For a larger Rust guest-contract example, see the [Miden Bank tutorial](../../tutorials/miden-bank/). For MASM deployment orchestrated by the Rust client, see [Deploying a Counter Contract](../../tutorials/recipes/rust/counter_contract_tutorial.md). The [assembly reference](../../../reference/miden-vm/user_docs/assembly/index.md) covers the language itself.
+For Rust client orchestration and network submission of a MASM account, see [Deploying a Counter Contract](../../tutorials/recipes/rust/counter_contract_tutorial.md). The [Miden Bank tutorial](../../tutorials/miden-bank/) covers the broader transaction lifecycle with Rust guest contracts.
 
 ## See also
 
