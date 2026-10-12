@@ -19,6 +19,12 @@ yarn dev
 
 The development server is the starting point for the frontend. The counter requires a compatible deployed counter address: set `VITE_MIDEN_COUNTER_ADDRESS` as the template documents, then restart Vite. Its default configuration is Testnet. A missing or old address is not repaired by connecting Bread, because this demo's increment uses the app-owned client.
 
+## Review the wallet-managed starter
+
+[Frontend-template PR33](https://github.com/0xMiden/frontend-template/pull/33) adds a separate `/mini-app.html` entry with reusable code in `src/mini-app/`. Integration is pending: use the PR's reviewed revision, rather than expecting that entry in upstream `main`. Follow the [pinned starter recipe](https://github.com/BrianSeong99/frontend-template/blob/8e6167166cffc097743b835fc87edf3e83db1588/docs/mini-app-starter.md) for setup, package pins and checks.
+
+This entry asks Bread to build, sign and submit requests; it needs no counter deployment or app-owned client/database. Controlled-provider browser tests exercise the starter and released adapter, while actual Bread extension/native approval and chain settlement remain separate acceptance checks.
+
 ## Keep contract artifacts compatible
 
 For a custom account or note, use the [project template](https://github.com/0xMiden/project-template) and its matching toolchain. The frontend counter expects its compiled account and note packages under `public/packages/`. Rebuild and copy the artifacts described by the template after changing contracts or upgrading the protocol; old account IDs, script roots, request bytes and package formats do not carry over automatically.

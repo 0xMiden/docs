@@ -20,6 +20,8 @@ Start with a small, complete flow: open the app, detect the provider, connect wi
 
 The public [frontend template](https://github.com/0xMiden/frontend-template) supplies a React/TypeScript/Vite starting point. Its counter demo uses an app-owned client even though the template also exposes a wallet connection control. Connecting that control does not turn the counter into a Bread-managed transaction. Choose the boundary deliberately before adapting it.
 
+A reusable wallet-managed starter is under review in [frontend-template PR33](https://github.com/0xMiden/frontend-template/pull/33). Its [pinned review recipe](https://github.com/BrianSeong99/frontend-template/blob/8e6167166cffc097743b835fc87edf3e83db1588/docs/mini-app-starter.md) covers the `/mini-app.html` entry and reusable `src/mini-app/` code. Integration into the maintained template is pending; the starter's controlled-provider tests do not establish real Bread extension/native acceptance or chain settlement.
+
 ## Build the complete flow
 
 1. [Set up a compatible project](./setup.md): packages, network, compiled artifacts and a fresh development environment.
