@@ -10,32 +10,11 @@ Record each check as passed, failed, or not run, with the command, working direc
 
 ## Check installed context
 
-From an [agent-tools](https://github.com/0xMiden/agent-tools) checkout, using Python 3.11+:
-
-```bash
-python3 scripts/agent_tools.py check-consumer \
-  --project /path/to/agentic-template/project-template --profile rust \
-  --docs-version 0.17 --docs-channel stable
-python3 scripts/agent_tools.py check-consumer \
-  --project /path/to/agentic-template/frontend-template --profile web --agent codex \
-  --docs-version 0.17 --docs-channel stable
-```
-
-The Rust check reads `Cargo.lock` and `miden-toolchain.toml`. The Web check compares exact declarations, resolved npm v2/v3 or Yarn v1 locks, installed guides/skills, copied skills, root guide pointers, and the `prepare` declaration. Its reference versions are core SDK `0.17.1` and React/Vite/initializer `0.17.0`; validate other versions or lock formats separately.
-
-Use `--agent claude` or `--agent cursor` for those environments. Claude needs either an `@AGENTS.md` import or the package-guide pointers directly in `CLAUDE.md`.
-
-The checker targets stable v0.17. `--docs-channel current` refers to unstable Current/Next and fails this release-context check. Its JSON deliberately leaves live docs, compiler execution, and hook execution unverified. A passing file check is not evidence that an agent loaded the instructions or a hook ran.
+Before building, complete [Check your setup](templates.md). That page covers release checks, installed package guides, optional read-only consumer checks, and the reviewed repair for missing frontend pointers. Revisit it if dependencies or agent instructions change.
 
 ## Repair missing frontend pointers
 
-The pinned frontend can have correctly synced skills but missing root package-guide pointers. If the Web check reports that gap, inspect the installed initializer, then run it from the frontend directory:
-
-```bash
-node node_modules/@miden-sdk/create/dist/cli.js
-```
-
-This writes guide pointers, agent imports, the prepare declaration, and synced copies. Review the diff and rerun the Web check. Preserve project instructions and unrelated skills. A `prepare` exit of zero alone is insufficient because the published hook can tolerate a sync failure.
+Follow the [installed-initializer repair](templates.md#repair-missing-frontend-pointers) after setup, review its file changes, and repeat the context check.
 
 ## Verify each runtime stage
 

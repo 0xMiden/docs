@@ -6,11 +6,11 @@ description: "Build and test the Rust counter, validate committed state on a loc
 
 # Build your first app
 
-Use the [full-stack template](templates.md) to build the counter first. Ask your agent to explain the counter's storage, increment note, and publication/consumption flow from source before changing behavior.
+Complete [Set up agentic-template](setup.md) and [Check your setup](templates.md), then build the counter in that workspace. Ask your agent to explain the counter's storage, increment note, and publication/consumption flow from source before changing behavior.
 
 ## Build and test the contracts
 
-Run from the agentic-template root after setup:
+Run from the agentic-template root after setup and context checks:
 
 ```bash
 (
@@ -59,10 +59,10 @@ bash scripts/journey.sh frontend
 
 `artifacts` copies the rebuilt packages to `frontend-template/public/packages/counter-account.masp` and `increment-note.masp`. `frontend` runs unit tests, TypeScript compilation, and a production build. Confirm the frontend loads those packages rather than stale copies.
 
-Set the counter address and network configuration using the frontend README. Then, from the frontend directory:
+Set the counter address and network configuration using the frontend README. Then start the dev server from the workspace root, using a subshell for the frontend directory:
 
 ```bash
-yarn dev
+(cd frontend-template && yarn dev)
 ```
 
 A local validator run does not configure the browser's network for you. Follow [Network handoff](network-handoff.md) before using a hosted counter. Check the initial count, publish and consume an increment, and confirm the updated committed count. Tests and a successful page load do not establish this browser result.

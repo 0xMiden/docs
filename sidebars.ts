@@ -313,7 +313,6 @@ const sidebars: SidebarsConfig = {
           items: [
             "builder/agentic/setup",
             "builder/agentic/templates",
-            "builder/agentic/tools",
           ],
         },
         {
@@ -326,6 +325,12 @@ const sidebars: SidebarsConfig = {
             "builder/agentic/recover",
             "builder/agentic/network-handoff",
           ],
+        },
+        {
+          type: "category",
+          label: "Optional resources",
+          collapsed: false,
+          items: ["builder/agentic/tools"],
         },
       ],
     },

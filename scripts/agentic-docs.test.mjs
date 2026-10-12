@@ -12,6 +12,14 @@ const versions = [
 ];
 const directory = 'builder/agentic';
 
+function readPage(root, name) {
+  return readFileSync(path.join(root, directory, `${name}.md`), 'utf8');
+}
+
+function bashCommands(source) {
+  return [...source.matchAll(/```bash\n([\s\S]*?)```/g)].map(match => match[1]).join('\n');
+}
+
 function docIds(item) {
   if (typeof item === 'string') return [item];
   if (item.type === 'doc') return [item.id];
@@ -74,6 +82,51 @@ test('Card links reject missing destinations and paths that escape the selected 
 for (const {root, sidebar} of versions) {
   const pages = readdirSync(path.join(root, directory)).filter(file => file.endsWith('.md')).sort();
 
+  test(`${root}: clone and setup precede checkout and installed-context checks`, () => {
+    const setup = readPage(root, 'setup');
+    const checks = readPage(root, 'templates');
+    const commands = bashCommands(setup);
+    const clone = 'git clone --recurse-submodules https://github.com/0xMiden/agentic-template\ncd agentic-template';
+    const position = commands.indexOf(clone);
+    assert.ok(position >= 0, 'canonical recursive clone and cd must appear together');
+    assert.ok(setup.indexOf('## Prerequisites') < setup.indexOf(clone));
+    assert.doesNotMatch(commands.slice(0, position), /git (?:rev-parse|submodule)|bash (?:scripts\/|setup\.sh)|cd (?:project|frontend)-template|node node_modules/);
+    assert.ok(commands.indexOf('bash setup.sh') > position + clone.length);
+    assert.match(commands, /git submodule update --init --recursive/);
+    assert.doesNotMatch(commands, /--remote/);
+    assert.doesNotMatch(commands, /journey\.sh doctor|rustc --version|midenup show|node --version|yarn --version|check-consumer/);
+    assert.match(checks, /\[Set up agentic-template\]\(setup\.md\)/);
+    assert.match(bashCommands(checks), /bash scripts\/journey\.sh doctor/);
+    assert.ok(checks.indexOf('## Check the release') < checks.indexOf('## Load the right instructions'));
+    assert.match(checks, /\[Build your first app\]\(first-app\.md\)/);
+    assert.match(readPage(root, 'first-app'), /\[Check your setup\]\(templates\.md\)/);
+  });
+
+  test(`${root}: the default cards follow the agentic-template journey`, () => {
+    const landing = readPage(root, 'index');
+    assert.match(landing, /agentic-template/);
+    assert.doesNotMatch(landing, /choose a template/i);
+    const cards = [...landing.matchAll(/<Card title="([^"]+)" href="([^"]+)"/g)];
+    assert.deepEqual(cards.slice(0, 4).map(match => [match[1], match[2]]), [
+      ['Set up agentic-template', './setup'],
+      ['Check your setup', './templates'],
+      ['Build your first app', './first-app'],
+      ['Verify your app', './verify'],
+    ]);
+    assert.match(readPage(root, 'setup'), /## Other starting points \(optional\)/);
+    assert.match(readPage(root, 'tools'), /optional/i);
+  });
+
+  test(`${root}: optional skills follow the main sidebar journey`, async () => {
+    const {builderSidebar} = await loadFreshModule(path.resolve(sidebar));
+    const category = builderSidebar.find(item => item.label === 'Agentic');
+    assert.deepEqual(docIds(category), ['index', 'setup', 'templates', 'first-app', 'verify',
+      'recover', 'network-handoff', 'tools'].map(name => `${directory}/${name}`));
+    assert.equal(category.items.at(-1).label, 'Optional resources');
+    assert.match(readPage(root, 'setup'), /title: "Set up agentic-template"/);
+    assert.match(readPage(root, 'templates'), /title: "Check your setup"/);
+  });
+
   test(`${root}: Agentic navigation covers its pages and stays a Build sibling`, async () => {
     const {builderSidebar} = await loadFreshModule(path.resolve(sidebar));
     const category = builderSidebar.find(item => item.type === 'category' && item.label === 'Agentic');
@@ -106,3 +159,13 @@ for (const {root, sidebar} of versions) {
     });
   }
 }
+
+test('current and 0.17 onboarding keep the same commands and page titles', () => {
+  for (const name of ['index', 'setup', 'templates', 'first-app', 'verify', 'tools']) {
+    const current = readPage('docs', name);
+    const stable = readPage('versioned_docs/version-0.17', name);
+    assert.equal(bashCommands(current), bashCommands(stable), `${name}: command drift`);
+    assert.equal(yaml.parse(current.split('---')[1]).title,
+      yaml.parse(stable.split('---')[1]).title, `${name}: title drift`);
+  }
+});
