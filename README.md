@@ -2,6 +2,37 @@
 
 Consolidated documentation for the Miden rollup
 
+## Reproduce a local release build
+
+The checkout contains authored current pages and complete release snapshots. The
+deployment workflow fills current upstream sections from its configured source
+refs before building. A bare checkout is therefore missing inputs required by
+the current sidebar.
+
+For a reproducible local check of authored changes against stable 0.17, use the
+checked-in snapshot to fill only absent upstream inputs:
+
+```bash
+npm ci
+npm run prepare:docs -- --snapshot 0.17 --manifest ../local-docs-inputs.json
+npm run typecheck
+NODE_OPTIONS=--max-old-space-size=16384 npm run build
+```
+
+The helper preserves every existing file, including local edits, and does not
+copy absent authored pages. Its manifest lists the files it created and their
+SHA-256 hashes. Keep the manifest outside the repository; an existing manifest is
+never overwritten. Record the docs commit alongside that manifest and the build log.
+Ingested files are local build inputs; keep them out of commits and review
+`git status` before staging specific authored paths. Repeated preparation adds
+nothing once those inputs exist; omit `--manifest` when repeating the command.
+
+This checks both the stable snapshot and authored `/next/` pages using snapshot
+inputs. It does **not** verify the moving development refs used by deployment.
+The `deploy-docs.yml` defaults and `.release/release-manifest.yml` pins have
+different purposes; changing those refs is a separate release decision. Use a
+fresh worktree when checking a different input set.
+
 ---
 
 ## Documentation Dependency & Versioning Model
