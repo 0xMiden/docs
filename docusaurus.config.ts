@@ -344,6 +344,7 @@ const config: Config = {
       },
       colorMode: {
         defaultMode: "light",
+        respectPrefersColorScheme: true,
         disableSwitch: false,
       },
       // TODO: implement exact code theme styling
