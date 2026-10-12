@@ -1,0 +1,27 @@
+use miden::protocol::active_note
+use demo::settings
+
+const STORAGE_PTR = 0
+
+#! Inputs:  [ARGS, pad(12)]
+#! Outputs: [pad(16)]
+@note_script
+pub proc main
+    # This script uses committed storage and ignores consumption-time arguments.
+    dropw
+
+    # This command note carries data, not assets.
+    exec.active_note::get_initial_num_assets
+    assertz.err="settings note must not carry assets"
+
+    # Read at most one Felt, then require exactly one.
+    push.1 push.STORAGE_PTR exec.active_note::get_bounded_storage
+    push.1 assert_eq.err="settings note expects exactly one storage item"
+
+    # Prepare the account procedure's 16-element call frame.
+    padw padw padw push.0.0.0 mem_load.STORAGE_PTR
+    # => [value, pad(15)]
+    call.settings::set_value
+    # => [pad(16)]
+    dropw dropw dropw dropw
+end
