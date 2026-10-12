@@ -84,3 +84,5 @@ All Miden contracts run without the standard library:
 | `println!()` | Use `miden::println!()` |
 | `eprintln!()` | No direct equivalent — run the transaction under the Mockchain and inspect outputs, or use the external debugger |
 | Error strings in `assert!()` | Use `assert!(condition)` without messages |
+
+For Bread’s local rolling policy and transaction-specific approval boundary, see [Bread spending limits](../tools/wallet/spending-limits.md).
