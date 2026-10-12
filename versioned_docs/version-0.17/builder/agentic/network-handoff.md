@@ -1,28 +1,44 @@
 ---
-title: "Prepare a network handoff"
-description: "Carry explicit configuration and evidence from local validation to the target network."
+title: "Network handoff"
+sidebar_label: "Network handoff"
+description: "Prepare the chain, accounts, endpoints, funding, and evidence needed to move from local validation to testnet."
 ---
 
-# Prepare a network handoff
+# Network handoff
 
-Prepare this record after the [verification gates](verify.md). Use the existing [Network guide](../tools/network.md) for current endpoint discovery and [Deploy your first contract](../get-started/your-first-smart-contract/deploy.md) for the client flow. Confirm compatibility before using a hosted service.
+Move to a hosted network after [local verification](verify.md). Use the [Network guide](../tools/network.md) for environment choices and endpoints, and [Deploy your first contract](../get-started/your-first-smart-contract/deploy.md) for the client flow.
 
-| Handoff field | Record |
+## Prepare your configuration
+
+| Field | Record |
 | --- | --- |
-| Source | Repository and submodule commits, lockfiles, compatibility tuple, rebuilt packages |
-| Target | Local node, devnet or testnet; chain/genesis identity and RPC endpoint |
-| Services | Matching prover and, for private notes, transport endpoint and delivery behavior |
-| Accounts | Account IDs, authentication/signing design, registration/admission requirements |
-| State | Separate store and keystore locations; existing state to preserve |
-| Funding | Test asset, faucet, recipient and returned note ID; consumption and resulting balance still need checks |
-| Execution scope | Actions authorized to create state, prove, sign and submit; who will execute them |
-| Success | Expected state, transaction/note IDs, publication and consumption commitments, browser assertion |
-| Failure | Bounded waits, status checks before retries and unresolved gates |
+| Source | Repository/submodule commits, lockfiles, version tuple, and rebuilt packages |
+| Target | Local node, devnet, or testnet; chain/genesis identity and RPC endpoint |
+| Services | Matching prover and, for private notes, transport endpoint and delivery checks |
+| Accounts | Account IDs, authentication/signing design, and registration/admission requirements |
+| State | Separate store/keystore locations and existing state to preserve |
+| Funding | Test asset, faucet, recipient, note ID, and resulting committed balance |
+| Success | Expected state, transaction/note IDs, publication/consumption commitments, and browser assertion |
+| Failure | Bounded waits and status checks before retrying |
 
-Use test assets for the counter demonstration. Inspect its authentication from source: the public counter example is unauthenticated and is not a production authorization design. If your application adds a wallet signer, private notes or account upgrades, verify those paths independently.
+Check client/node/prover compatibility before submission. The local counter's fee-free genesis does not establish hosted admission or funding. Never reuse insecure local fixture keys on a hosted network.
 
-A successful faucet request is an intermediate result. Preserve its note ID, synchronize, consume where required, and check committed balances or state. A funding wait, browser launch or completed build does not establish network success.
+## Run the testnet counter
 
-Template PR #24 implements an explicit `testnet` stage, gated on integration into your checkout and `MIDEN_ALLOW_TESTNET=1`. Inspect its binary and configuration before authorizing submission. Its hosted testnet/browser flow remains unverified; the successful root `local` stage uses a separate fee-free disposable chain and does not establish admission, funding or hosted service compatibility. Never reuse the local fixture keys for a hosted network. No automatic deployment or network handoff is supplied here.
+Inspect `project-template/integration/src/bin/increment_count.rs` and its configuration first. When you are ready to create testnet accounts, local keys/store, and submit test transactions, run from the workspace root:
 
-Ask the agent to return the completed handoff record with each open gate and the next executable check. Do not label the app deployed until the selected network's commitments and final assertions have been observed.
+```bash
+MIDEN_ALLOW_TESTNET=1 bash scripts/journey.sh testnet
+```
+
+The binary prints sender and counter IDs and waits for public funding notes. Follow the network's admission process if registration is required, then fund both accounts using the current faucet. Keep each returned note ID, synchronize, consume where required, and check committed balances/state.
+
+The public counter example is unauthenticated. Use test assets; design and verify real authorization separately for your app. The template's hosted testnet/browser journey is not covered by its local-node acceptance.
+
+## Hand off to the browser
+
+Copy fresh packages with the `artifacts` stage and set `VITE_MIDEN_COUNTER_ADDRESS` in the frontend's `.env.local` to the compatible counter ID on the configured chain. Match RPC, prover, and any transport settings, then restart the frontend server.
+
+Verify the initial count and the updated count after publication and consumption commit. A faucet response or loaded page is not a completed app flow. Check wallet signers, private delivery, and account upgrades independently when your app uses them.
+
+Keep this configuration and the results as a handoff record. Mark deployment complete only after the target network's commitments and final assertions have been observed.

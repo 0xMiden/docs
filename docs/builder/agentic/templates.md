@@ -1,45 +1,44 @@
 ---
-title: "Choose a starter"
-description: "Choose the existing full-stack, Rust or frontend template for your task."
+title: "Choose a template"
+sidebar_label: "Choose a template"
+description: "Choose a full-stack, Rust, or frontend starting point and install its pinned dependencies."
 ---
 
-# Choose a starter
+# Choose a template
 
-| Starting point | Use it for | Context to read |
-| --- | --- | --- |
-| [Agentic template](https://github.com/0xMiden/agentic-template) | A full-stack Rust + React app, or source-grounded architecture and debugging questions | Root instructions plus both pinned subprojects |
-| [Project template](https://github.com/0xMiden/project-template) | Rust contracts, MockChain assertions and a client counter example | Contract README, toolchain files and integration tests |
-| [Frontend template](https://github.com/0xMiden/frontend-template) | A browser app consuming existing contracts | Project instructions and installed npm SDK guidance |
-| [Agent tools](tools.md) | Shared ecosystem knowledge in an existing project | Selected skills and command prompt files |
+Choose the smallest starting point that includes the code you need. Each template carries project instructions; browser SDK guidance comes from its installed npm packages.
 
-For the full-stack path:
+## Templates
+
+<CardGrid cols={3}>
+  <Card title="Agentic template" href="https://github.com/0xMiden/agentic-template" eyebrow="Full stack · Agent workflow">
+    Rust contracts, a React frontend, and explicit build, test, and local-node stages in one workspace.
+  </Card>
+  <Card title="Project template" href="https://github.com/0xMiden/project-template" eyebrow="Rust · Contracts">
+    Contract packages, MockChain tests, and a client counter example.
+  </Card>
+  <Card title="Frontend template" href="https://github.com/0xMiden/frontend-template" eyebrow="React · Browser">
+    Build a browser app around existing contracts with installed SDK guidance.
+  </Card>
+</CardGrid>
+
+For an existing project, [install selected agent skills](tools.md) rather than copying a new app template over it.
+
+## Set up the full-stack workspace
+
+Install Rust/rustup, a manifest-compatible midenup, Node.js 20.19.0+ within the 20.x line, Yarn Classic 1, and Python 3.11+. Check package engines before choosing another Node release. Docker with Compose is needed for local-node validation.
 
 ```bash
 git clone --recurse-submodules https://github.com/0xMiden/agentic-template.git
 cd agentic-template
-git submodule status --recursive
-```
-
-For a clone missing submodules, initialize its checked-in pins with `git submodule update --init --recursive`. Avoid `--remote` during onboarding: it changes the source baseline. Compare the checkout with [Release and agent context](setup.md) before installing.
-
-Inspect `setup.sh` before running it. The existing script can install prerequisites, fetch dependencies and build contracts; check whether its selected channel and lockfile behavior match your intended release. Use the subprojects' pinned installation instructions if they do not. The release-pinned setup and stage runner are implemented in template PR #24 but remain gated on code PR integration.
-
-Once Rust/rustup, a manifest-compatible midenup, Node.js 20.19.0 or newer within the 20.x line, and Yarn Classic 1 are available, the reviewed pins support explicit setup. Node 20.19.0 matches the tested baseline and the frontend test runner's requirements; inspect package engines if selecting another Node release:
-
-```bash
-(cd project-template && midenup install 0.17.0)
-(cd frontend-template && yarn install --frozen-lockfile)
-```
-
-The first command downloads the pinned channel; the checked-in project toolchain selects it. The second installs frontend dependencies without updating the lockfile and may run the package's configured preparation scripts. Verify installed SDK context afterward. If your pins differ, read their toolchain and package files before using this baseline.
-
-After [template PR #24](https://github.com/0xMiden/agentic-template/pull/24) is integrated into your checkout, its root setup path is:
-
-```bash
 bash scripts/journey.sh doctor
 bash setup.sh
 ```
 
-`doctor` checks prerequisites and source pins; it does not build or run a node. The revised setup uses the checked-in Miden channel and frozen frontend lockfile and explicitly runs SDK skill sync so `prepare` cannot hide a sync failure. Root installed-package pointers still need the [consumer-context check](tools.md); matching pins and successful sync alone do not close that gate.
+`doctor` checks prerequisites and source pins. `setup.sh` can install missing prerequisites, downloads the checked-in Miden channel, installs locked frontend dependencies, explicitly syncs SDK skills, and builds the contracts. Inspect it before running if your environment already has toolchains you need to preserve.
 
-For explanation or planning, ask the agent to cite source files and stop before installation or transaction execution. For implementation, use the [first-app flow](first-app.md) and record each stage's result.
+If you cloned without submodules, initialize the checked-in pins with `git submodule update --init --recursive`. Avoid `--remote` during setup: it changes the source baseline.
+
+After setup, [verify the installed context](verify.md). SDK skill sync does not necessarily create the frontend's root package-guide pointers; initialize and check them before relying on agent discovery.
+
+For architecture or source questions, you can use the workspace without executing the build flow. For implementation, continue to [Build your first app](first-app.md).

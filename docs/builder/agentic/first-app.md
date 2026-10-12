@@ -1,72 +1,74 @@
 ---
 title: "Build your first app"
-description: "Use the counter to establish a contract transition before extending the app."
+sidebar_label: "Build your first app"
+description: "Build and test the Rust counter, validate committed state on a local node, and prepare the React frontend."
 ---
 
 # Build your first app
 
-Start with the existing counter. Explain its account storage, increment note and transaction flow from source before changing behavior. Use the pinned [agentic template](templates.md) if you need both Rust and React.
+Use the [full-stack template](templates.md) to build the counter first. Ask your agent to explain the counter's storage, increment note, and publication/consumption flow from source before changing behavior.
 
-## Build and test the counter
+## Build and test the contracts
 
-After [setup](setup.md), use midenup's `miden` command to compile from each contract directory so its toolchain applies:
+Run from the agentic-template root after setup:
 
 ```bash
-(cd project-template/contracts/counter-account && miden build --release)
-(cd project-template/contracts/increment-note && miden build --release)
 (
-  cd project-template/integration &&
-  MIDENUP_HOME="$(midenup show home)" &&
-  export MIDENUP_HOME &&
-  cargo test -p integration --release --locked
+  MIDENUP_HOME="$(midenup show home)"
+  export MIDENUP_HOME
+  bash scripts/journey.sh contracts
 )
 ```
 
-The pinned integration helper also builds the contracts. Setting `MIDENUP_HOME` makes it invoke `miden build`; without it, the helper falls back to `cargo miden`, which a midenup installation does not put on your shell's `PATH`. The subshell uses your existing midenup home and keeps this environment change local to the test run.
+The stage runs `cargo test -p integration --release --locked` from `project-template/integration`. Its helpers rebuild both contract packages and assert a committed MockChain transition from 0 to 1. `MIDENUP_HOME` makes the pinned helper use `miden build`; without it, the helper falls back to `cargo miden`, which a midenup installation may not expose on `PATH`.
 
-The integration working directory matters: helpers resolve `../contracts`. Inspect `integration/tests/counter_test.rs`; the expected counter assertion is a committed MockChain transition from 0 to 1. A command exiting successfully with no relevant test executed is not evidence for that transition. Read [Test your contract](../get-started/your-first-smart-contract/test.md) for the test structure.
+Check that `counter_test` ran and its assertion passed. For direct builds, run `miden build --release` inside each contract directory so the toolchain overrides apply. See [Test your contract](../get-started/your-first-smart-contract/test.md) for the test structure.
 
-Ask your agent:
+## Validate on a real local node
 
-> Explain the counter invariant from source, run the contract builds and integration test, and report the test name and observed assertion. List the runtime gates still open. Before changing the app, add assertions for the new invariant and expected failures.
-
-## Verify the Rust flow before wiring the UI
-
-MockChain checks the contract logic in a controlled chain. [Template PR #24](https://github.com/0xMiden/agentic-template/pull/24) implements a root app-specific counter validator against real node services. **Integration gate:** the following commands require that code PR to be integrated into your checkout; they are not commands supplied by the pinned project submodule.
+With Python, Docker Compose, the pinned Rust nightly, and rebuilt packages available:
 
 ```bash
-# From the agentic-template root, after the integrated setup path.
-bash scripts/journey.sh contracts
 MIDEN_ALLOW_LOCAL=1 bash scripts/journey.sh local
 ```
 
-The contracts stage rebuilds both packages through the integration test. The local stage requires Python 3, Docker with Compose, the pinned Rust nightly and those rebuilt packages. It builds and starts a unique Compose project with digest-pinned node `0.17.0` components, while the Rust client/store remain `0.17.2`. The chain is public and fee-free and uses insecure disposable fixtures. It does not use an existing wallet or a hosted network.
+This starts a fresh public, fee-free chain with digest-pinned node `0.17.0` components and Rust client/store `0.17.2`. It uses disposable insecure fixtures, publishes and consumes the increment note, waits for both commitments, and checks:
 
-Each run creates fresh state under `local-node-runs/<id>/`, verifies publication and consumption commitments and asserts `PASS committed counter value: 1`. Inspect `report.json`, `validator.log` and `node.log`: the report records `kind: real-local-node`, readiness, validator exit code, node errors, shutdown and `passed`. RPC `58291` and health `58292` bind only to `127.0.0.1`; choose unused ports with the runner's `--rpc-port` and `--health-port` options. The runner stops only its own Compose project and preserves containers and state for review.
+```text
+PASS committed counter value: 1
+```
 
-The reviewed code also supports an intentional failure check. After integration, this command starts another disposable local run and must return nonzero after both commitments, because one increment produces 1:
+Each run writes `report.json`, `validator.log`, and `node.log` under `local-node-runs/<id>/`. Check `passed`, `validator_exit_code`, `node_error_count`, and `node_stopped`. The runner stops only its uniquely named Compose project and preserves state for inspection.
+
+RPC `58291` and health `58292` bind to `127.0.0.1`. Choose unused ports with `python3 scripts/local_node.py --rpc-port 59291 --health-port 59292` if needed. The pinned project submodule has no `validate_local` target; this validator lives at the workspace root.
+
+To test the failure path, start another disposable run with an intentionally wrong expected value:
 
 ```bash
 python3 scripts/local_node.py --expected-count 2
 ```
 
-Saved local acceptance evidence at the reviewed head shows success at count 1 and nonzero exits for the wrong assertion, unavailable/external RPC and existing client state. PR #24 has no configured repository CI; these are local results. They do not establish browser/wallet behavior, fee-funded admission, private-note transport or account upgrades.
+It must return nonzero after both commitments: one increment produces 1. For another app, adapt the assertions in `examples/local-counter/`. This fee-free public flow does not validate fee-funded admission, private transport, browser signers, or account upgrades.
 
-The pinned project submodule still has no `validate_local` target. Use the root local stage after integration; do not substitute an older bundled-node command. For another app, adapt this example's invariants and real-node flow, and follow [Local node testing](../tools/clients/local-node-testing.md) for versioned component configuration.
-
-## Connect the frontend
-
-Rebuild both packages and inspect their emitted paths before copying them into `frontend-template/public/packages/`. Match the filenames requested by the frontend source and confirm that both came from the same build. Use the frontend README for its configuration keys and the deployed account ID on the selected chain. After template PR #24 integration, `bash scripts/journey.sh artifacts` copies the rebuilt packages to the frontend's hyphenated filenames; `bash scripts/journey.sh frontend` runs its tests and build. Confirm [consumer context](tools.md) separately before relying on automatic agent guidance.
+## Prepare the frontend
 
 ```bash
-(cd frontend-template && yarn test)
-(cd frontend-template && yarn build)
+bash scripts/journey.sh artifacts
+bash scripts/journey.sh frontend
 ```
 
-These check frontend tests, TypeScript compilation and production bundling at the reviewed baseline. They do not exercise a browser transaction. Use [Verify the result](verify.md) to check loaded artifacts and actual browser state. For direct WebAssembly access follow the installed SDK locking guidance; avoid nesting calls that already acquire the SDK lock.
+`artifacts` copies the rebuilt packages to `frontend-template/public/packages/counter-account.masp` and `increment-note.masp`. `frontend` runs unit tests, TypeScript compilation, and a production build. Confirm the frontend loads those packages rather than stale copies.
 
-## Guided-flow availability
+Set the counter address and network configuration using the frontend README. Then, from the frontend directory:
 
-The root `doctor`, `contracts`, `frontend`, `artifacts`, `local` and `testnet` stages are implemented in template PR #24 and remain gated on its integration. Existing Cargo/Yarn commands above remain the fallback when your checkout lacks those helpers. The local counter evidence is specific to the reviewed version tuple and app; rerun its assertions for your own changes.
+```bash
+yarn dev
+```
 
-Continue to [verification](verify.md), then prepare a [network handoff](network-handoff.md). Funding or submitting the counter demo is a separate action; passing these local commands does not authorize or establish it.
+A local validator run does not configure the browser's network for you. Follow [Network handoff](network-handoff.md) before using a hosted counter. Check the initial count, publish and consume an increment, and confirm the updated committed count. Tests and a successful page load do not establish this browser result.
+
+## Extend the app
+
+Define the new state invariant and expected failures. Add MockChain assertions, adapt the real-node flow, then mirror that proven transaction flow in the UI. Follow installed SDK guidance for direct WASM calls and locking; avoid nesting hooks that already acquire the SDK lock.
+
+Continue to [Verify your app](verify.md) or [Troubleshoot](recover.md) a failed stage.
