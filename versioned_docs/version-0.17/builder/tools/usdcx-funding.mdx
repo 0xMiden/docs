@@ -14,7 +14,7 @@ For protocol 0.17, sync the client, then read the Web SDK's `await client.feeFau
 
 ## Fund an empty account
 
-The current wallet implements direct xReserve deposits from **Arc Testnet or Ethereum Sepolia to Miden Testnet**. Its other source-chain routes have additional routing steps; this guide covers the direct xReserve path. Source selection, token addresses and domain registration must match the wallet's [network configuration](https://github.com/0xMiden/wallet/blob/a013fc15e5523bd3facd8e34ad6f24fca7be2796/src/lib/usdcx/constant.ts).
+Use the tested direct xReserve route from **Arc Testnet to Miden Testnet**. Ethereum Sepolia also has a direct-deposit entry in the reviewed wallet configuration, but use it only after confirming that Miden is registered there and deposits are enabled. Its other source-chain routes have additional routing steps; this guide covers the direct xReserve path. Source selection, token addresses and domain registration must match the wallet's [network configuration](https://github.com/0xMiden/wallet/blob/a013fc15e5523bd3facd8e34ad6f24fca7be2796/src/lib/usdcx/constant.ts).
 
 1. Select Miden Testnet in a compatible wallet and create or select the recipient account. Preserve its signing material and required private-state backup.
 2. In Receive, choose the USDCx route and a direct source network. Connect an EVM wallet holding that network's accepted **test USDC** and enough source-chain gas. Ethereum Sepolia uses test ETH; Arc Testnet uses USDC for gas, so reserve additional USDC there.
@@ -46,11 +46,11 @@ The current output-note fee term is zero. Standard authentication withdraws the 
 | Network-account application fee | The note sender, when the target's policy requires sponsorship; separate from the sender's protocol fee. |
 | Deposit, withdrawal or proving-service charges | According to the selected provider's current policy or quote; separate from the protocol fee. |
 
-The signed xReserve `maxFee` is a **ceiling**, not the charged amount. The reviewed mint implementation sends the complete attested amount to the recipient; the wallet currently submits a zero deposit-fee ceiling. Neither establishes a permanent zero-fee service promise.
+The signed xReserve `maxFee` is a **ceiling**, not the charged amount. The reviewed mint implementation sends the complete attested amount to the recipient; the wallet currently submits a zero deposit-fee ceiling. The charged `feeAmount` is separate: the [current mint transport](https://github.com/0xMiden/protocol/blob/v0.17.1/crates/miden-usdcx/src/note/xreserve_mint.rs) reconstructs it as zero, so an attestation with a nonzero charged fee cannot be minted by that format. A positive `maxFee` alone does not mean a fee was charged. Confirm provider policy and implementation compatibility before changing the ceiling.
 
 ## Exit and network limits
 
-On supported Testnet destinations, choose the wallet's USDCx Send route and review the destination and payout deductions. Creating a public burn note removes the amount from the holder's vault. The faucet's later consumption burns it; destination USDC payout is another step. The withdrawal service requires the burn note to have been committed in an earlier block. A published burn is not a cancellable pending send.
+On supported Testnet destinations, choose the wallet's USDCx Send route and review the destination and payout deductions. Creating a public burn note removes the amount from the holder's vault. The faucet's later consumption burns it; destination USDC payout is another step. The withdrawal service requires the burn note to have been committed in an earlier block. A published burn is not a cancellable pending send. For a custom SDK integration, use the matching release's burn-note factory and attachments, and verify that its burn script root is allowed by the deployed faucet before creating the note. An SDK/faucet script mismatch can leave the note unprocessed.
 
 | Environment | Funding and limits |
 | --- | --- |
