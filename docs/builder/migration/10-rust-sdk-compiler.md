@@ -69,7 +69,7 @@ This page covers the contract toolchain (`midenc`, `cargo-miden` and the `cargo 
 | `cargo miden new` template bundle | 0.32.1 | 0.33.0 |
 | midenup channel (`miden-toolchain.toml`) | `0.16.0` | `0.17.0` |
 | Protocol it builds against (`miden-protocol`, `miden-standards`) | `0.16` | `0.17` |
-| VM crates it builds against | 0.29 | 0.33.0 |
+| VM crates it builds against | 0.29 | 0.35.0 |
 | `.masp` package format | 6.0.0 | 7.0.0 |
 | MSRV / nightly | 1.99 / `nightly-2026-09-01` | unchanged |
 
@@ -98,7 +98,7 @@ miden-mast-package        = { version = "0.35.0", default-features = false }   #
 
 ### Summary
 
-The 0.11 compiler links against VM 0.33 and the 0.17 protocol, and the packages it writes use package format 7.0.0. Packages written by 0.10.x (format 6.0.0, VM 0.29, the protocol 0.16 kernel) cannot be loaded by a 0.17 client, by `midenc`, or by the SDK macros that read dependency packages.
+The released 0.11.0 compiler links against VM 0.35.0 and the 0.17 protocol, and the packages it writes use package format 7.0.0. Packages written by 0.10.x (format 6.0.0, VM 0.29, the protocol 0.16 kernel) cannot be loaded by a 0.17 client, by `midenc`, or by the SDK macros that read dependency packages.
 
 ### Affected Code
 
