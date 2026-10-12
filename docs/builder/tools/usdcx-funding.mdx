@@ -46,11 +46,28 @@ The current output-note fee term is zero. Standard authentication withdraws the 
 | Network-account application fee | The note sender, when the target's policy requires sponsorship; separate from the sender's protocol fee. |
 | Deposit, withdrawal or proving-service charges | According to the selected provider's current policy or quote; separate from the protocol fee. |
 
-The signed xReserve `maxFee` is a **ceiling**, not the charged amount. The reviewed mint implementation sends the complete attested amount to the recipient; the wallet currently submits a zero deposit-fee ceiling. The charged `feeAmount` is separate: the [current mint transport](https://github.com/0xMiden/protocol/blob/v0.17.1/crates/miden-usdcx/src/note/xreserve_mint.rs) reconstructs it as zero, so an attestation with a nonzero charged fee cannot be minted by that format. A positive `maxFee` alone does not mean a fee was charged. Confirm provider policy and implementation compatibility before changing the ceiling.
+The signed xReserve `maxFee` is a **ceiling**, not the charged amount. The reviewed mint implementation sends the complete attested amount to the recipient; the wallet currently submits a zero deposit-fee ceiling. The charged `feeAmount` is separate: the [current mint transport](https://github.com/0xMiden/protocol/blob/v0.17.1/crates/miden-usdcx/src/note/xreserve_mint.rs) reconstructs it as zero, so an attestation with a nonzero charged fee cannot be minted by that format. A positive `maxFee` alone does not mean a fee was charged. Circle currently documents [no xReserve deposit fee](https://developers.circle.com/xreserve/references/fees); source-chain gas and Miden processing fees remain separate. Confirm provider policy and implementation compatibility before changing the ceiling.
 
 ## Exit and network limits
 
 On supported Testnet destinations, choose the wallet's USDCx Send route and review the destination and payout deductions. Creating a public burn note removes the amount from the holder's vault. The faucet's later consumption burns it; destination USDC payout is another step. The withdrawal service requires the burn note to have been committed in an earlier block. A published burn is not a cancellable pending send. For a custom SDK integration, use the matching release's burn-note factory and attachments, and verify that its burn script root is allowed by the deployed faucet before creating the note. An SDK/faucet script mismatch can leave the note unprocessed.
+
+### Withdrawal quotes and routes
+
+Read a successful [`POST /v1/prepare-withdrawal` response](https://github.com/0xMiden/miden-usdcx/blob/04e9ef4eab2c5c13c9a79009e0b8cb5b0674d15e/crates/xusdc-light-attester/src/circle.rs) for the deployment's environment, destination and amount. Preparing a quote does not submit a withdrawal or prove payout. Request `valueIncludingFees` and `forwardingOptions.maxFee` are **decimal USDC strings**; response `batches[0].burnIntents[0].maxFee` is an **integer string in six-decimal base units**. The reviewed attester supports one returned burn intent; an error, unexpected hook or multiple intents is not a supported quote.
+
+[Circle's route guide](https://developers.circle.com/xreserve/concepts/technical-guide) distinguishes direct payouts through Gateway from withdrawals requiring an additional CCTP leg. The [Miden attester](https://github.com/0xMiden/miden-usdcx/blob/04e9ef4eab2c5c13c9a79009e0b8cb5b0674d15e/crates/xusdc-light-attester/src/verify.rs) validates the returned destination and hook:
+
+| Returned route | Withdrawal fee components |
+| --- | --- |
+| Direct payout: requested destination/recipient, zero forwarding-contract address, empty forwarding calldata | Returned xReserve quote; no additional CCTP cap is added. |
+| Supported forwarding through Arc with a validated CCTP call | Returned xReserve quote plus a separate CCTP fee. The service's acceptance check reserves the full configured CCTP cap; the actual charge can be lower. |
+
+`useCircleForwarding: true` alone does not identify a CCTP route. This possible withdrawal leg does not change USDCx's xReserve backing or Miden's native fee asset. Confirm support from the actual prepare response, rather than a destination name alone.
+
+**Illustrative direct payout:** request `valueIncludingFees: "10.000000"`; if the returned `maxFee` is `"24000"`, the xReserve fee is `0.024000 USDC` and the prepared payout is `9.976000 USDC`. A separate CCTP leg would also deduct its charge. Do not treat an operator cap or wallet payout-confirmation allowance as the charged fee, or reuse a Testnet quote as a Mainnet price.
+
+### Network limits
 
 | Environment | Funding and limits |
 | --- | --- |
