@@ -105,6 +105,7 @@ const sidebars: SidebarsConfig = {
           items: [
             "builder/smart-contracts/standards/account-components",
             "builder/smart-contracts/standards/standard-notes",
+            "builder/smart-contracts/standards/pswap-lifecycle",
             "builder/smart-contracts/standards/faucets-and-policies",
           ],
         },
