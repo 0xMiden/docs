@@ -12,6 +12,8 @@ For protocol-level application patterns, see [Smart-contract patterns](../../sma
 
 ## Keep bridge capacity separate
 
+For Partner Mainnet's deposited-balance limit, use the [support explanation](https://support.miden.xyz/#moving-across-chains/what-is-the-partner-mainnet-deposit-limit).
+
 A bridge's configured frontend admission/capacity rule and this account's local rolling spending policy answer different questions. Passing one does not establish that the other allows the route. Balance valuation, transfers already pending and enforcement across other devices or clients must be checked against the bridge's actual deployed configuration. A transaction-specific wallet approval does not override a bridge or partner's capacity rule.
 
 ## What the policy counts
