@@ -23,6 +23,6 @@ Use test assets for the counter demonstration. Inspect its authentication from s
 
 A successful faucet request is an intermediate result. Preserve its note ID, synchronize, consume where required, and check committed balances or state. A funding wait, browser launch or completed build does not establish network success.
 
-The guided-flow draft proposes an explicit testnet stage, but the published template must be checked for its available client binaries and configuration before executing them. No generic deployment command or automatic network handoff is supplied here.
+Template PR #24 implements an explicit `testnet` stage, gated on integration into your checkout and `MIDEN_ALLOW_TESTNET=1`. Inspect its binary and configuration before authorizing submission. Its hosted testnet/browser flow remains unverified; the successful root `local` stage uses a separate fee-free disposable chain and does not establish admission, funding or hosted service compatibility. Never reuse the local fixture keys for a hosted network. No automatic deployment or network handoff is supplied here.
 
 Ask the agent to return the completed handoff record with each open gate and the next executable check. Do not label the app deployed until the selected network's commitments and final assertions have been observed.

@@ -22,7 +22,7 @@ git submodule status --recursive
 
 For a clone missing submodules, initialize its checked-in pins with `git submodule update --init --recursive`. Avoid `--remote` during onboarding: it changes the source baseline. Compare the checkout with [Release and agent context](setup.md) before installing.
 
-Inspect `setup.sh` before running it. The existing script can install prerequisites, fetch dependencies and build contracts; check whether its selected channel and lockfile behavior match your intended release. Use the subprojects' pinned installation instructions if they do not. A proposed release-pinned setup and stage runner are still under review; this guide does not require those unpublished commands.
+Inspect `setup.sh` before running it. The existing script can install prerequisites, fetch dependencies and build contracts; check whether its selected channel and lockfile behavior match your intended release. Use the subprojects' pinned installation instructions if they do not. The release-pinned setup and stage runner are implemented in template PR #24 but remain gated on code PR integration.
 
 Once Rust/rustup, a manifest-compatible midenup, Node 20 and Yarn Classic 1 are available, the reviewed pins support explicit setup. Node 20 matches the tested baseline and the frontend test runner's requirements; inspect package engines if selecting another Node release:
 
@@ -32,5 +32,14 @@ Once Rust/rustup, a manifest-compatible midenup, Node 20 and Yarn Classic 1 are 
 ```
 
 The first command downloads the pinned channel; the checked-in project toolchain selects it. The second installs frontend dependencies without updating the lockfile and may run the package's configured preparation scripts. Verify installed SDK context afterward. If your pins differ, read their toolchain and package files before using this baseline.
+
+After [template PR #24](https://github.com/0xMiden/agentic-template/pull/24) is integrated into your checkout, its root setup path is:
+
+```bash
+bash scripts/journey.sh doctor
+bash setup.sh
+```
+
+`doctor` checks prerequisites and source pins; it does not build or run a node. The revised setup uses the checked-in Miden channel and frozen frontend lockfile and explicitly runs SDK skill sync so `prepare` cannot hide a sync failure. Root installed-package pointers still need the [consumer-context check](tools.md); matching pins and successful sync alone do not close that gate.
 
 For explanation or planning, ask the agent to cite source files and stop before installation or transaction execution. For implementation, use the [first-app flow](first-app.md) and record each stage's result.

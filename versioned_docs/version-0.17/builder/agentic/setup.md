@@ -36,8 +36,11 @@ The reviewed agentic-template baseline uses project pin `e941949b1cb244f1557ace1
 | --- | --- |
 | Miden channel / compiler / guest Rust SDK | `0.17.0` / `0.11.0` / `0.15.0` |
 | Protocol / Rust client and store / VM | `0.17.1` / `0.17.2` / `0.35.0` |
+| Disposable local validator node components | `0.17.0`, digest-pinned in template PR #24 |
 | Browser core / React, adapters and tooling | `0.17.1` / `0.17.0` |
 | Contract Rust toolchain | `nightly-2026-09-01` |
+
+The root local-node validator is implemented in [template PR #24](https://github.com/0xMiden/agentic-template/pull/24), reviewed at `a43051aa7a9530f5d1ce08c003edb40f2f7936f7`. It remains an open code PR; use its commands only after integration into your checkout. [Agent-tools PR #19](https://github.com/0xMiden/agent-tools/pull/19), reviewed at `bc8d207980aaedd42a66d7ac2cf07d911415ef25`, preserves the same Rust baseline and adds consumer-context checks. Neither code PR is a merged-availability claim.
 
 These versions intentionally differ. The v0.17 docs snapshot contains Rust client and node sources at `0.17.3`; that does not upgrade a template pinned to `0.17.2`. Check the resolved dependencies before borrowing an example. Rebuild contract packages for format 7 when migrating; do not reuse v0.16 stores or serialized artifacts as v0.17 inputs.
 
@@ -54,6 +57,8 @@ An instruction file existing on disk does not prove your agent loaded it. Ask it
 ## Reuse installed browser context
 
 Web SDK guidance ships with the installed npm packages. Inspect their `AGENTS.md` and `skills/` directories under `node_modules/@miden-sdk/miden-sdk`, `@miden-sdk/react` and `@miden-sdk/vite-plugin`. Check any project pointers or synced skills after installation. If the installed package provides a skill-sync command, follow its own instructions and verify the resulting files.
+
+A successful install or `prepare` exit is insufficient: the published initializer can tolerate a failed sync. Verify installed guide pointers, copied skill bytes and the hook declaration with the integration-gated [consumer checks](tools.md). These checks target stable v0.17; declaring `current`/Next fails that release-context check even when a Next page discusses v0.17. Select stable v0.17 for the consumer check rather than treating Next as stable.
 
 Keep that version-matched context as the source for browser APIs. Do not copy a second frontend skill bundle from agent-tools. SDK installation details remain in [Web SDK setup](../tools/clients/web-client/setup.md) and [React setup](../tools/clients/react-sdk/setup.md).
 
