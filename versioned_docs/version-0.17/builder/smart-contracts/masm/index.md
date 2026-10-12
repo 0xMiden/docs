@@ -6,6 +6,8 @@ sidebar_position: 0
 
 # MASM Smart Contracts
 
+import DocCardList from "@theme/DocCardList";
+
 This section is the practical guide to authoring Miden smart contracts directly in **Miden Assembly (MASM)** — the path Miden mainnet supports for production deployments today. The Rust SDK is in active development and will become the default authoring path once it ships v1; until then, MASM is what you ship with.
 
 :::info Audience
@@ -28,20 +30,13 @@ For mainnet shipping today, the choice is straightforward: write MASM. Most prod
 
 The full Miden Assembly reference — every instruction, the stack semantics, control flow, cryptographic operations, debugging instructions — lives in [Reference → Miden VM → Assembly](../../../reference/miden-vm/user_docs/assembly/index.md). Treat that as the dictionary. This Builder section is the cookbook: how to structure a project, conventions for accounts, notes, and transactions, deployment, testing, and debugging in the context of building a Miden app.
 
-## Tutorials
+## Guides
 
-Practical, end-to-end tutorials are in progress in the [Miden tutorials repository](https://github.com/0xMiden/tutorials) and will land in this section as they ship:
+Follow the guides below to build, test, and debug MASM contracts. The examples use Rust host harnesses to assemble and execute MASM, with the execution boundaries stated in each guide.
 
-| Tutorial | Status |
-|---|---|
-| Project setup and first MASM contract | In progress |
-| MASM account components | In progress |
-| MASM note scripts | In progress |
-| [MASM transaction scripts](./transaction-scripts) | Compile and execute a script with explicit arguments and expiry checks. |
-| [Testing with MockChain](./testing-mockchain) | Check execution, committed state, and rejection paths locally. |
-| [Debugging MASM](./debugging) | Inspect compiler diagnostics, assertion messages, and stack output. |
+<DocCardList />
 
-In the meantime, the existing [Rust-based Miden Bank tutorial](../../tutorials/miden-bank/) is useful for understanding the overall transaction lifecycle and the patterns that translate to MASM. The [Reference assembly section](../../../reference/miden-vm/user_docs/assembly/index.md) covers the language itself.
+For Rust client orchestration and network submission of a MASM account, see [Deploying a Counter Contract](../../tutorials/recipes/rust/counter_contract_tutorial.md). The [Miden Bank tutorial](../../tutorials/miden-bank/) covers the broader transaction lifecycle with Rust guest contracts.
 
 ## See also
 
