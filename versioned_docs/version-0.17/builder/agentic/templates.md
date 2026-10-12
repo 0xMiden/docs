@@ -24,7 +24,7 @@ For a clone missing submodules, initialize its checked-in pins with `git submodu
 
 Inspect `setup.sh` before running it. The existing script can install prerequisites, fetch dependencies and build contracts; check whether its selected channel and lockfile behavior match your intended release. Use the subprojects' pinned installation instructions if they do not. A proposed release-pinned setup and stage runner are still under review; this guide does not require those unpublished commands.
 
-Once Rust/rustup, a manifest-compatible midenup, Node 18+ and Yarn Classic 1 are available, the reviewed pins support explicit setup:
+Once Rust/rustup, a manifest-compatible midenup, Node 20 and Yarn Classic 1 are available, the reviewed pins support explicit setup. Node 20 matches the tested baseline and the frontend test runner's requirements; inspect package engines if selecting another Node release:
 
 ```bash
 (cd project-template && midenup install 0.17.0)
