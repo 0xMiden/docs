@@ -119,3 +119,5 @@ The Rust types live under `miden_standards::note`. The MASM scripts live under `
 - [Output Notes](../notes/output-notes) - creating output notes from transactions
 - [Note Scripts](../notes/note-scripts) - writing custom note scripts
 - [`miden-standards` note source](https://github.com/0xMiden/protocol/tree/next/crates/miden-standards/src/note) - current implementation
+
+For offer tracking, partial fills, payback consumption and reclaim, see [Partial-swap lifecycle](./pswap-lifecycle.md).

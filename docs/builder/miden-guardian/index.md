@@ -78,3 +78,5 @@ Guardian has an explicit trust boundary:
 ## Repository
 
 - [Miden Guardian](https://github.com/OpenZeppelin/guardian) - Guardian server, client SDKs, multisig client libraries, and specification
+
+For wallet-level signing material, private state and pending-note recovery limits, see [Bread recovery and backup](../tools/wallet/recovery.md).

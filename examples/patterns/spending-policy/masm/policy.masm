@@ -1,0 +1,71 @@
+use miden::protocol::active_account
+use miden::protocol::native_account
+use miden::protocol::output_note
+
+# CONSTANTS
+# =================================================================================================
+
+const ASSET_SLOT = word("demo::spending_policy::asset")
+const REMAINING_SLOT = word("demo::spending_policy::remaining")
+
+# ERRORS
+# =================================================================================================
+
+const ERR_AMOUNT_NOT_U32 = "spending amount must fit u32"
+const ERR_AMOUNT_ZERO = "spending amount must be positive"
+const ERR_ALLOWANCE_NOT_U32 = "spending allowance must fit u32"
+const ERR_ALLOWANCE_EXCEEDED = "spending allowance exceeded"
+
+# PUBLIC INTERFACE
+# =================================================================================================
+
+pub use {create_note} from miden::standards::note::note_creator
+pub use {receive_asset} from miden::standards::wallets::basic
+
+#! Moves a positive u32 amount of the configured fungible asset to an output note.
+#! Debits the persistent lifetime allowance; receiving assets does not reset it.
+#!
+#! Inputs:  [amount, note_idx, pad(14)]
+#! Outputs: [pad(16)]
+#!
+#! Where:
+#! - amount is the quantity in the asset's smallest units.
+#! - note_idx is the index of an output note already created in this transaction.
+#!
+#! Panics if:
+#! - amount is zero, exceeds u32, or exceeds the remaining allowance.
+#! - the stored allowance is not a u32.
+#! - native_account::remove_asset or output_note::add_asset fails.
+#!
+#! Invocation: call
+@account_procedure
+@locals(2)
+pub proc send
+    loc_store.0 loc_store.1
+
+    loc_load.0 u32assert.err=ERR_AMOUNT_NOT_U32
+    dup neq.0 assert.err=ERR_AMOUNT_ZERO drop
+
+    push.REMAINING_SLOT[0..2] exec.active_account::get_item
+    movdn.4 dropw
+    # => [remaining, pad(16)]
+
+    u32assert.err=ERR_ALLOWANCE_NOT_U32
+    dup loc_load.0 u32gte assert.err=ERR_ALLOWANCE_EXCEEDED
+    loc_load.0 sub
+    # => [new_remaining, pad(16)]
+
+    push.0.0.0 movup.3
+    push.REMAINING_SLOT[0..2] exec.native_account::set_item dropw
+    # => [pad(16)]
+
+    # construct only the configured asset; the caller supplies no asset ID
+    loc_load.1
+    push.0.0.0 loc_load.0
+    push.ASSET_SLOT[0..2] exec.active_account::get_item
+    # => [ASSET_ID, ASSET_VALUE, note_idx, pad(16)]
+
+    dupw.1 dupw.1
+    exec.native_account::remove_asset dropw
+    exec.output_note::add_asset
+end

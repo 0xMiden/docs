@@ -50,7 +50,7 @@ If you're new to Miden, the hands-on [Miden Bank Tutorial](../tutorials/miden-ba
     Core types: Felt, Word, AccountId, NoteId, and more.
   </Card>
   <Card title="Patterns" href="./patterns" eyebrow="Recipes">
-    Access control, rate limiting, spending limits, and anti-patterns.
+    Access control, rate limiting, fixed spending allowances, and anti-patterns.
   </Card>
 </CardGrid>
 
