@@ -200,3 +200,5 @@ miden-client network-note-status <NOTE_ID>
 ```
 
 The status output includes the processing state, attempt count, latest error, and last attempt block when the node has those details.
+
+To start Testnet wallet setup, see [Developer mode](../wallet/developer-mode.md).

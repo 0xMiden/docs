@@ -32,8 +32,9 @@
   --miden-inactive: #dedede;
   --miden-title: Seasonmix, Arial, sans-serif;
   --miden-body: 'Soehne Buch', Arial, sans-serif;
-  /* Approved accessibility adjustment for white, normal-size button labels. */
+  /* Approved CTA shade also keeps normal-size accent text readable on light surfaces. */
   --miden-action-orange: #c94600;
+  --miden-accent-text: var(--miden-action-orange);
   --font-sans: var(--miden-body);
   --font-display: var(--miden-title);
   --font-eyebrow: var(--miden-body);
@@ -65,6 +66,7 @@
   --miden-control-bg: #181c22;
   --miden-hover-bg: #181c22;
   --miden-inactive: #8a919b;
+  --miden-accent-text: var(--miden-orange);
 }
 .theme-layout-navbar {
   height: 90px;
@@ -89,8 +91,10 @@
   font-size: 16px;
   font-weight: 500;
   color: var(--miden-text);
+  transition: none;
 }
-.theme-layout-navbar .navbar__link:hover { color: var(--miden-orange); }
+.theme-layout-navbar .navbar__link:hover { color: var(--miden-accent-text); }
+.theme-layout-navbar .navbar__item.dropdown > .navbar__link { transition: none; }
 .theme-layout-navbar [class*='colorModeToggle'] button { color: var(--miden-text); }
 .theme-layout-navbar .dropdown__menu,
 .navbar-sidebar { --color-text:var(--miden-text); --color-muted:var(--miden-text); --color-surface:var(--miden-surface); --color-surface-hover:var(--miden-control-bg); --color-bg:var(--miden-page-bg); --color-border:var(--miden-line); background: var(--miden-page-bg); color: var(--miden-text); }
@@ -113,12 +117,13 @@
   text-transform: none;
   letter-spacing: normal;
 }
+.theme-layout-footer.footer a { transition: none; }
 .theme-layout-footer.footer .footer__link-item { font-family: 'Soehne Buch', Arial, sans-serif; color: var(--miden-text); font-size: 16px; }
 .theme-layout-footer.footer .footer__logo { width: 106px; height: 33px; margin-left:auto; margin-right:auto; }
 .theme-layout-footer.footer .footer__copyright,
 .theme-layout-footer.footer .footer__tagline { font-family: 'Soehne Buch', Arial, sans-serif; color: var(--miden-text); text-transform: none; letter-spacing: normal; font-size: 14px; }
 .markdown h1, .markdown h2, .markdown h3 { font-family: Seasonmix, Arial, sans-serif; font-weight: 600; color: var(--color-text); }
-@media (max-width: 991px) {
+@media (max-width: 996px) {
   :root { --ifm-navbar-height: 64px; }
   .theme-layout-navbar { height: 64px; padding: 0 32px; }
   .theme-layout-navbar .navbar__logo, .theme-layout-navbar .navbar__logo :is(img,svg) { width: 64px; height: 20px; }
