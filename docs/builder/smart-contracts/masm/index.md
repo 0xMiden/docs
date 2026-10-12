@@ -28,20 +28,20 @@ For mainnet shipping today, the choice is straightforward: write MASM. Most prod
 
 The full Miden Assembly reference — every instruction, the stack semantics, control flow, cryptographic operations, debugging instructions — lives in [Reference → Miden VM → Assembly](/reference/miden-vm/user_docs/assembly/). Treat that as the dictionary. This Builder section is the cookbook: how to structure a project, conventions for accounts, notes, and transactions, deployment, testing, and debugging in the context of building a Miden app.
 
-## Tutorials
+## Guides
 
-Practical, end-to-end tutorials are in progress in the [Miden tutorials repository](https://github.com/0xMiden/tutorials) and will land in this section as they ship:
+Start with a local MASM project, then add account state and programmable notes. These guides use Rust on the host to assemble and execute MASM; they do not require the Rust guest-contract compiler.
 
-| Tutorial | Status |
+| Guide | Purpose or status |
 |---|---|
-| Project setup and first MASM contract | In progress |
-| MASM account components | In progress |
-| MASM note scripts | In progress |
+| [Your first MASM project](./first-project.md) | Assemble and execute a standalone VM program. |
+| [MASM account components](./account-components.md) | Package procedures and named account storage. |
+| [MASM note scripts](./note-scripts.md) | Read committed note storage and call an account procedure. |
 | MASM transaction scripts | In progress |
 | Testing with MockChain | In progress |
 | Debugging MASM contracts | In progress |
 
-In the meantime, the existing [Rust-based Miden Bank tutorial](../../tutorials/miden-bank/) is useful for understanding the overall transaction lifecycle and the patterns that translate to MASM. The [Reference assembly section](/reference/miden-vm/user_docs/assembly/) covers the language itself.
+For a larger Rust guest-contract example, see the [Miden Bank tutorial](../../tutorials/miden-bank/). For MASM deployment orchestrated by the Rust client, see [Deploying a Counter Contract](../../tutorials/recipes/rust/counter_contract_tutorial.md). The [assembly reference](../../../reference/miden-vm/user_docs/assembly/index.md) covers the language itself.
 
 ## See also
 
