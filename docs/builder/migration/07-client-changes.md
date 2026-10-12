@@ -26,14 +26,42 @@ A 0.17.0 client talks only to a stable 0.17 node: the node matches major.minor a
 # ./.miden/miden-client.toml if it exists, else $MIDEN_CLIENT_HOME, else ~/.miden
 if [ -f .miden/miden-client.toml ]; then dir="$PWD/.miden"; else dir="${MIDEN_CLIENT_HOME:-$HOME/.miden}"; fi
 cfg="$dir/miden-client.toml"
-store=$(sed -n 's/^store_filepath *= *"\(.*\)"$/\1/p' "$cfg")
-pkgs=$(sed -n 's/^package_directory *= *"\(.*\)"$/\1/p' "$cfg")
-case "$store" in /*) ;; *) store="$dir/$store";; esac
-case "$pkgs" in /*) ;; *) pkgs="$dir/$pkgs";; esac
+# Requires Python 3.11+ (tomllib). Parse TOML before any destructive command.
+paths=$(python3 - "$cfg" <<'PYTHON'
+import sys
+import tomllib
+from pathlib import Path
+
+config = Path(sys.argv[1]).absolute()
+with config.open('rb') as file:
+    data = tomllib.load(file)
+paths = []
+for key in ('store_filepath', 'package_directory'):
+    value = data.get(key)
+    if not isinstance(value, str) or not value.strip() or '\n' in value or '\r' in value:
+        raise SystemExit(f'{key} must be a nonempty, single-line TOML string; stop before deleting or copying')
+    path = Path(value)
+    if not path.is_absolute():
+        path = config.parent / path
+    path = path.resolve()
+    if path == Path(path.anchor) or path == config.parent.resolve():
+        raise SystemExit(f'{key} resolves to a directory root; inspect the configuration manually')
+    paths.append(path)
+if paths[0].is_dir() or paths[0] == paths[1]:
+    raise SystemExit('The store must be a file path distinct from the package directory')
+for path in paths:
+    print(path)
+PYTHON
+) || exit 1
+store=$(printf '%s\n' "$paths" | sed -n '1p')
+pkgs=$(printf '%s\n' "$paths" | sed -n '2p')
 echo "$cfg | $store | $pkgs"     # check these three paths before running the next block
 ```
 
 ```bash
+set -eu
+: "${store:?Run and verify the path-resolution block first}"
+: "${pkgs:?Run and verify the path-resolution block first}"
 rm -f "$store" "$store-wal" "$store-shm"
 tmp=$(mktemp -d) && (cd "$tmp" && miden-client init --local >/dev/null) \
   && mkdir -p "$pkgs" && cp -R "$tmp/.miden/packages/." "$pkgs/" && rm -rf "$tmp"
@@ -1182,9 +1210,10 @@ miden-client new-wallet
 
 # Refresh only the packages of the ACTIVE config (./.miden, else $MIDEN_CLIENT_HOME, else ~/.miden),
 # keeping the config and keystore (the store still has to go; see the Quick Fix)
-if [ -f .miden/miden-client.toml ]; then dir="$PWD/.miden"; else dir="${MIDEN_CLIENT_HOME:-$HOME/.miden}"; fi
-pkgs=$(sed -n 's/^package_directory *= *"\(.*\)"$/\1/p' "$dir/miden-client.toml")
-case "$pkgs" in /*) ;; *) pkgs="$dir/$pkgs";; esac
+# First run the TOML path-resolution block in Quick Fix and inspect its output.
+# Stop if parsing fails; do not replace an empty value with the config directory.
+set -eu
+: "${pkgs:?Run and verify the Quick Fix path-resolution block first}"
 echo "$pkgs"     # check before copying
 tmp=$(mktemp -d) && (cd "$tmp" && miden-client init --local >/dev/null) \
   && mkdir -p "$pkgs" && cp -R "$tmp/.miden/packages/." "$pkgs/" && rm -rf "$tmp"
