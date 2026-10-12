@@ -1,0 +1,5 @@
+begin
+    # Input stack: [width, height, ...]
+    mul
+    # Output stack: [area, ...]
+end
