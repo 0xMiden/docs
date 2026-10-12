@@ -17,3 +17,5 @@ Expected runner outputs are `area: 42`, `settings value: 7 -> 42`, and `settings
 The note example includes the account example's `settings.masm` source. Keep both directories together. MockChain exercises the transaction kernel with test accounts, signers, and testing proofs; these projects require no live node or account funding.
 
 The Node check compares every titled source block with the executable files and checks that current and v0.17 guide copies are identical.
+
+After building the docs site, run `node examples/masm/check-navigation.mjs` to check the MASM sidebar order and landing-page pagination in current and v0.17.
