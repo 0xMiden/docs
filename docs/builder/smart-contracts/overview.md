@@ -179,6 +179,6 @@ Wallet, contract, and faucet behavior comes from the components and configuratio
 | [Authentication](./accounts/authentication) | Falcon-512 Poseidon2 signatures and replay protection |
 | [Cross-Component Calls](./cross-component-calls) | Inter-component communication |
 | [Types](./types) | Felt, Word, Asset — the VM's native types |
-| [Patterns](./patterns) | Access control, rate limiting, spending limits, anti-patterns |
+| [Patterns](./patterns) | Access control, rate limiting, fixed spending allowances, anti-patterns |
 
 Ready to start building? The [Miden Bank Tutorial](../tutorials/miden-bank/) is a hands-on walkthrough (currently written against the Rust SDK; the concepts translate to MASM).
