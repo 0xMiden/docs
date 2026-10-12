@@ -16,6 +16,8 @@
 .secondary { background: var(--miden-surface); border: 3px solid var(--miden-panel-border); color: var(--miden-secondary-text); transition: none; }
 .secondary:hover { background: var(--miden-hover-bg); }
 .page :is(a,button,select):focus-visible, .page .tabs button:focus-visible { outline: 3px solid var(--miden-text); outline-offset: 4px; }
+/* Semantic link text must switch with its surface during theme changes. */
+.page a:not(.primary) { transition: none; }
 .workbench { min-width: 0; background: var(--miden-surface); border: 3px solid var(--miden-panel-border); border-radius: 10px; }
 .panelHeader { padding: 1.5rem 1.5rem 0; display: flex; align-items: center; justify-content: space-between; gap: 1rem; font-size: 16px; }
 .panelHeader strong { font-family: Seasonmix, Arial, sans-serif; font-weight: 600; }
@@ -75,7 +77,7 @@
 .sdkGrid { display:grid; grid-template-columns:repeat(3,1fr); gap:4.5rem; margin-top:2rem; }
 .sdk { display:block; color:var(--miden-text); text-decoration:none; }
 .sdk:hover { color:var(--miden-text); text-decoration:none; }
-.language { color:var(--miden-orange); font-family:Seasonmix,Arial,sans-serif; font-size:1rem; }
+.language { color:var(--miden-accent-text); font-family:Seasonmix,Arial,sans-serif; font-size:1rem; }
 .page .sdk h3 { font-family:Seasonmix,Arial,sans-serif; font-size:1.75rem; font-weight:600; line-height:1.1; letter-spacing:-.036em; color:var(--miden-text); display:flex; justify-content:space-between; margin:.5rem 0 1rem; }
 .sdk h3 span, .resources h3 span { color:var(--miden-orange); }
 .sdk p { font-family:'Soehne Buch',Arial,sans-serif; font-size:1.125rem; line-height:1.3; color:var(--miden-text); margin:0; }
@@ -84,7 +86,7 @@
 .resources a:hover { text-decoration:none; }
 .page .resources h3 { font-family:Seasonmix,Arial,sans-serif; font-size:1.25rem; font-weight:600; line-height:1.3; color:var(--miden-text); display:flex; justify-content:space-between; margin:0 0 .75rem; }
 .resources p { font-family:'Soehne Buch',Arial,sans-serif; color:var(--miden-text); font-size:1rem; line-height:1.4; margin:0; }
-@media (max-width: 991px) { .page { padding-left:2rem; padding-right:2rem; } .hero { grid-template-columns:1fr; gap:2rem; padding-top:2rem; padding-bottom:2rem; } .page .intro h1 { font-size:3rem; } .lead { font-size:1rem; } .modelControls,.sdkGrid { gap:2rem; } .model { padding-bottom:2rem; } .walkthrough { padding-bottom:2rem; } .resources { grid-template-columns:repeat(2,1fr); } }
+@media (max-width: 996px) { .page { padding-left:2rem; padding-right:2rem; } .hero { grid-template-columns:1fr; gap:2rem; padding-top:2rem; padding-bottom:2rem; } .page .intro h1 { font-size:3rem; } .lead { font-size:1rem; } .modelControls,.sdkGrid { gap:2rem; } .model { padding-bottom:2rem; } .walkthrough { padding-bottom:2rem; } .resources { grid-template-columns:repeat(2,1fr); } }
 @media (max-width: 767px) { .page { padding-bottom:2rem; } .page .intro h1 { font-size:2.5rem; line-height:1.1; } .primary,.secondary { font-size:1rem; padding:.75rem 1rem; } .page .model h2 { font-size:1.5rem; } .modelCanvas { aspect-ratio:2 / 1; } .modelControls { gap:1.5rem; } .modelControls button { font-size:1.25rem; } .stageNumber { font-size:2rem; } .explanation p { font-size:1rem; } .page .explanation h3 { font-size:1.25rem; } .sectionHeading { align-items:start; flex-direction:column; } .page .sectionHeading h2,.page .sdkSection h2 { font-size:1.5rem; } .milestones { gap:1rem; } .milestones button { font-size:1rem; } .sdkGrid { grid-template-columns:1fr; gap:1.5rem; } .page .sdk h3 { font-size:1.5rem; } .sdk p { font-size:1rem; } .panelHeader { flex-wrap:wrap; } .panelHeader label { flex-direction:row; } .panelBody { padding:1rem; } .panelHeader { padding:1rem 1rem 0; } .tabs { margin-left:1rem; margin-right:1rem; gap:1rem; } .tabs button { font-size:14px; } .page .panelSlot h2 { font-size:1.25rem; } .panelSlot p { font-size:14px; } .resources { gap:1.5rem; } .page .resources h3 { font-size:1rem; } .resources p { font-size:14px; } }
 @media (max-width: 479px) { .page { padding-left:1rem; padding-right:1rem; } .actions { flex-direction:column; align-items:stretch; margin-top:1.5rem; } .resources { gap:1rem; } .modelCanvas { border-radius:10px; } }
 @media (prefers-reduced-motion:reduce) { .page *, .page *::before, .page *::after { animation:none!important; transition:none!important; scroll-behavior:auto!important; } }
