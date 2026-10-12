@@ -1,0 +1,87 @@
+{
+  "source": "https://www.miden.xyz/",
+  "stylesheet": "https://cdn.prod.website-files.com/6a26670ad40ec24a0a8e0c5f/css/midenxyz.webflow.shared.77048d061.min.css",
+  "fonts": {
+    "title": {
+      "family": "Seasonmix",
+      "weight": 600,
+      "file": "SeasonMix-SemiBold.woff2"
+    },
+    "body": {
+      "family": "Soehne Buch",
+      "weight": 400,
+      "file": "soehne-buch.woff2"
+    }
+  },
+  "tokens": {
+    "light_grey": "#f9f9f9",
+    "dark_grey": "#484848",
+    "warm_grey": "#dfd8d3",
+    "brownish_grey": "#eae5e1",
+    "off_white": "#efefef",
+    "orange": "#e65303"
+  },
+  "roles": {
+    "hero": "Official .text_display-lg: 56px / 56px, weight600, tracking-.03em; responsive48/40px.",
+    "lead": "Official .text_body-sm: 20px / 28px, Soehne Buch400.",
+    "secondary_button": "Official .button.is-light: Seasonmix20px, 18px32px padding, 10px radius, 3px #eae5e1 border.",
+    "container": "Official .container: max83rem, padding2.5rem; 2rem/1rem responsive.",
+    "logo": "Official .nav_logo-img:84x26px desktop,64px mobile; unchanged SVG bytes.",
+    "illustrations": "Three exact homepage privacy PNGs, reserved4:1 media region; 20px source media corner radius.",
+    "motion": "Official .home_real-world-btn / .nav_link-icon transition:200ms cubic-bezier(.25,.46,.45,.94); opacity-only illustration state changes. No loops or automatic motion."
+  },
+  "accessibility_exception": {
+    "purpose": "Previously approved white normal-size CTA labels",
+    "source_orange": "#e65303",
+    "button_background": "#c94600",
+    "text": "#ffffff",
+    "contrast_ratio": 4.82
+  },
+  "functional_preservation": "Docusaurus navigation/version/search and the approved layout remain. Light palette/typography/assets follow the official site; dark mode reuses the existing docs dark surfaces, and system mode follows OS preference. The official SVG geometry and orange are unchanged; only its gray wordmark uses the theme text color.",
+  "assets": [
+    {
+      "file": "static/brand/miden/miden-logo.svg",
+      "source": "https://cdn.prod.website-files.com/6a26670ad40ec24a0a8e0c5f/6a2902fbde181744161d90f7_miden-logo.svg",
+      "sha256": "f40b8dc3fb133d128f4cc092d5e4ff9e135f7d48b2062e030f0c8443182c9276",
+      "bytes": 8393
+    },
+    {
+      "file": "static/brand/miden/SeasonMix-SemiBold.woff2",
+      "source": "https://cdn.prod.website-files.com/6a26670ad40ec24a0a8e0c5f/6a7b233378d5d3afbee1bc7d_SeasonMix-SemiBold.woff2",
+      "sha256": "97e84da2aa27bc3436e4e1d61b274ce5959f93b1faac7891717083c2aea4fb1f",
+      "bytes": 64244
+    },
+    {
+      "file": "static/brand/miden/soehne-buch.woff2",
+      "source": "https://cdn.prod.website-files.com/6a26670ad40ec24a0a8e0c5f/6a7b51f3156ad57f65b06a5d_soehne-buch.woff2",
+      "sha256": "5891f36db4e0f27e190e6ecfbb5a5792d941a397acf2b2e9b14266466b62183a",
+      "bytes": 38848
+    },
+    {
+      "file": "static/brand/miden/local-transactions.png",
+      "source": "https://cdn.prod.website-files.com/6a26670ad40ec24a0a8e0c5f/6a297151a02651094702811e_1694c6d60407a037de90ff148ef656e0_home-privacy-wide-img-p-1600.png",
+      "sha256": "e774a013ff81a26e1eccb4f9d79eb88c851ad33e351dbb599fa216d122780d33",
+      "bytes": 46430
+    },
+    {
+      "file": "static/brand/miden/transaction-proof.png",
+      "source": "https://cdn.prod.website-files.com/6a26670ad40ec24a0a8e0c5f/6a5fb3c5bd1c1b7d67855382_home-privacy-wide-img-2.png",
+      "sha256": "40c964a30e85bba41a2be98a3228441940dcfa857f713080f77fa921b3b8a5fb",
+      "bytes": 31999
+    },
+    {
+      "file": "static/brand/miden/network-verification.png",
+      "source": "https://cdn.prod.website-files.com/6a26670ad40ec24a0a8e0c5f/6a5fb3c547bc5c60277301cd_home-privacy-wide-img-3.png",
+      "sha256": "704c11f05ac6472ab4fdb844c6a7aaecbddee682efd52062936a1b004b9462d6",
+      "bytes": 37841
+    }
+  ],
+  "dark_extension": {
+    "page": "#0b0d10",
+    "surface": "#13161b",
+    "text": "#e7e9ec",
+    "control": "#181c22",
+    "border": "#353940",
+    "source": "Existing docs dark tokens; enabled by user request."
+  }
+}
