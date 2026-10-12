@@ -42,6 +42,6 @@ Developer tools for building on and interacting with the Miden network. Use the 
   </Card>
 </CardGrid>
 
-## Bread wallet
+## Mini-apps
 
-Use [Connect a mini-app to Bread](./wallet/index.md) for provider detection, explicit permissions, wallet-managed sends and result reconciliation.
+Use [Mini-apps](../mini-apps/index.md) for the complete setup, building, Bread integration, testing and publishing workflow.

@@ -12,6 +12,14 @@ const height = 630;
 
 const images = [
   {
+    id: "mini-apps",
+    eyebrow: "Solutions",
+    title: "Mini-apps",
+    description: "Build, integrate, test and publish mini-apps for Bread.",
+    accent: "#ff5500",
+    panel: "APPS",
+  },
+  {
     id: "miden-docs",
     eyebrow: "Miden Docs",
     title: "Miden Docs",

@@ -222,4 +222,4 @@ function SignerPicker() {
 - [Recipes](./recipes.md) — end-to-end patterns with signer integration examples.
 - [Setup](./setup.md) — client config and lifecycle.
 
-For provider detection, wallet-managed sends, permissions and embedded app checks, see [Connect a mini-app to Bread](../../wallet/index.md).
+For provider detection, wallet-managed sends, permissions and embedded app checks, see [Connect a mini-app to Bread](../../../mini-apps/bread-wallet-integration.md).

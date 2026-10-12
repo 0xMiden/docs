@@ -1,0 +1,41 @@
+---
+sidebar_position: 5
+title: "Testing and troubleshooting"
+description: "Test provider readiness, permission refusal, result recovery and each supported platform."
+---
+
+# Testing and troubleshooting
+
+Test the app's state handling separately from an actual injected Bread provider. TypeScript proves that a recipe matches its installed declarations; mock-provider tests prove application behavior. Neither proves that extension, mobile or desktop builds implement the same method or that a transaction reached its recipient.
+
+The public [frontend template](https://github.com/0xMiden/frontend-template) supplies type, unit, lint and production-build checks. Run its current commands for the checkout you use. The [wallet adapter conformance suite](https://github.com/0xMiden/web-sdk/blob/main/packages/adapter/miden/conformance.ts) is a starting point for checking a real provider's supported surface.
+
+## Minimum integration matrix
+
+| Scenario | Expected observation |
+| --- | --- |
+| No injected provider | Truthful installation/open-in-wallet guidance; no successful connection state. |
+| Client-only initialization | Adapter detects the browser provider after mounting rather than staying unsupported from server construction. |
+| User refuses connection or private read | App stays usable and does not treat refusal as granted permission. |
+| Unsupported method | Capability-specific explanation before attempting another action. |
+| Wrong account/network/faucet | Request is stopped or rejected; pending work keeps its original context. |
+| Accepted request then timeout/reload | Original ID/context is restored and reconciled before another submission. |
+| Wallet result returned | App distinguishes result retrieval from chain inclusion and recipient consumption. |
+| Parked app, lock or disconnect | Session/read caches refresh and stale approval is not reused. |
+
+Exercise the actual embedded browser on every platform you claim. An ordinary mobile browser opening the same URL is a different environment; it does not gain provider injection automatically. Include cancel, permission refusal and returning from a parked app alongside the successful path.
+
+## Diagnose by boundary
+
+- **Unsupported immediately:** ensure the adapter is constructed once in a browser-only module. Recreating it during render can disconnect a previous instance.
+- **Provider not detected:** confirm the page is running in a supported injected environment and wait for readiness. Do not label this as a chain failure.
+- **SDK/client initialization stalled:** inspect the execution boundary and provider order. A wallet-signer ancestor can deliberately gate an app-owned client's initialization until connection; the template's local counter uses a different arrangement.
+- **Serialization or artifact errors:** match SDK/protocol versions and rebuild packages; do not patch encoded bytes or discard old private state blindly.
+- **Wallet result unresolved:** retain the original request and inspect supported wallet/chain evidence before another spend. A local error can occur after submission.
+- **Recipient balance unchanged:** check discovery, note consumption, matching network and synchronization separately from the sender result.
+
+## Record useful evidence
+
+For a test run, record the app commit, package versions, wallet candidate/platform, network, public account/faucet identity and non-secret request/transaction/note identifiers. Keep recovery phrases, private keys, invitation codes and unnecessary private data out of logs and support exports.
+
+Use disposable development accounts and supported test funding. Stop when a route, faucet or provider is not configured for that deployment. Successful mocks or endpoint health cannot replace actual request/result and recovery checks; a catalog entry is also not a platform conformance result.

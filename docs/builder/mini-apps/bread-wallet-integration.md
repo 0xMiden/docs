@@ -1,7 +1,7 @@
 ---
 title: "Connect a mini-app to Bread"
 description: "Connect a web app to Bread, request wallet-managed transactions, and handle permissions, account changes, and completion."
-sidebar_position: 1
+sidebar_position: 4
 ---
 
 # Connect a mini-app to Bread
@@ -20,7 +20,7 @@ npm install @miden-sdk/miden-wallet-adapter@0.17.0 \
   react@19.1.1 react-dom@19.1.1
 ```
 
-The adapter line is 0.17.0; the reviewed current Bread source pins Web SDK and React SDK 0.17.3. These are the package versions used for this example check. A deployed wallet may run a different release; verify compatibility before exchanging serialized custom requests. See [Migration](../../migration/index.md).
+The adapter line is 0.17.0; the reviewed current Bread source pins Web SDK and React SDK 0.17.3. These are the package versions used for this example check. A deployed wallet may run a different release; verify compatibility before exchanging serialized custom requests. See [Migration](../migration/index.md).
 
 For non-React integrations, the base and Miden packages provide types and `MidenWalletAdapter`. The React package also imports the React SDK at module initialization, so install that peer even when your app only uses `useWallet`.
 
@@ -192,7 +192,7 @@ export function customEnvelope(
 
 The constructor serializes the request; the wallet deserializes it with its own SDK. Use compatible released encodings on both sides. Do not reuse stored request bytes across an incompatible upgrade.
 
-For the wallet-as-signer provider setup, see [External signers](../clients/react-sdk/signers.md). Signing an account ID does not reconstruct that account's private state. Your application's client still needs the state and notes required by its chosen workflow.
+For the wallet-as-signer provider setup, see [External signers](../tools/clients/react-sdk/signers.md). Signing an account ID does not reconstruct that account's private state. Your application's client still needs the state and notes required by its chosen workflow.
 
 ## Private reads and capability checks
 
