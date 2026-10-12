@@ -289,6 +289,7 @@ const sidebars: SidebarsConfig = {
             "builder/tools/bridging/epoch",
           ],
         },
+        "builder/tools/usdcx-funding",
         "builder/tools/midenup",
         "builder/tools/playground",
         "builder/tools/network",

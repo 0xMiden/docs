@@ -1,0 +1,63 @@
+---
+title: "USDCx and native gas"
+description: "Fund a Miden account with the right fee asset, understand xReserve deposits and exits, and calculate fees in base units."
+sidebar_position: 8
+---
+
+# USDCx and native gas
+
+USDCx represents USDC held in Circle's xReserve on a source chain. An attested deposit lets the Miden faucet mint USDCx; a withdrawal burns USDCx before the service releases source-chain USDC. The Miden integration uses **xReserve**. See the [implementation architecture](https://github.com/0xMiden/miden-usdcx/blob/04e9ef4eab2c5c13c9a79009e0b8cb5b0674d15e/docs/ARCHITECTURE.md).
+
+“Native gas” means the network's asset for protocol transaction fees. When that asset is USDCx, the same asset can fund a payment and its Miden fee; no additional Miden gas token is required. Identify it by **network and issuing faucet account**, rather than its symbol or logo. Another bridge's USDC token can have a different issuer and cannot substitute for the configured fee asset.
+
+For protocol 0.17, sync the client, then read the Web SDK's `await client.feeFaucetId()` and compare it with the asset's faucet. The underlying identity comes from `ProtocolConfig::fee_asset_id()`. Use a compatible SDK and deployment; switching endpoints does not move balances. See [Transaction fees](../smart-contracts/transactions/fees.md) and [Migration](../migration/index.md).
+
+## Fund an empty account
+
+The current wallet implements direct xReserve deposits from **Arc Testnet or Ethereum Sepolia to Miden Testnet**. Its other source-chain routes have additional routing steps; this guide covers the direct xReserve path. Source selection, token addresses and domain registration must match the wallet's [network configuration](https://github.com/0xMiden/wallet/blob/a013fc15e5523bd3facd8e34ad6f24fca7be2796/src/lib/usdcx/constant.ts).
+
+1. Select Miden Testnet in a compatible wallet and create or select the recipient account. Preserve its signing material and required private-state backup.
+2. In Receive, choose the USDCx route and a direct source network. Connect an EVM wallet holding that network's accepted **test USDC** and enough source-chain gas. Ethereum Sepolia uses test ETH; Arc Testnet uses USDC for gas, so reserve additional USDC there.
+3. Review the recipient, network, deposit amount and charges. Approve the xReserve allowance if necessary, then submit the deposit. A source transaction receipt establishes the deposit, not a spendable Miden balance.
+4. Wait for Circle's attestation and the relayer's mint. The faucet emits a recipient-bound funding note. Keep the deposit identifier while delivery is pending.
+5. Let the wallet claim the note and sync the confirmed account state. The consume transaction receives USDCx **before** authentication pays its fee, so an initially empty compatible account can pay from the incoming funds. The note must cover that fee; custom accounts also need a compatible receiving procedure. The reviewed wallet's automatic claim policy requires incoming native funds to exceed `30 × verification_base_fee` base units; this conservative wallet threshold is separate from the actual protocol fee.
+6. Check the remaining vault balance before sending. Retain enough USDCx for the send and later claims or exits.
+
+The [October 12 live workflow](https://github.com/0xMiden/wallet/actions/runs/38201067754) passed against Arc Testnet and Miden Testnet. Its [test specification](https://github.com/0xMiden/wallet/blob/a013fc15e5523bd3facd8e34ad6f24fca7be2796/playwright/e2e/ios/tests/usdcx-live-deposit.ios.spec.ts) covers deposit, mint, Guardian-wallet claim, and a subsequent burn with Arc payout; additional Testnet faucet funds supply the larger burn. This is evidence for that tested route and revision; Sepolia configuration alone does not establish equivalent live-test coverage or service availability. Check [network status](./network.md) before funding.
+
+## Units and fees
+
+USDC and this USDCx implementation both use **six decimals**: `1 USDCx = 1,000,000` base units; `0.01 USDCx = 10,000` base units. The [0.17 amount encoding](https://github.com/0xMiden/protocol/blob/v0.17.0/crates/miden-usdcx/src/xreserve/encoding/amount.rs) preserves these units without decimal rescaling. Use integer base units for amounts and fees; reject excess decimal precision instead of rounding silently.
+
+The protocol fee pays for verification and batch inclusion. For positive estimated VM cycles `C` and the reference block's verification base fee `B`, its current verification term is:
+
+```text
+fee_base_units = B × (floor(log2(C)) + 1)
+```
+
+The current output-note fee term is zero. Standard authentication withdraws the fee and creates a public `TX_FEE` note; payment takes effect with onchain inclusion. The [fee guide](../smart-contracts/transactions/fees.md#how-the-fee-is-calculated) explains estimation and payment inspection.
+
+**Illustrative arithmetic, not a live quote:** with `B = 500` and `C = 90,000`, the multiplier is `17` and the fee is `8,500` base units, or `0.008500 USDCx`. Consuming a `1.000000 USDCx` funding note leaves `0.991500 USDCx`. If the next transaction has the same illustrative fee, sending `0.500000 USDCx` leaves `0.483000 USDCx`. Actual fees can differ with the reference block and execution estimate.
+
+| Charge | Who funds it |
+| --- | --- |
+| Miden protocol fee | Each executing account: sender for a send, recipient for a claim, and faucet/network account for its own mint or burn processing. |
+| Source-chain gas | The EVM transaction payer, unless the route explicitly sponsors it. Approval and deposit can be separate transactions. |
+| Network-account application fee | The note sender, when the target's policy requires sponsorship; separate from the sender's protocol fee. |
+| Deposit, withdrawal or proving-service charges | According to the selected provider's current policy or quote; separate from the protocol fee. |
+
+The signed xReserve `maxFee` is a **ceiling**, not the charged amount. The reviewed mint implementation sends the complete attested amount to the recipient; the wallet currently submits a zero deposit-fee ceiling. Neither establishes a permanent zero-fee service promise.
+
+## Exit and network limits
+
+On supported Testnet destinations, choose the wallet's USDCx Send route and review the destination and payout deductions. Creating a public burn note removes the amount from the holder's vault. The faucet's later consumption burns it; destination USDC payout is another step. The withdrawal service requires the burn note to have been committed in an earlier block. A published burn is not a cancellable pending send.
+
+| Environment | Funding and limits |
+| --- | --- |
+| Local/devnet | Read that deployment's fee asset and base fee. Use a configured funding service or faucet for that asset. Local tokens have no implied external redemption; a zero base fee means no protocol fee note. |
+| Testnet | Arc direct deposit/claim/exit has the live evidence above. Use test assets and the wallet's offered destinations. Withdrawals check the live minimum-burn policy and reject amounts at or below the destination's payout-fee allowance. |
+| Mainnet | The reviewed wallet gates withdrawals to Testnet. Mainnet table entries and protocol code are not evidence of an enabled Mainnet route. Mainnet funding, payout fees and operational limits remain unverified here. |
+
+**Values requiring deployment confirmation:** the current fee faucet ID, verification base fee, minimum burn, supply cap, provider deposit/withdrawal charges, and faucet request/rate limits. The protocol's representable amount maximum (`2^63 − 2^31` base units) is a type limit, not an approved deposit limit. The burn floor is at least one base unit but administrators can raise it. The wallet uses empty hook data; custom deposits must check the matching release's transport capacity before locking funds. See [faucet configuration](https://github.com/0xMiden/protocol/blob/v0.17.0/crates/miden-usdcx/src/account/xreserve/builder/mod.rs) and [withdrawal validation](https://github.com/0xMiden/wallet/blob/a013fc15e5523bd3facd8e34ad6f24fca7be2796/src/lib/usdcx/withdrawal.ts).
+
+If funding stalls, distinguish deposit, attestation, delivery, claim and confirmation. Compare issuer IDs for a wrong-asset error; check incoming funds and receiving compatibility for a claim failure. A pause or blocklist can prevent receipt or exit. Reconcile transaction/note status after a timeout before resubmitting, and use the provider's recovery instructions when services are unavailable. A Miden burn confirmation alone does not prove destination payout; the wallet's balance-based payout check can also be affected by unrelated transfers.
