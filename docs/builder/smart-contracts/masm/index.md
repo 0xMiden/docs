@@ -37,9 +37,9 @@ Practical, end-to-end tutorials are in progress in the [Miden tutorials reposito
 | Project setup and first MASM contract | In progress |
 | MASM account components | In progress |
 | MASM note scripts | In progress |
-| MASM transaction scripts | In progress |
-| Testing with MockChain | In progress |
-| Debugging MASM contracts | In progress |
+| [MASM transaction scripts](./transaction-scripts) | Compile and execute a script with explicit arguments and expiry checks. |
+| [Testing with MockChain](./testing-mockchain) | Check execution, committed state, and rejection paths locally. |
+| [Debugging MASM](./debugging) | Inspect compiler diagnostics, assertion messages, and stack output. |
 
 In the meantime, the existing [Rust-based Miden Bank tutorial](../../tutorials/miden-bank/) is useful for understanding the overall transaction lifecycle and the patterns that translate to MASM. The [Reference assembly section](/reference/miden-vm/user_docs/assembly/) covers the language itself.
 

@@ -47,7 +47,11 @@ const sidebars: SidebarsConfig = {
           type: "category",
           label: "MASM",
           link: { type: "doc", id: "builder/smart-contracts/masm/index" },
-          items: [],
+          items: [
+            "builder/smart-contracts/masm/transaction-scripts",
+            "builder/smart-contracts/masm/testing-mockchain",
+            "builder/smart-contracts/masm/debugging",
+          ],
         },
         {
           type: "category",
