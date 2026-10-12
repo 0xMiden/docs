@@ -205,7 +205,7 @@ Lookup requests are sent to the chiplets bus by the following components:
 - The decoder sends a procedure access request to the [Kernel ROM chiplet](./kernel_rom.md) for each `SYSCALL` during [program block hashing](../decoder/index.md#program-block-hashing).
 - The verifier initializes the bus with requests to the [Kernel ROM chiplet](./kernel_rom.md) for each unique kernel procedure digest.
 
-Responses are provided by the [hash](./hasher.md#chiplets-bus-constraints), [bitwise](./bitwise.md#chiplets-bus-constraints), [memory](./memory.md#chiplets-bus-constraints), and [kernel ROM](./kernel_rom.md#chiplets-bus-constraints) chiplets.
+Responses are provided by the [hash](./hasher.md#1-chiplets-bus-b_chiplets), [bitwise](./bitwise.md#chiplets-bus-constraints), [memory](./memory.md#chiplets-bus-constraints), and [kernel ROM](./kernel_rom.md#chiplets-bus-constraints) chiplets.
 
 The verifier computes the expected final value of $b_{chip}$ from public inputs and checks it
 against `aux_finals`. There is no explicit last-row boundary constraint in the chiplets bus.
@@ -216,7 +216,7 @@ _Note: over time, the use of this construction has evolved to the point where it
 
 The [virtual table](../lookups/multiset.md#virtual-tables) bus $vt_{chip}$ is used by several chiplets as a way to maintain and enforce the correctness of their internal states, and enable communication with each other.
 
-The hasher chiplet uses it as a way to store [sibling nodes](./hasher.md#sibling-table-constraints) when performing a Merkle tree update.
+The hasher chiplet uses it as a way to store [sibling nodes](./hasher.md#3-hash-kernel-virtual-table-b_hash_kernel) when performing a Merkle tree update.
 In particular, it expects an empty bus at the start of this operation, and ensures that all entries it inserts are removed once the new tree is finalized.
 Consequently, the column representing this table must be equal to 1 at the boundaries of the hasher chiplet's trace, preventing communication with other chiplets.
 
