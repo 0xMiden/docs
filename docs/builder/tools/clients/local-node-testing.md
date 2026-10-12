@@ -201,4 +201,4 @@ miden-client network-note-status <NOTE_ID>
 
 The status output includes the processing state, attempt count, latest error, and last attempt block when the node has those details.
 
-For Bread endpoint presets and destructive-reset boundaries, see [Bread developer endpoints](../wallet/developer-mode.md).
+To start Testnet wallet setup, see [Developer mode](../wallet/developer-mode.md).
