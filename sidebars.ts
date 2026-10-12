@@ -196,6 +196,7 @@ const sidebars: SidebarsConfig = {
       label: "Tools",
       link: { type: "doc", id: "builder/tools/index" },
       items: [
+        "builder/tools/network",
         {
           type: "category",
           label: "Clients",
@@ -291,7 +292,6 @@ const sidebars: SidebarsConfig = {
         },
         "builder/tools/midenup",
         "builder/tools/playground",
-        "builder/tools/network",
       ],
     },
 
