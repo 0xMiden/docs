@@ -6,7 +6,7 @@ description: "Host the app, prepare its catalog entry and submit a wallet-config
 
 # Publish and list in Explore
 
-Deploy your mini-app as a hosted web application, then submit its Explore catalog change through a pull request to [wallet-config](https://github.com/0xMiden/wallet-config). Hosting, configuration review and an observed listing are separate steps. There is no mini-app registration API established by the wallet adapter.
+Deploy your mini-app as a hosted web application, then submit its Explore catalog change through a pull request to [wallet-config](https://github.com/0xMiden/wallet-config). The configuration workflow targets wallet-config for all dynamic wallet data, including Explore listings and configured bridge, market and swap metadata. Hosting, configuration review and an observed listing are separate steps. There is no mini-app registration API established by the wallet adapter.
 
 ## Prepare the hosted app
 
@@ -16,7 +16,7 @@ A catalog URL is an app launch target, not authority to select another user's ac
 
 ## Prepare the catalog entry
 
-Follow the current catalog layout and schema in wallet-config. Use the existing network document and preserve unrelated bridge, market and feature configuration. Do not invent another endpoint, listing API or JSON property to get around repository validation.
+Follow the current catalog layout and schema in wallet-config. Follow the repository's contributor instructions for network selection and preserve unrelated bridge, market and feature configuration. Do not invent another endpoint, listing API or JSON property to get around repository validation.
 
 The wallet's Explore catalog contract includes:
 
@@ -30,7 +30,7 @@ The wallet's Explore catalog contract includes:
 | Exchange classification | Set accurately for an exchange/swap app; platform feature gating can hide such entries. |
 | Section placement | Use the section's app IDs in display order, without duplicate IDs. Recents and search results belong to the wallet. |
 
-The public [Explore catalog contract](https://github.com/0xMiden/wallet-explore/blob/main/README.md) and [wallet parser](https://github.com/0xMiden/wallet/blob/main/src/lib/explore-config/schema.ts) explain these limits. Use wallet-config's current contributor instructions for the accepted file layout and validation rather than copying a standalone document into an unrelated field.
+The [wallet parser](https://github.com/0xMiden/wallet/blob/main/src/lib/explore-config/schema.ts) describes the reviewed catalog limits. Use wallet-config's current contributor instructions for the accepted file layout and validation rather than copying a standalone document into an unrelated field.
 
 ## Submit a reviewable configuration PR
 
