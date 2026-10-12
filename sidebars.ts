@@ -289,6 +289,7 @@ const sidebars: SidebarsConfig = {
             "builder/tools/bridging/epoch",
           ],
         },
+        { type: "doc", id: "builder/tools/wallet/index", label: "Bread wallet" },
         "builder/tools/midenup",
         "builder/tools/playground",
         "builder/tools/network",

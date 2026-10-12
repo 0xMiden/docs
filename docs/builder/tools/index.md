@@ -41,3 +41,7 @@ Developer tools for building on and interacting with the Miden network. Use the 
     Compare bridge timing and tradeoffs, then integrate Agglayer or Epoch into a Miden application.
   </Card>
 </CardGrid>
+
+## Bread wallet
+
+Use [Connect a mini-app to Bread](./wallet/index.md) for provider detection, explicit permissions, wallet-managed sends and result reconciliation.
