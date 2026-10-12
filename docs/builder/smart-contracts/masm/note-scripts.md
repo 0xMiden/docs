@@ -197,7 +197,7 @@ For a transfer to a particular account, use [standard P2ID notes](../standards/s
 The runner requests authenticated consumption of the genesis note and checks the committed result.
 `authenticated_input_note` supplies proof that the note exists in the chain. The consumer's account authentication separately requires its owner's signature over the transaction. MockChain registers the test signer when it builds the account; the test that removes the authenticator fails with `MissingAuthenticator`.
 
-Execution produces an account update. Enqueueing the executed transaction and advancing the mock block commits that update and records the note's nullifier, preventing another consumption. The successful test checks both the final storage value and the recorded nullifier.
+Execution produces an account update. Enqueueing the executed transaction and advancing the mock block commits that update and records the note's nullifier, preventing another committed consumption. MockChain retains the note record and can execute it again; proposing a second block rejects its spent nullifier. The successful test checks both the final storage value and the recorded nullifier.
 
 ## 5. Check rejection paths
 

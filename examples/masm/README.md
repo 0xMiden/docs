@@ -9,10 +9,13 @@ cargo +1.98.1 run --locked --manifest-path examples/masm/first-project/Cargo.tom
 cargo +1.98.1 run --locked --manifest-path examples/masm/account-components/Cargo.toml
 cargo +1.98.1 run --locked --manifest-path examples/masm/note-scripts/Cargo.toml
 cargo +1.98.1 test --locked --manifest-path examples/masm/note-scripts/Cargo.toml
+cargo +1.98.1 test --locked --manifest-path examples/masm/regressions/Cargo.toml
 node examples/masm/check-guide-examples.mjs
 ```
 
 Expected runner outputs are `area: 42`, `settings value: 7 -> 42`, and `settings value: 7 -> 42; note consumed`. The six note tests cover successful consumption, nonzero consumption arguments, empty/oversized storage, unexpected assets, and missing consumer authentication.
+
+The additional regression suite checks field boundaries, missing account authentication, unavailable Settings procedures, consumption by a different authorized compatible account, and rejection of a second committed consumption.
 
 The note example includes the account example's `settings.masm` source. Keep both directories together. MockChain exercises the transaction kernel with test accounts, signers, and testing proofs; these projects require no live node or account funding.
 
