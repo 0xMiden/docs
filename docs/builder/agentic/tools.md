@@ -1,10 +1,12 @@
 ---
-title: "Install agent skills"
+title: "Add agent skills"
 sidebar_label: "Agent skills"
 description: "Discover, preview, install, and check Rust, MASM, and protocol skills for your coding agent."
 ---
 
-# Install agent skills
+# Add agent skills
+
+This optional step adds knowledge beyond the template and installed SDK guidance. Complete the main [setup](setup.md) and [context checks](templates.md) first.
 
 [Agent tools](https://github.com/0xMiden/agent-tools) provides Rust, MASM, and protocol knowledge skills plus Markdown workflow prompts. Use it in an existing project or alongside a template. Browser API skills remain owned by the installed npm SDK packages.
 
@@ -43,7 +45,7 @@ Claude can import `AGENTS.md` from its existing `CLAUDE.md`; the installer does 
 
 ## Check the consumer too
 
-An installed prompt matching the bundle does not establish that the app uses matching SDK packages. [Verify your app](verify.md) checks the actual locks, installed package guides, copied skills, and root pointers. Keep npm-bundled Web/React guidance as the browser API source instead of copying a second frontend bundle from agent-tools.
+An installed prompt matching the bundle does not establish that the app uses matching SDK packages. [Check your setup](templates.md) checks the actual locks, installed package guides, copied skills, and root pointers. Keep npm-bundled Web/React guidance as the browser API source instead of copying a second frontend bundle from agent-tools.
 
 These tools perform local file reads and selected copies. They do not install packages, launch a node, access credentials, sign, or submit transactions. Workflow prompts describe tasks for the agent; they are not an MCP server or executable scanner.
 

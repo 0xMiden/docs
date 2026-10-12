@@ -18,7 +18,7 @@ Capture the failed command, working directory, exit code, and first useful error
 | Rust MSRV or compiler mismatch | Run in the contract or integration directory so checked-in overrides apply; keep the lockfile |
 | Contract package cannot parse | Rebuild both packages with the pinned compiler; check format 7 and frontend filenames |
 | Agent misses a skill | Supply the file directly and check the editor's discovery path; preserve unrelated skills |
-| SDK context or pointers are missing | Review the installed initializer's edits, run it, then repeat the [consumer check](verify.md) |
+| SDK context or pointers are missing | Review the installed initializer's edits, run it, then repeat the [consumer check](templates.md#optional-automated-context-check) |
 | Consumer check rejects the docs channel | Declare stable `0.17`; Current/Next is separate unstable context |
 | Local stage cannot start | Read the report/logs; check Docker, unused ports, rebuilt packages, and the pinned nightly |
 | Wrong expected-count run fails | Expected count 2 intentionally fails. Confirm both commitments and the final assertion in `validator.log` |
