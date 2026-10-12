@@ -71,7 +71,7 @@ function Workbench() {
   const timer = useRef<ReturnType<typeof setTimeout>>();
   useEffect(() => () => clearTimeout(timer.current), []);
   const route = (path: string) => `${selectedVersion.path.replace(/\/$/, '')}${path}`;
-  const agentPrompt = `Use the Miden ${current ? 'current (unstable)' : stableVersion.label} documentation at https://docs.miden.xyz${current ? '/next' : ''}/builder/get-started/. Help me follow the first smart contract tutorial. Check prerequisites and version compatibility, explain each change, and validate locally before deployment. Ask before submitting a network transaction. Do not invent tools or test results.`;
+  const agentPrompt = `Use the Miden ${current ? 'current (unstable)' : stableVersion.label} documentation at https://docs.miden.xyz${current ? '/next' : ''}/builder/agentic/. Help me follow the first smart contract tutorial. Check prerequisites and version compatibility, explain each change, and validate locally before deployment. Ask before submitting a network transaction. Do not invent tools or test results.`;
   async function copy(text: string) {
     clearTimeout(timer.current);
     try { await navigator.clipboard.writeText(text); setStatus('Copied to clipboard'); }
@@ -111,7 +111,7 @@ function Workbench() {
                 <p>Copy this starting prompt into your coding assistant. Review generated code and run the tutorial’s checks locally.</p>
                 <div className={styles.prompt}>{agentPrompt}</div>
                 <button className={styles.copyPrompt} onClick={() => copy(agentPrompt)}>Copy starting prompt</button>
-                <p className={styles.note}>The dedicated Build with an agent guide is in draft. This prompt does not install or run an agent.</p>
+                <p className={styles.note}><Link className={styles.guide} to={route('/builder/agentic/')}>Read the agent-assisted guide <span aria-hidden="true">↗</span></Link>. This prompt does not install or run an agent.</p>
               </div>
             </div>
             <div className={styles.status}><span className={styles.statusSizer} aria-hidden="true">Could not copy. Select the text and copy it manually.</span><span className={styles.statusMessage} role="status">{status}</span></div>
