@@ -24,7 +24,7 @@ For a clone missing submodules, initialize its checked-in pins with `git submodu
 
 Inspect `setup.sh` before running it. The existing script can install prerequisites, fetch dependencies and build contracts; check whether its selected channel and lockfile behavior match your intended release. Use the subprojects' pinned installation instructions if they do not. The release-pinned setup and stage runner are implemented in template PR #24 but remain gated on code PR integration.
 
-Once Rust/rustup, a manifest-compatible midenup, Node 20 and Yarn Classic 1 are available, the reviewed pins support explicit setup. Node 20 matches the tested baseline and the frontend test runner's requirements; inspect package engines if selecting another Node release:
+Once Rust/rustup, a manifest-compatible midenup, Node.js 20.19.0 or newer within the 20.x line, and Yarn Classic 1 are available, the reviewed pins support explicit setup. Node 20.19.0 matches the tested baseline and the frontend test runner's requirements; inspect package engines if selecting another Node release:
 
 ```bash
 (cd project-template && midenup install 0.17.0)
