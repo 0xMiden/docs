@@ -273,7 +273,7 @@ const config: Config = {
       },
     ],
     [
-      "@cmfcmf/docusaurus-search-local",
+      "./src/plugins/docs-search.ts",
       {
         indexDocs: true,
         indexBlog: false,
@@ -345,6 +345,7 @@ const config: Config = {
       },
       colorMode: {
         defaultMode: "light",
+        respectPrefersColorScheme: true,
         disableSwitch: false,
       },
       // TODO: implement exact code theme styling
@@ -367,11 +368,11 @@ const config: Config = {
       },
       navbar: {
         logo: {
-          src: "img/miden-logo-horizontal.svg",
-          srcDark: "img/miden-logo-horizontal-dark.svg",
+          src: "brand/miden/miden-logo.svg",
+          srcDark: "brand/miden/miden-logo.svg",
           alt: "Miden",
-          height: 22,
-          width: 73,
+          height: 26,
+          width: 84,
         },
         items: [
           // LEFT - Section tabs using docSidebar
@@ -410,9 +411,10 @@ const config: Config = {
       footer: {
         style: "light",
         logo: {
-          src: "img/logo.svg",
+          src: "brand/miden/miden-logo.svg",
           alt: "Miden",
-          height: 28,
+          height: 33,
+          width: 106,
         },
         links: [
           {

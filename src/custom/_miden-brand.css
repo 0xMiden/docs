@@ -1,0 +1,130 @@
+/* Source: midenxyz.webflow.shared.77048d061.min.css on www.miden.xyz.
+   The font bytes and logo are copied unchanged from its published assets. */
+@font-face {
+  font-family: Seasonmix;
+  src: url('../../static/brand/miden/SeasonMix-SemiBold.woff2') format('woff2');
+  font-style: normal;
+  font-weight: 600;
+  font-display: swap;
+}
+@font-face {
+  font-family: 'Soehne Buch';
+  src: url('../../static/brand/miden/soehne-buch.woff2') format('woff2');
+  font-style: normal;
+  font-weight: 400;
+  font-display: swap;
+}
+:root {
+  --miden-light-grey: #f9f9f9;
+  --miden-dark-grey: #484848;
+  --miden-warm-grey: #dfd8d3;
+  --miden-brownish-grey: #eae5e1;
+  --miden-off-white: #efefef;
+  --miden-orange: #e65303;
+  --miden-page-bg: var(--miden-light-grey);
+  --miden-surface: #fff;
+  --miden-text: var(--miden-dark-grey);
+  --miden-secondary-text:#000;
+  --miden-line: var(--miden-warm-grey);
+  --miden-panel-border: var(--miden-brownish-grey);
+  --miden-control-bg: var(--miden-off-white);
+  --miden-hover-bg: var(--miden-brownish-grey);
+  --miden-inactive: #dedede;
+  --miden-title: Seasonmix, Arial, sans-serif;
+  --miden-body: 'Soehne Buch', Arial, sans-serif;
+  /* Approved accessibility adjustment for white, normal-size button labels. */
+  --miden-action-orange: #c94600;
+  --font-sans: var(--miden-body);
+  --font-display: var(--miden-title);
+  --font-eyebrow: var(--miden-body);
+  --ifm-font-family-base: var(--miden-body);
+  --ifm-heading-font-weight: 600;
+  --ifm-navbar-height: 90px;
+}
+:root:not([data-theme='dark']) {
+  --color-brand: var(--miden-orange);
+  --color-on-brand: #fff;
+  --color-bg: var(--miden-light-grey);
+  --color-surface: #fff;
+  --color-card-bg: #fff;
+  --color-text: var(--miden-dark-grey);
+  --color-ink: var(--miden-dark-grey);
+  --color-muted: var(--miden-dark-grey);
+  --color-border: var(--miden-warm-grey);
+  --color-border-strong: var(--miden-warm-grey);
+}
+:root[data-theme='dark'] {
+  /* Reuse the repository's established dark surfaces; the official site
+     supplies the light palette, fonts, logo geometry and illustration assets. */
+  --miden-page-bg: #0b0d10;
+  --miden-surface: #13161b;
+  --miden-text: #e7e9ec;
+  --miden-secondary-text:#e7e9ec;
+  --miden-line: #353940;
+  --miden-panel-border: #353940;
+  --miden-control-bg: #181c22;
+  --miden-hover-bg: #181c22;
+  --miden-inactive: #8a919b;
+}
+.theme-layout-navbar {
+  height: 90px;
+  padding: 0 max(40px, calc((100vw - 1248px) / 2));
+  background: var(--miden-page-bg);
+  border-bottom: 0;
+  color: var(--miden-text);
+  box-shadow: none;
+  --color-text: var(--miden-text);
+  --color-muted: var(--miden-text);
+  --color-bg:var(--miden-page-bg);
+  --color-surface:var(--miden-surface);
+  --color-surface-hover:var(--miden-control-bg);
+  --color-brand:var(--miden-orange);
+  --color-border:var(--miden-line);
+  --color-border-strong:var(--miden-line);
+}
+.theme-layout-navbar .navbar__logo { height: 26px; }
+.theme-layout-navbar .navbar__logo :is(img,svg) { width: 84px; height: 26px; }
+.theme-layout-navbar .navbar__link {
+  font-family: Seasonmix, Arial, sans-serif;
+  font-size: 16px;
+  font-weight: 500;
+  color: var(--miden-text);
+}
+.theme-layout-navbar .navbar__link:hover { color: var(--miden-orange); }
+.theme-layout-navbar [class*='colorModeToggle'] button { color: var(--miden-text); }
+.theme-layout-navbar .dropdown__menu,
+.navbar-sidebar { --color-text:var(--miden-text); --color-muted:var(--miden-text); --color-surface:var(--miden-surface); --color-surface-hover:var(--miden-control-bg); --color-bg:var(--miden-page-bg); --color-border:var(--miden-line); background: var(--miden-page-bg); color: var(--miden-text); }
+.navbar-sidebar .menu__link,
+.navbar-sidebar .navbar-sidebar__back,
+.navbar-sidebar .navbar-sidebar__brand { color: var(--miden-text); }
+.navbar-sidebar .navbar__logo :is(img,svg) { width: 64px; height: auto; }
+.theme-layout-footer.footer {
+  background: var(--miden-page-bg);
+  color: var(--miden-text);
+  border-top-color: var(--miden-line);
+  padding: 64px max(40px, calc((100vw - 1248px) / 2));
+}
+.theme-layout-footer.footer .container { max-width: 1248px; padding: 0; }
+.theme-layout-footer.footer .footer__title {
+  font-family: Seasonmix, Arial, sans-serif;
+  font-size: 20px;
+  font-weight: 600;
+  color: var(--miden-text);
+  text-transform: none;
+  letter-spacing: normal;
+}
+.theme-layout-footer.footer .footer__link-item { font-family: 'Soehne Buch', Arial, sans-serif; color: var(--miden-text); font-size: 16px; }
+.theme-layout-footer.footer .footer__logo { width: 106px; height: 33px; margin-left:auto; margin-right:auto; }
+.theme-layout-footer.footer .footer__copyright,
+.theme-layout-footer.footer .footer__tagline { font-family: 'Soehne Buch', Arial, sans-serif; color: var(--miden-text); text-transform: none; letter-spacing: normal; font-size: 14px; }
+.markdown h1, .markdown h2, .markdown h3 { font-family: Seasonmix, Arial, sans-serif; font-weight: 600; color: var(--color-text); }
+@media (max-width: 991px) {
+  :root { --ifm-navbar-height: 64px; }
+  .theme-layout-navbar { height: 64px; padding: 0 32px; }
+  .theme-layout-navbar .navbar__logo, .theme-layout-navbar .navbar__logo :is(img,svg) { width: 64px; height: 20px; }
+  .theme-layout-footer.footer { padding: 32px; }
+}
+@media (max-width: 479px) {
+  .theme-layout-navbar { padding: 0 16px; }
+  .theme-layout-footer.footer { padding: 32px 16px; }
+}
