@@ -295,6 +295,22 @@ const sidebars: SidebarsConfig = {
       ],
     },
 
+    // Agentic placement is a narrow proposal pending the broader IA review.
+    {
+      type: "category",
+      label: "Agentic",
+      link: { type: "doc", id: "builder/agentic/index" },
+      items: [
+        "builder/agentic/setup",
+        "builder/agentic/templates",
+        "builder/agentic/first-app",
+        "builder/agentic/verify",
+        "builder/agentic/recover",
+        "builder/agentic/network-handoff",
+        "builder/agentic/tools",
+      ],
+    },
+
     // ── SOLUTIONS
     {
       type: "html",
