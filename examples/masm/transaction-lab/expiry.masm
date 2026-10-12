@@ -1,0 +1,11 @@
+use miden::protocol::tx
+
+@transaction_script
+pub proc main
+    # Inputs: [delta, reserved_1, reserved_2, reserved_3]
+    u32assert
+    dup neq.0 assert.err="expiry delta must be positive"
+    dup u32lte.64 assert.err="expiry delta exceeds 64 blocks"
+    exec.tx::update_expiration_block_delta
+    drop drop drop
+end
