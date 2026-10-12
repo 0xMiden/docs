@@ -1,0 +1,171 @@
+---
+title: "Bootstrap and Genesis"
+sidebar_position: 3
+---
+
+<!-- markdownlint-disable MD033 MD041 -->
+
+import Tabs from "@theme/Tabs"; import TabItem from "@theme/TabItem";
+
+# Bootstrap and Genesis
+
+The genesis block is the trust anchor for every service that joins a network. It is not signed: it simply commits to the
+full validator set in its header, and that set must sign every block after genesis. Because nothing signs the genesis
+block, it must always be obtained from a trusted source. One of the network's operators is responsible for building it
+from the required account files and network parameters. On official networks, the validators are operated by separate
+entities from the network operator.
+
+The genesis block is subsequently made available for official networks at
+
+```text
+https://genesis.<network>.miden.io
+```
+
+which provides an easy method to obtain this data. This is directly supported by service bootstrap commands by passing
+`--network mainnet`, `--network testnet`, or `--network devnet`. Bootstrap commands also support passing a file directly
+to cover custom networks, or if the official URLs are not trusted.
+
+Before starting the sequencer, create and deploy its [fee collector account](./sequencer.md#fee-collection).
+
+## Bootstrap Flow
+
+<Tabs groupId="network-operator-genesis-source" defaultValue="official">
+  <TabItem value="official" label="Official network">
+
+The genesis block is the chain's trust root: its header commits to the full validator set, which must sign every block
+after genesis. Each validator operator first prints their public key and sends it to the bootstrapping operator:
+
+```bash
+miden-validator pubkey --signing-key.kms-id <validator-N-kms-key-id>
+```
+
+The full validator set is passed on the command line, as one `--validator.key` flag per validator. There is no default
+set: the flag is required.
+
+**One** operator then runs `genesis` with the required accounts and collected keys. Building the genesis block requires
+no signing key:
+
+```bash
+miden-validator genesis \
+  --genesis-block-directory genesis-data \
+  --accounts-directory accounts \
+  --native-faucet usdcx-faucet.mac \
+  --funding-account distributor.genesis.mac \
+  --verification-base-fee 7 \
+  --timestamp <unix-seconds> \
+  --validator.key <validator-1-public-key-hex> \
+  --validator.key <validator-2-public-key-hex> \
+  --validator.key <validator-3-public-key-hex>
+```
+
+The native faucet and public funding account must be prepared before genesis. Both account files must have nonzero
+nonces. Genesis does not require their signing keys. The funding service uses the funding account file with its signing
+key. The verification base fee must match the fee configured in the native faucet.
+
+Use `--accounts-config accounts.toml` to add faucets, generated wallets, or imported accounts. Each `[[wallet]]` entry
+requires a unique `name`; genesis writes its account file as `<name>.mac` in the accounts directory. Account file paths
+in this TOML are relative to the TOML file. Paths passed on the CLI are relative to the working directory.
+
+Upload `genesis-data/genesis.dat` so it is served at:
+
+```text
+https://genesis.<network>.miden.io
+```
+
+Every validator operator — including the one that built the genesis block — seeds their own database from the genesis
+block:
+
+```bash
+miden-validator bootstrap \
+  --data-directory validator-1-data \
+  --genesis genesis-data/genesis.dat
+```
+
+Initialize the sequencer's node storage from the hosted genesis block:
+
+```bash
+miden-node bootstrap \
+  --data-directory node-data \
+  --network testnet
+```
+
+Initialize the network transaction builder from the same hosted genesis block:
+
+```bash
+miden-ntx-builder bootstrap \
+  --data-directory ntx-builder-data \
+  --network testnet
+```
+
+For other official networks, use `--network mainnet` or `--network devnet` instead. The `--network` flag is shorthand
+for downloading the genesis block from `https://genesis.<network>.miden.io`.
+
+Each validator operator's own KMS key ID must be used when that operator starts their validator for this network.
+
+  </TabItem>
+  <TabItem value="unofficial" label="Unofficial network">
+
+**One** operator builds the genesis block; no signing key is needed. The genesis header commits to the full validator
+set, passed as one `--validator.key` flag per validator; there is no default set. Each validator operator generates a
+key-pair with `miden-validator keygen` (or prints the public key of an existing secret with
+`miden-validator pubkey --signing-key.hex <validator-N-key-hex>`) and sends the public key to the bootstrapping
+operator.
+
+```bash
+miden-validator genesis \
+  --genesis-block-directory genesis-data \
+  --accounts-directory accounts \
+  --native-faucet usdcx-faucet.mac \
+  --funding-account distributor.genesis.mac \
+  --verification-base-fee 7 \
+  --timestamp <unix-seconds> \
+  --validator.key <validator-1-public-key-hex> \
+  --validator.key <validator-2-public-key-hex> \
+  --validator.key <validator-3-public-key-hex>
+```
+
+Distribute `genesis-data/genesis.dat` to the validator operators, who each seed their own database from it — including
+the operator who built the genesis block:
+
+```bash
+miden-validator bootstrap \
+  --data-directory validator-1-data \
+  --genesis genesis-data/genesis.dat
+```
+
+For unofficial networks or pre-publication testing, distribute the genesis block file directly and initialize services
+from that file:
+
+```bash
+miden-node bootstrap \
+  --data-directory node-data \
+  --genesis genesis-data/genesis.dat
+```
+
+```bash
+miden-ntx-builder bootstrap \
+  --data-directory ntx-builder-data \
+  --genesis genesis-data/genesis.dat
+```
+
+  </TabItem>
+</Tabs>
+
+The key each validator operator starts their validator with must match the public key committed for them via the
+`genesis` command's `--validator.key` flags.
+
+## Storage Key Ceremony
+
+All validators must take part in a distributed key generation (DKG) ceremony to protect stored private inputs. The
+ceremony produces a private bundle for each validator, required to start its validator service. All validators must
+participate, even when fewer are needed to decrypt stored data.
+
+The ceremony uses the validators' public keys directly and can run before genesis is built. The ceremony and database
+bootstrap must both finish before the validator starts. Follow [storage key setup](./validator.md#storage-key-setup) to
+coordinate with the other operators, run the ceremony, and handle its results.
+
+Bootstrap takes no transaction encryption key: that key is configured separately when the validator is started, and
+nothing cross-checks it against the genesis block. Every validator must be started with the same encryption key; the
+validator refuses to start without one. See [Validator](./validator.md) for how to provision it.
+
+<!-- markdownlint-enable MD033 MD041 -->

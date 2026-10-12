@@ -1,0 +1,223 @@
+---
+title: Known Limitations
+draft: true
+---
+
+# Known limitations
+
+:::tip
+
+See the [issue tracker](https://github.com/0xMiden/compiler/issues) for information
+on known bugs. This document focuses on missing/incomplete features, rather than bugs.
+
+:::
+
+The compiler is still in its early stages of development, so there are various features that are
+unimplemented, or only partially implemented, and the test suite is still limited in scope, so
+we are still finding bugs on a regular basis. We are rapidly improving this situation, but it is
+important to be aware of this when using the compiler.
+
+The features discussed below are broken up into sections, to make them easier to navigate and
+reference.
+
+## Rust language support
+
+### Floating point types
+
+- Status: **Unsupported**
+- Tracking Issue: N/A
+- Release Milestone: N/A
+
+In order to represent `Felt` "natively" in Rust, we were forced to piggy-back on the `f32` type,
+which is propagated through to WebAssembly, and allows us to handle those values specially.
+
+As a result, floating-point types in Rust are not supported at all. Any attempt to use them will
+result in a compilation error. We considered this a fair design tradeoff, as floating point math
+is unused/rare in the context in which Miden is used, in comparison to fixed-point or field
+arithmetic. In addition, implementing floating-point operations in software on the Miden VM would
+be extraordinarily expensive, which generally works against the purpose of using floats in the
+first place.
+
+At this point in time, we have no plans to support floats, but this may change if we are able to
+find a better/more natural representation for `Felt` in WebAssembly.
+
+### Function call indirection
+
+- Status: **Partially implemented**
+- Tracking Issue: [#32](https://github.com/0xMiden/compiler/issues/32)
+
+This feature corresponds to `call_indirect` in WebAssembly, and is associated with Rust features
+such as function pointers, trait objects (which use indirection to call trait methods), and
+closures.
+
+The compiler lowers each locally-defined Wasm `funcref` table through which a `call_indirect`
+dispatches (tables that are never dispatched through, which Wasm toolchains routinely emit, are
+ignored) to a word-aligned region of linear memory holding two words per table slot: the MAST
+root digest of the referenced function, paired with a tag that identifies the function's
+signature (an all-zero slot — zero digest, tag 0 — denotes a null entry). The region is
+populated at program startup by the component initialization procedure using `procref`, and
+`call_indirect` dispatches through it with `dynexec` (i.e. in the caller's memory context) after
+two deterministic runtime checks that mirror Wasm's `call_indirect` semantics:
+
+- a bounds check on the table index, which traps with an "indirect call: function table index
+  out of bounds" assertion failure;
+- a signature check comparing the slot's tag with the signature expected at the call site,
+  which traps with an "indirect call: callee signature mismatch or null function reference"
+  assertion failure. Null slots hold the reserved tag 0, so this check also produces Wasm's
+  uninitialized-element trap.
+
+The following limitations remain:
+
+- The signature and null checks share one assertion message (see above), rather than trapping
+  with Wasm's distinct "indirect call type mismatch" and "uninitialized element" traps.
+- Unlike a Wasm table, which lives outside the program's addressable memory, the lowered table
+  is a region of ordinary linear memory: a wild out-of-bounds write (only possible through
+  code whose behavior is already undefined) can overwrite a slot and its tag, bypassing the
+  signature check. A corrupted slot can still never escape the program: `dynexec` resolves the
+  slot's first word as a MAST root digest, so it either matches a procedure already compiled
+  into the program or fails execution.
+- Imported tables, non-`funcref` tables, element segments with `global.get`-relative offsets, the
+  table mutation ops (`table.set`, `table.get`, `table.grow`, etc.), `ref.func`/`ref.null` as
+  function body instructions, and `return_call_indirect` are unsupported, and produce a
+  compile-time error.
+- The callee arguments plus the table index must fit in Miden's 16-element operand stack window,
+  so indirect callee signatures are limited to 15 field elements worth of arguments.
+- A `funcref` table entry naming a function the compiler lowers to an inlined operation — the
+  linker stubs for intrinsics such as `intrinsics::felt::add`, whose Wasm body is a single
+  `unreachable` — is rejected: the stub has no procedure body whose MAST root a slot could
+  hold. Calling such a function directly is supported; only taking its address is not.
+- For a linker stub naming an intrinsic the compiler lowers to a MASM procedure, the stub's
+  declared Wasm signature is taken at face value: it is what calls are emitted from and what the
+  stub's table entries are tagged with, and it is never checked against the signature the
+  intrinsic actually has. Declaring such a stub with the wrong signature is a program error the
+  compiler does not diagnose: a wrong parameter or result type produces a mismatched stack
+  contract at run time, and a wrong number of parameters fails late in compilation rather than
+  as a diagnostic.
+
+### Miden SDK
+
+- Status: **Incomplete**
+- Tracking Issue: [#159](https://github.com/0xMiden/compiler/issues/159) and [#158](https://github.com/0xMiden/compiler/issues/158)
+- Release Milestone: [Beta 1](https://github.com/0xMiden/compiler/milestone/4)
+
+The Miden SDK for Rust, is a Rust crate that provides the implementation of native Miden types, as
+well as bindings to the Miden standard library and transaction kernel APIs.
+
+Currently, only a very limited subset of the API surface has had bindings implemented. This means
+that there is a fair amount of native Miden functionality that is not yet available from Rust. We
+will be expanding the SDK rapidly over the next few weeks and months, but for the time being, if
+you encounter a missing API that you need, let us know, so we can ensure it is prioritized above
+APIs which are lesser used.
+
+### Rust/Miden FFI (foreign function interface) and interop
+
+- Status: **Internal Use Only**
+- Tracking Issue: [#304](https://github.com/0xMiden/compiler/issues/304)
+- Release Milestone: TBD
+
+While the compiler has functionality to link against native Miden Assembly libraries, binding
+against procedures exported from those libraries from Rust can require glue code to be emitted
+by the compiler in some cases, and the set of procedures for which this is done is currently
+restricted to a hardcoded whitelist of known Miden procedures.
+
+This affects any procedure which returns a type larger than `u32` (excluding `Felt`, which for
+this purpose has the same size). For example, returning a Miden `Word` from a procedure, a common
+return type, is not compatible with Rust's ABI - it will attempt to generate code which allocates
+stack space in the caller, which it expects the callee to write to, inserting a new parameter at
+the start of the parameter list, and expecting nothing to be returned by value. The compiler handles
+situations like these using a set of ABI "transformation strategies", which lift/lower differences
+between the Rust and Miden ABIs at call boundaries.
+
+To expose the FFI machinery for use with any Miden procedure, we need type signatures for those
+procedures at a minimum, and in some cases we may require details of the calling convention/ABI.
+This metadata does not currently exist, but is on the roadmap for inclusion into Miden Assembly
+and Miden packaging. Once present, we can open up the FFI for general use.
+
+## Core Miden functionality
+
+### Dynamic procedure invocation
+
+- Status: **Partially implemented**
+- Tracking Issue: [#32](https://github.com/0xMiden/compiler/issues/32)
+
+This is the mechanism behind [Function Call Indirection](#function-call-indirection) described
+above. Same-context indirect calls are lowered to `dynexec`: the VM pops a word-aligned memory
+address from the operand stack, reads the word at that address as the MAST root of the callee,
+and transfers control to it, so the callee observes its arguments in the normal order with no
+extra stack fixup (older VM versions kept the callee hash on the operand stack, which would have
+required per-callee stubs; that design is obsolete).
+
+Cross-context indirect calls via `dyncall` are not lowered yet; they additionally depend on
+[Cross-Context Procedure Invocation](#cross-context-procedure-invocation).
+
+### Cross-context procedure invocation
+
+- Status: **Unimplemented**
+- Tracking Issue: [#303](https://github.com/0xMiden/compiler/issues/303)
+- Release Milestone: [Beta 2](https://github.com/0xMiden/compiler/milestone/5)
+
+This is required in order to support representing Miden accounts and note scripts in Rust, and
+compilation to Miden Assembly.
+
+Currently, you can write code in Rust that is very close to how accounts and note scripts will
+look like in the language, but it is not possible to actually implement either of those in Rust
+today. The reasons for this are covered in depth in the tracking issue linked above, but to
+briefly summarize, the primary issue has to do with the fact that Rust programs are compiled
+for a "shared-everything" environment, i.e. you can pass references to memory from caller to
+callee, write to caller memory from the callee, etc. In Miden however, contexts are "shared-nothing"
+units of isolation, and thus cross-context operations, such as performing a `call` from a note script
+to a method on an account, are not compatible with the usual calling conventions used by Rust and
+LLVM.
+
+The solution to this relies on compiling the Rust code for the `wasm32-wasip2` target, which emits
+a new kind of WebAssembly module, known as a _component_. These components adhere to the rules of
+the [WebAssembly Component Model](https://component-model.bytecodealliance.org/). Of primary
+interest to us, is the fact that components in this model are "shared-nothing", and the ABI used to
+communicate across component boundaries, is specially designed to enforce shared-nothing semantics
+on caller and callee. In addition to compiling for a specific Wasm target, we also rely on some
+additional tooling for describing component interfaces, types, and generating Rust bindings for
+those descriptions, to ensure that calls across the boundary remain opaque, even to the linker,
+which ensures that the assumptions of the caller and callee with regard to what address space they
+operate in are preserved (i.e. a callee can never be inlined into the caller, and thus end up
+executing in the caller's context rather than the expected callee context).
+
+This is one of our top priorities, as it is critical to be able to use Rust to compile code for
+the Miden rollup, but it is also the most complex feature on our roadmap, hence why it is scheduled
+for our Beta 2 milestone, rather than Beta 1 (the next release), as it depends on multiple other
+subfeatures being implemented first.
+
+## Packaging
+
+### Package format
+
+- Status: **Experimental**
+- Tracking Issue: [#121](https://github.com/0xMiden/compiler/issues/121)
+- Release Milestone: [Beta 1](https://github.com/0xMiden/compiler/milestone/4)
+
+This feature represents the ability to compile and distribute a single artifact that contains
+the compiled MAST, and all required and optional metadata to make linking against, and executing
+packages as convenient as a dynamic library or executable.
+
+The compiler currently produces, by default, an experimental implementation of a package format
+that meets the minimum requirements to support libraries and programs compiled from Rust:
+
+- Name and semantic version information
+- Content digest
+- The compiled MAST and metadata about the procedures exported from it
+- Read-only data segments and their hashes (if needed by the program, used to load data into the
+  advice provider when a program is loaded, and to write those segments into linear memory when the
+  program starts)
+- Dependency information (optional, specifies what libraries were linked against during compilation)
+- Debug information (optional)
+
+Use a compatible `miden-debug` executable to load and execute `.masp` packages, including their
+metadata and dependencies. The compiler's `midenc` executable compiles artifacts; execution and
+debugging are provided by the separate debugger.
+
+```shell
+miden-debug program.masp --inputs inputs.toml
+```
+
+See [Debugging programs](../guides/debugger.md) for installation, interactive use, and command-script
+execution. Keep the debugger's package and VM versions compatible with the compiler that produced
+the artifact; a package produced by another toolchain version may require that toolchain's debugger.

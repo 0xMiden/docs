@@ -1,0 +1,4 @@
+label: React
+# Sidebar position within tools/clients/ (Rust is 1, TypeScript is 2, React is 3)
+position: 3
+collapsed: true

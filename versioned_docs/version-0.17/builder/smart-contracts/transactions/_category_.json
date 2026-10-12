@@ -1,0 +1,8 @@
+{
+  "label": "Transactions",
+  "position": 5,
+  "link": {
+    "type": "generated-index",
+    "slug": "/builder/smart-contracts/transactions"
+  }
+}
