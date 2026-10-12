@@ -61,8 +61,8 @@ Miden VM makes use of 6 virtual tables across 4 components:
     - [Op group table](../decoder/index.md#op-group-table)
 - Chiplets:
     - [Chiplets virtual table](../chiplets/index.md#chiplets-virtual-table), which combines the following two tables into one:
-        - [Hash chiplet sibling table](../chiplets/hasher.md#sibling-table-constraints)
-        - [Kernel ROM chiplet procedure table](../chiplets/kernel_rom.md#constraints)
+        - [Hash chiplet sibling table](../chiplets/hasher.md#3-hash-kernel-virtual-table-b_hash_kernel)
+        - [Kernel ROM chiplet procedure table](../chiplets/kernel_rom.md)
 
 ## Communication buses {#communication-buses}
 
