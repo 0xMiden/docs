@@ -1,0 +1,448 @@
+---
+title: Library
+sidebar_position: 5
+---
+
+To use the Miden client library in a Rust project, include it as a dependency.
+
+In your project's `Cargo.toml`, add:
+
+```toml
+miden-client = { version = "0.16.0-alpha.1", features = ["tonic"] }
+```
+
+The `tonic` feature is not enabled by default and gates everything that speaks gRPC to a node: `GrpcClient`, `RemoteTransactionProver`, the gRPC note transport client, and the `ClientBuilder` methods that wire them up. Leave it out only when supplying your own `NodeRpcClient` and `TransactionProver` implementations. See [Features](./features.md#crate-features) for the full list.
+
+## Client instantiation
+
+The recommended way to create a client is using the `ClientBuilder`. For standard networks, use the pre-configured constructors:
+
+```rust
+use std::sync::Arc;
+use miden_client::builder::ClientBuilder;
+use miden_client_sqlite_store::SqliteStore;
+
+// Create store
+let sqlite_store = SqliteStore::new("path/to/store".try_into()?).await?;
+let store = Arc::new(sqlite_store);
+
+// Build client for testnet (pre-configured RPC, prover, and note transport)
+let client = ClientBuilder::for_testnet()
+    .store(store)
+    .filesystem_keystore("path/to/keys")?
+    .build()
+    .await?;
+```
+
+Other network constructors are available:
+- `ClientBuilder::for_mainnet()` - Pre-configured for Miden mainnet
+- `ClientBuilder::for_testnet()` - Pre-configured for Miden testnet
+- `ClientBuilder::for_devnet()` - Pre-configured for Miden devnet
+- `ClientBuilder::for_localhost()` - Pre-configured for local development
+
+For custom configurations, use `ClientBuilder::new()` and configure each component:
+
+```rust
+use std::sync::Arc;
+use miden_client::builder::ClientBuilder;
+use miden_client::rpc::{Endpoint, GrpcClient};
+use miden_client_sqlite_store::SqliteStore;
+
+// Create store
+let sqlite_store = SqliteStore::new("path/to/store".try_into()?).await?;
+let store = Arc::new(sqlite_store);
+
+// Setup the gRPC endpoint
+let endpoint = Endpoint::new("https".into(), "localhost".into(), Some(57291));
+
+let client = ClientBuilder::new()
+    .grpc_client(&endpoint, None)
+    .store(store)
+    .filesystem_keystore("path/to/keys")?
+    // Optional: custom prover via .prover(Arc::new(prover))
+    // Optional: note transport via .note_transport(Arc::new(nt_client))
+    // Optional: custom source manager via .source_manager(Arc::new(sm)) — only
+    //   needed when compiling scripts outside the client with an external
+    //   `Assembler`; pass the same `Arc` to both so source spans align.
+    .build()
+    .await?;
+```
+
+## Create local account
+
+With the Miden client, you can create and track any number of public and local accounts. For local accounts, the state is tracked locally, and the rollup only keeps commitments to the data, which in turn guarantees privacy.
+
+The `AccountBuilder` can be used to create a new account with the specified parameters and components. The following code creates a new local account:
+
+```rust
+let key_pair = SecretKey::with_rng(client.rng());
+
+let new_account = AccountBuilder::new(init_seed) // Seed should be random for each account
+    .account_type(AccountType::Private)
+    .with_auth_component(AuthRpoFalcon512::new(key_pair.public_key()))
+    .with_component(BasicWallet)
+    .build()?;
+keystore.add_key(&AuthSecretKey::RpoFalcon512(key_pair), new_account.id()).await?;
+client.add_account(&new_account, false).await?;
+```
+Once an account is created, it is kept locally and its state is automatically tracked by the client.
+
+To create a public account, specify `AccountType::Public`:
+
+```Rust
+let key_pair = SecretKey::with_rng(client.rng());
+let anchor_block = client.get_latest_epoch_block().await.unwrap();
+
+let new_account = AccountBuilder::new(init_seed) // Seed should be random for each account
+    .anchor((&anchor_block).try_into().unwrap())
+    .account_type(AccountType::Public)
+    .with_auth_component(AuthRpoFalcon512::new(key_pair.public_key()))
+    .with_component(BasicWallet)
+    .build()?;
+keystore.add_key(&AuthSecretKey::RpoFalcon512(key_pair), new_account.id()).await?;
+client.add_account(&new_account, false).await?;
+```
+
+The account's state is also tracked locally, but during sync the client updates the account state by querying the node for the most recent account data.
+
+### Network accounts
+
+A network account is a public account that the node drives automatically: it consumes matching notes on the network's behalf via network transactions (NTX). A network account is built by using the `NetworkAccount::builder` method, which takes a standardized allowlist of note script roots. The node uses that allowlist to identify the account and route only allowlisted notes to it; the auth procedure additionally enforces that consumed notes are allowlisted and that no transaction script runs.
+
+```rust
+let network_account = NetworkAccount::builder(init_seed, allowed_note_script_roots)?
+    .with_component(/* your contract component */)
+    .build_with_schema_commitment()?;
+client.add_account(&network_account, false).await?;
+
+// Deploy with an empty (scriptless) transaction: `AuthNetworkAccount` forbids transaction
+// scripts, and its auth procedure bumps the nonce from 0 to 1, which registers the account.
+let deploy = TransactionRequestBuilder::new().build()?;
+let tx_id = client.submit_new_transaction(network_account.id(), deploy).await?;
+```
+
+After deployment the account is a network account, so the node rejects user-submitted transactions against it; all further state changes happen through network transactions.
+
+## Account registration on an allowlisted network
+
+A network can restrict which accounts get created on chain. An account is created on chain by its first transaction, and a node that enforces an account allowlist rejects that transaction unless the account was registered with an invitation code. Only account creation is gated: an account that already exists on chain is never checked, and network accounts are exempt because the node creates them itself. The network operator hands out the invitation codes. A code binds to one account and cannot be reused for another.
+
+Register the account after adding it to the client and before its first transaction:
+
+```rust
+client.add_account(&new_account, false).await?;
+client.register_account(new_account.id(), invitation_code).await?;
+```
+
+`Client::register_account` requires the account to be tracked by the client, not yet created on chain, and not a network account. A registration consumes the code, so the client first asks the node whether it already allows the account, and fails with `ClientError::AccountAlreadyAllowed` without sending the code when it does. The node rejects an unknown code, a code that is bound to a different account, and an account that is already registered, each with its own `RegisterAccountError` variant.
+
+### Funding of registered accounts
+
+A new account on a fee-charging network cannot pay the fee of its first transaction out of an empty vault. A network operator can run a funding service for this. When one is configured, the node pays every registered account a public P2ID note with the native asset, and `register_account` returns as soon as the funding service queues that note. The note is not committed on chain yet at that point, so it can take a few blocks to arrive.
+
+The note is not part of the response. The client tracks the note tag of every account it owns, so a `sync_state` that runs after the note is committed imports it. Sync until the note arrives. Consuming it is what creates the account on chain, and the fee of that transaction is paid out of the funds the note carries:
+
+```rust
+let records = loop {
+    client.sync_state().await?;
+    let records = client.get_consumable_notes(Some(new_account.id())).await?;
+    if !records.is_empty() {
+        break records;
+    }
+    tokio::time::sleep(Duration::from_secs(3)).await;
+};
+
+let mut notes = Vec::new();
+for (record, _) in records {
+    let note: InputNote = record.try_into()?;
+    notes.push(note.into_note());
+}
+
+let deploy = TransactionRequestBuilder::new().build_consume_notes(notes)?;
+client.submit_new_transaction(new_account.id(), deploy).await?;
+```
+
+If the funding fails on the node side, `register_account` returns an `Unavailable` RPC error. The account stays registered, so a retry fails with `ClientError::AccountAlreadyAllowed`, and the account has to be funded another way, for example through a faucet.
+
+On a network that does not enforce the allowlist the node already allows every account, so `register_account` fails with `ClientError::AccountAlreadyAllowed` and no registration is needed.
+
+### Checking before submitting
+
+Use `Client::is_invitation_code_valid(invitation_code).await?` to check a code before registration. This query does not consume the code. It returns `true` for an unused code or when the node does not enforce the allowlist. Unknown and registered codes return `false`. An empty code returns an error when enforcement is enabled. The response does not identify the account that holds a code.
+
+`Client::submit_new_transaction` and `BatchBuilder::submit` ask the node whether the network accepts the creation of an account before they submit a transaction that creates one, and fail with `ClientError::AccountNotAllowlisted` when it does not. The check runs after the transaction is executed and proven, so it does not save that work. Register the account first. `Client::is_account_allowed` asks the node the same question directly, and answers `true` on a network that does not enforce an allowlist.
+
+## Execute transaction
+
+In order to execute a transaction, you first need to define which type of transaction is to be executed. This may be done with the `TransactionRequest` which represents a general definition of a transaction. Some standardized constructors are available for common transaction types.
+
+Here is an example for a `pay-to-id` transaction type:
+
+```rust
+// Define asset
+let faucet_id = AccountId::from_hex(faucet_id)?;
+let fungible_asset = FungibleAsset::new(faucet_id, *amount)?.into();
+
+let sender_account_id = AccountId::from_hex(bob_account_id)?;
+let target_account_id = AccountId::from_hex(alice_account_id)?;
+let payment_description = PaymentNoteDescription::new(
+    vec![fungible_asset.into()],
+    sender_account_id,
+    target_account_id,
+);
+
+let transaction_request = TransactionRequestBuilder::new().build_pay_to_id(
+    payment_description,
+    None,
+    NoteType::Private,
+    client.rng(),
+)?;
+
+// Execute transaction. No information is tracked after this.
+let transaction_execution_result = client.new_transaction(sender_account_id, transaction_request.clone()).await?;
+
+// Prove and submit the transaction, which is stored alongside created notes (if any)
+client.submit_transaction(transaction_execution_result).await?
+```
+
+You can decide whether you want the note details to be public or private through the `note_type` parameter.
+You may also customize the transaction request with the other `TransactionRequestBuilder` methods. This allows you to run custom code, with custom note arguments and additional output/input notes as well.
+
+### Upgrade account code
+
+An account with the `UpgradeManager` component can replace its code. An upgrade does not change the account storage, so the new code must use the same storage layout as the current code. Otherwise, the account can become unusable.
+
+An account whose authority is `Authority::AuthControlled` upgrades itself with a local transaction:
+
+```rust
+let request = TransactionRequestBuilder::new().build_account_code_upgrade(new_code)?;
+client.submit_new_transaction(account_id, request).await?;
+```
+
+A network account gets its code upgraded through an upgrade note that its owner sends to it. The network account must allowlist `UpgradeNote::script_root()`, and its `Authority` must accept the sender, for example `AccessControl::Ownable2Step` with the sender as owner. The node consumes the note with a network transaction:
+
+```rust
+let upgrade_note = UpgradeNote::builder()
+    .sender(owner_id)
+    .target(network_account_id)
+    .code(new_code)
+    .generate_serial_number(client.rng())
+    .build()?;
+let request = TransactionRequestBuilder::new()
+    .own_output_notes([upgrade_note.into()])
+    .build()?;
+client.submit_new_transaction(owner_id, request).await?;
+```
+
+To upgrade the code and make other changes in the same transaction, write a custom script that calls `upgrade` and give the new code to the transaction with `TransactionRequestBuilder::account_code_upgrade`.
+
+## Note screening
+
+### When to use note screening
+
+You can use note screening when you need to decide whether a note is relevant to the accounts tracked by the client. Screening checks whether each tracked account can consume the note now or at a future block.
+
+Screening cost depends on each screened note's script. A few well-known scripts, such as P2ID, can be checked statically. Every other note is trial-executed against every tracked account, so cost grows with the number of tracked accounts multiplied by the number of notes screened. Use screening when you need consumability information for planning, filtering, or building a consume transaction.
+
+### Use the Client helpers first
+
+For notes already tracked by the client, you should usually start with the helper methods on `Client`. These cover the common case without creating a `NoteScreener` directly.
+
+```rust
+use miden_client::note::NoteConsumptionStatus;
+
+// Return all committed input notes that at least one tracked account may consume.
+let consumable_notes = client.get_consumable_notes(None).await?;
+
+for (note, accounts) in consumable_notes {
+    for (account_id, status) in accounts {
+        if matches!(status, NoteConsumptionStatus::Consumable) {
+            // This account can consume the note at the current sync height.
+            println!("{} can consume {}", account_id, note.id().to_hex());
+        }
+    }
+}
+```
+
+Passing an account ID to `get_consumable_notes` screens only that account, so its cost scales with the number of committed notes alone. If you only need the committed notes without consumability verdicts, `get_input_notes` with `NoteFilter::Committed` is much cheaper.
+
+### Obtain a screener
+
+When you need to check notes that are not already covered by the client helpers, you can obtain a screener from the client.
+
+```rust
+// Build a screener configured with the client's store and RPC client.
+let screener = client.note_screener();
+```
+
+You can also pass custom transaction arguments to the screener via `with_transaction_args`. The screener uses them during its trial executions, which lets it evaluate consumability under the same conditions you will use when actually consuming. For example:
+
+```rust
+use std::collections::BTreeMap;
+
+use miden_client::Word;
+use miden_client::note::NoteId;
+use miden_client::transaction::{AdviceMap, TransactionArgs};
+
+// Per-note arguments passed to the note script.
+let note_args: BTreeMap<NoteId, Word> = BTreeMap::from([(note_id, custom_args)]);
+let tx_args = TransactionArgs::new(AdviceMap::default()).with_note_args(note_args);
+
+let screener_with_args = client.note_screener().with_transaction_args(tx_args);
+```
+
+### Check one note
+
+To check one note, call `get_consumability`.
+
+```rust
+use miden_client::note::{Note, NoteConsumptionStatus};
+
+// Fetch the input note from the store.
+let input_note_record = client.get_input_note(note_id).await?.unwrap();
+let note: Note = input_note_record.try_into()?;
+
+let account_statuses = screener.get_consumability(&note).await?;
+
+for (account_id, status) in account_statuses {
+    match status {
+        NoteConsumptionStatus::Consumable => {
+            // The note can be consumed now by this account.
+            println!("{account_id} can consume {}", note.id().to_hex());
+        },
+        NoteConsumptionStatus::ConsumableAfter(block_number) => {
+            // The note becomes consumable at a later block.
+            println!("{account_id} can consume this note after block {block_number}");
+        },
+        _ => {
+            // Other statuses explain why the note is not immediately consumable.
+            println!("{account_id}: {status:?}");
+        },
+    }
+}
+```
+
+### Check many notes
+
+When you have several notes, use `get_batch_consumability` to check them all in one pass.
+
+```rust
+use std::collections::BTreeMap;
+
+use miden_client::note::{Note, NoteConsumability, NoteId};
+use miden_client::store::NoteFilter;
+
+// Fetch committed input notes from the store.
+let input_note_records = client.get_input_notes(NoteFilter::Committed).await?;
+
+let notes: Vec<Note> = input_note_records
+    .iter()
+    .cloned()
+    .map(TryInto::try_into)
+    .collect::<Result<_, _>>()?;
+
+// Check all notes with one executor setup.
+let notes_by_id: BTreeMap<NoteId, Vec<NoteConsumability>> =
+    screener.get_batch_consumability(&notes).await?;
+
+for (note_id, account_statuses) in notes_by_id {
+    println!("{} has {} possible consumers", note_id.to_hex(), account_statuses.len());
+}
+```
+
+Prefer a single `get_batch_consumability` call over calling `get_consumability` in a loop. A batch reuses each account's execution inputs (account state, reference block, and vault witnesses) across every note in the same pass, while separate calls re-read them each time. This reuse lasts only for the duration of the call, so it does not carry across separate screening calls.
+
+### Check consumability for one account
+
+If you already know which account will consume the notes, use `check_notes_consumability`. This is useful when planning a multi-note consume transaction for a known account.
+
+```rust
+use miden_client::note::{Note, NoteConsumptionInfo};
+use miden_client::store::NoteFilter;
+
+// Fetch committed input notes from the store.
+let input_note_records = client.get_input_notes(NoteFilter::Committed).await?;
+
+let notes: Vec<Note> = input_note_records
+    .iter()
+    .cloned()
+    .map(TryInto::try_into)
+    .collect::<Result<_, _>>()?;
+
+// Find the largest subset that can execute together for this account.
+let consumption_info: NoteConsumptionInfo = screener
+    .check_notes_consumability(account_id, notes)
+    .await?;
+
+for successful_note in &consumption_info.successful {
+    // These notes can be included together in the consume transaction.
+    println!("can consume {}", successful_note.id().to_hex());
+}
+
+for failed_note in &consumption_info.failed {
+    // Failed notes include the note and the execution error.
+    println!("cannot consume {}: {}", failed_note.note.id().to_hex(), failed_note.error);
+}
+```
+
+## Reading consumed notes
+
+### When to use the note reader
+
+Use the note reader when you need to iterate over the input notes a specific account has already consumed, for example to build a consumption history or reconcile past activity.
+
+`InputNoteReader` reads lazily from the store, so creating a reader does not run a query. Since the reader queries the local store, sync the client first to see the latest consumptions. Notes are returned in on-chain consumption order, first by block number, then by the account's transaction order within each block.
+
+### Iterate over an account's consumed notes
+
+Obtain a reader from the client and call `next` until it returns `None`. Each call to `next` runs one store query.
+
+```rust
+let mut reader = client.input_note_reader(account_id);
+
+while let Some(note) = reader.next().await? {
+    // Use the consumed input note.
+}
+```
+
+### Restrict to a block range
+
+Configure the reader with `in_block_range` to return only notes consumed within an inclusive block range. `reset` returns the reader to the beginning without changing its consumer account or block range.
+
+```rust
+use miden_client::block::BlockNumber;
+
+let mut reader = client
+    .input_note_reader(account_id)
+    .in_block_range(BlockNumber::from(0u32), BlockNumber::from(100u32));
+
+while let Some(note) = reader.next().await? {
+    // Use the consumed input note.
+}
+
+// Start another pass over the same notes.
+reader.reset();
+```
+
+## Supply foreign account inputs yourself
+
+A request normally declares foreign accounts as `ForeignAccount::public` or `ForeignAccount::private`, and the client fetches their state and inclusion witnesses from the node at the transaction's reference block. When you already hold that data, declare it as `ForeignAccount::Prefetched` and nothing is fetched for that account. A witness opens against the account tree of exactly one block, so inputs fetched at block `N` are only valid for a transaction whose reference block is `N`; the client rejects a mismatch before execution. Under `Client::execute_transaction_at` the reference block is the anchor's block. Otherwise it is the sync height at execution time, so do not sync between fetching and executing.
+
+`Client::get_foreign_account_inputs` fetches inputs for a set of declarations at a given block, and `AccountInputs` serializes, so one party can fetch and another can execute:
+
+```rust
+use miden_client::transaction::{ForeignAccount, TransactionRequestBuilder};
+
+let declarations = [ForeignAccount::public(foreign_account_id, storage_requirements)?];
+let block_num = client.get_sync_height().await?;
+let inputs = client.get_foreign_account_inputs(declarations, block_num).await?;
+
+let request = TransactionRequestBuilder::new()
+    .custom_script(tx_script)
+    .foreign_accounts(inputs)
+    .build()?;
+```
+
+Declaring an account ID more than once keeps the last declaration, so prefetched inputs added after a `ForeignAccount::public` declaration for the same account replace it. Only the accounts you pass are fetched: include every account reached through foreign procedure calls and every faucet with asset callbacks enabled whose asset the transaction moves, which on a fee-charging chain can include the fee faucet. Storage map keys and vault assets absent from the inputs are still resolved lazily during execution.
+
+Prefetching is what lets a request executed with `Client::execute_transaction_at` run after the node stopped serving account state at the anchor's block: fetch the inputs at `ChainAnchor::block_num` while the node still has them, and ship them with the anchor.

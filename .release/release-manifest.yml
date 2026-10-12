@@ -1,12 +1,12 @@
-version: "0.16"
-refs: # Immutable documentation source commits, resolved on 2026-09-14.
-  protocol: "fb1e40da0f7cec156963e5d815a51a18a8313f25" # v0.16.1
-  node: "d6ce8b14d4680e0187b877c1de5c1cdeea16e7e2" # v0.16.0
-  miden-client: "5f36964d2655549e600f55ab6f65caea943d1130" # rust-sdk v0.16.1
-  tutorials: "965739b626acf3c63a0e547d313859079ee03c18" # v0.16 migration + NFT recipe (#249, #250)
-  miden-vm: "c1c2ddcb9cabc3d5c2071f8baf68c7930917cad8" # v0.29.2, the protocol v0.16 VM line
-  compiler: "f2e0b4274f4f13caeceb215645bd3f1f03a3c6f5" # v0.10.1; still pins protocol v0.16.0-rc.4
-  guardian: "be66822395551c630a164f7bdafbb67771c83442" # v0.17.0, built for Miden v0.16
-  note-transport: "9736b39d64cfb4d77bb2d777a9ad1a4f2ea3f2a5" # v0.5.0-rc.2, used by rust-sdk v0.16
-  bridge-portal: "5d8f327a8adea0e0d671b798145b6092f5e23d6a" # Developer docs #117; portal still uses SDK v0.15
-next_version: "0.17"
+version: "0.17"
+refs: # Immutable documentation source commits, verified on 2026-10-12.
+  protocol: "673ed0c7d080d82dfdaed3d36d69ce33c894fbbb" # v0.17.1
+  node: "6f7828fcf581e08ed670ebf36e20a9026d6ab00a" # v0.17.3
+  miden-client: "a4d9bbd66bf64b42d30c13de30561dd97467540a" # rust-sdk v0.17.3
+  tutorials: "9baa774000ea75804e4b0b9f59ce67a658b5f7d2" # Merged v0.17 migration (#253)
+  miden-vm: "7d2866da412cebc97d4cc3847ba0dae812baa407" # v0.35.0, the protocol v0.17.1 VM line
+  compiler: "08883bfb6e3578ce8af2be142fc62e1140187823" # v0.11.0; contract compiler uses VM v0.33
+  guardian: "fab5f5cb2c3fecc6b9130b7a3c7eba90c5ffb512" # v0.18.0, built for Miden v0.17
+  note-transport: "9736b39d64cfb4d77bb2d777a9ad1a4f2ea3f2a5" # Retained v0.5.0-rc.2; no confirmed v0.17 release
+  bridge-portal: "5d8f327a8adea0e0d671b798145b6092f5e23d6a" # Retained developer docs #117; no confirmed v0.17 release
+next_version: null # Next release train has not been confirmed.

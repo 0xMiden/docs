@@ -76,7 +76,7 @@ const config: Config = {
           includeCurrentVersion: true,
           versions: {
             current: {
-              label: `${nextVersion} (unstable)`,
+              label: `${nextVersion ?? "Next"} (unstable)`,
             },
           },
           remarkPlugins: [remarkMath],
