@@ -103,7 +103,7 @@ function Workbench() {
                 <p>Requires Rust and Cargo. Follow the versioned guide to select a compatible toolchain.</p>
                 <div className={styles.code}><code>{command}</code><button onClick={() => copy(command)} aria-label="Copy installation command">Copy</button></div>
                 <Link className={styles.guide} to={route('/builder/get-started/setup/installation')}>Read the installation guide <span aria-hidden="true">↗</span></Link>
-                <p className={styles.note}>Then verify your installation with <code>miden --version</code>.</p>
+                <p className={styles.note}>Check the manager with <code>miden --version</code>, then finish toolchain setup in the guide.</p>
                 <div className={styles.nextStep}><Link className={styles.guide} to={route('/builder/get-started/your-first-smart-contract/create')}>Next: create your first contract <span aria-hidden="true">↗</span></Link></div>
               </div>
               <div id="setup-panel-agent" role="tabpanel" aria-labelledby="agent-tab" aria-hidden={mode !== 'agent'} inert={mode !== 'agent'} className={styles.panelSlot}>
