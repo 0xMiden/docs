@@ -2,13 +2,16 @@
   "compilerOptions": {
     "target": "ES2022",
     "lib": ["ES2022"],
-    "module": "NodeNext",
-    "moduleResolution": "NodeNext",
+    "module": "CommonJS",
+    "moduleResolution": "Node",
     "types": ["node"],
+    "esModuleInterop": true,
     "strict": true,
     "noUncheckedIndexedAccess": true,
-    "noEmit": true,
-    "skipLibCheck": true
+    "noEmitOnError": true,
+    "skipLibCheck": true,
+    "rootDir": ".",
+    "outDir": "../../.cache/masm-checks"
   },
   "include": ["check-guide-examples.ts", "check-navigation.ts", "checkers.test.ts"]
 }

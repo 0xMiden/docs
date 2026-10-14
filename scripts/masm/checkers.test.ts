@@ -3,11 +3,10 @@ import { copyFileSync, mkdirSync, mkdtempSync, readFileSync, rmSync, writeFileSy
 import { tmpdir } from "node:os";
 import { dirname, resolve } from "node:path";
 import { test, type TestContext } from "node:test";
-import { fileURLToPath } from "node:url";
 import { checkGuideExamples, guideSpecs } from "./check-guide-examples.js";
 import { checkNavigation } from "./check-navigation.js";
 
-const repository = fileURLToPath(new URL("../../", import.meta.url));
+const repository = resolve(__dirname, "../..");
 const pageDirectory = "builder/smart-contracts/masm";
 const metadataDirectory = ".docusaurus/docusaurus-plugin-content-docs/default";
 const guideIds = ["first-project", "account-components", "note-scripts"]

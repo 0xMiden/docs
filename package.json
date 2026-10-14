@@ -11,6 +11,8 @@
     "deploy": "docusaurus deploy",
     "clear": "docusaurus clear",
     "serve": "docusaurus serve",
+    "check:masm": "tsc --project scripts/masm/tsconfig.json && node --test .cache/masm-checks/checkers.test.js && node .cache/masm-checks/check-guide-examples.js",
+    "check:masm-navigation": "tsc --project scripts/masm/tsconfig.json && node .cache/masm-checks/check-navigation.js",
     "generate:og": "node scripts/generate-og-images.mjs",
     "write-translations": "docusaurus write-translations",
     "write-heading-ids": "docusaurus write-heading-ids",

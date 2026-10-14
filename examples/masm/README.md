@@ -18,15 +18,13 @@ The additional regression suite checks field boundaries, missing account authent
 
 The note example includes the account example's `settings.masm` source. Keep both directories together. MockChain exercises the transaction kernel with test accounts, signers, and testing proofs; these projects require no live node or account funding.
 
-The TypeScript checkers require Node.js 20.20.2 or later. From the repository root, install their pinned tools, type-check the scripts, run their regression tests, and compare every titled source block with the executable files and the current/v0.17 mirrors:
+Validation tooling lives in [`scripts/masm`](../../scripts/masm), using the docs site's existing npm dependencies. Use Node.js 20.20.2 or later. From the repository root, install them once and run the strict TypeScript compilation, eighteen checker regressions, and current/v0.17 source parity check:
 
 ```bash
-npm ci --prefix examples/masm
-npm --prefix examples/masm run typecheck
-npm --prefix examples/masm run test:checkers
-npm --prefix examples/masm run check:guides
+npm ci
+npm run check:masm
 ```
 
-The checker tools are separate from the docs site's npm dependencies. `tsx` executes the TypeScript scripts; `tsc` checks them in strict mode before execution. The checker regressions cover source/mirror drift, omitted or duplicate fences, malformed navigation metadata, guide order, and index pagination.
+The site's TypeScript compiler emits the checks into the ignored `.cache/masm-checks` directory; Node runs that output directly. No separate checker package or TypeScript runtime is needed. The checker regressions cover source/mirror drift, omitted or duplicate fences, malformed navigation metadata, guide order, and index pagination.
 
-After building the docs site, run `npm --prefix examples/masm run check:navigation` to check the MASM sidebar order and landing-page pagination in current and v0.17.
+After building the docs site, run `npm run check:masm-navigation` to check the generated MASM sidebar order and landing-page pagination in current and v0.17. CI runs this check against the built site as well.

@@ -1,7 +1,6 @@
 import assert from "node:assert/strict";
 import { readFileSync, readdirSync } from "node:fs";
 import { resolve } from "node:path";
-import { fileURLToPath } from "node:url";
 
 type SupportedVersion = "current" | "0.17";
 type JsonObject = Record<string, unknown>;
@@ -86,8 +85,8 @@ export function checkNavigation(root: string): void {
   assert.equal(checked.size, 2, "Build current and v0.17 docs before checking navigation");
 }
 
-if (process.argv[1] && resolve(process.argv[1]) === fileURLToPath(import.meta.url)) {
-  const root = fileURLToPath(new URL("../../", import.meta.url));
+if (require.main === module) {
+  const root = resolve(__dirname, "../..");
   checkNavigation(root);
   console.log("Checked current/v0.17 MASM order, unique index, and landing-page pagination");
 }

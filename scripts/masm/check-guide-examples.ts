@@ -1,7 +1,6 @@
 import assert from "node:assert/strict";
 import { readFileSync } from "node:fs";
 import { resolve } from "node:path";
-import { fileURLToPath } from "node:url";
 
 interface GuideSpec {
   project: string;
@@ -68,8 +67,8 @@ export function checkGuideExamples(root: string): number {
   return checked;
 }
 
-if (process.argv[1] && resolve(process.argv[1]) === fileURLToPath(import.meta.url)) {
-  const root = fileURLToPath(new URL("../../", import.meta.url));
+if (require.main === module) {
+  const root = resolve(__dirname, "../..");
   const checked = checkGuideExamples(root);
   console.log(`Checked ${checked} code blocks and three current/v0.17 guide mirrors`);
 }
