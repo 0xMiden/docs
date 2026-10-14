@@ -16,7 +16,7 @@ You need Git and Rust **1.98.1**. The example pins `miden-protocol`, `miden-stan
 
 ```bash
 git clone https://github.com/0xMiden/docs.git
-cd docs/examples/masm/transaction-lab
+cd docs/tests/masm/transaction-lab
 cargo +1.98.1 test --locked --test transaction_scripts -- --nocapture
 ```
 

@@ -8,7 +8,7 @@ sidebar_position: 5
 
 Use `miden-testing::MockChain` to test transactions against local accounts, notes, and block state. It executes the real transaction kernel and can build subsequent blocks without a node. Test both the intended state transition and the precise failure conditions.
 
-The [transaction-script example](./transaction-scripts) supplies the pinned **0.17.1** project and Rust **1.98.1** prerequisites. From `docs/examples/masm/transaction-lab`, run:
+The [transaction-script example](./transaction-scripts) supplies the pinned **0.17.1** project and Rust **1.98.1** prerequisites. From `docs/tests/masm/transaction-lab`, run:
 
 ```bash
 cargo +1.98.1 test --locked --test mock_chain -- --nocapture

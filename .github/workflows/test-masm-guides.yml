@@ -6,7 +6,15 @@ on:
       - "docs/builder/smart-contracts/masm/**"
       - "versioned_docs/version-0.17/builder/smart-contracts/masm/**"
       - "tests/masm/**"
-      - "examples/masm/transaction-lab/**"
+      - "tests/patterns/**"
+      - "docs/builder/smart-contracts/patterns.md"
+      - "versioned_docs/version-0.17/builder/smart-contracts/patterns.md"
+      - "docs/builder/smart-contracts/index.md"
+      - "docs/builder/smart-contracts/overview.md"
+      - "docs/builder/smart-contracts/rust/index.md"
+      - "versioned_docs/version-0.17/builder/smart-contracts/index.md"
+      - "versioned_docs/version-0.17/builder/smart-contracts/overview.md"
+      - "versioned_docs/version-0.17/builder/smart-contracts/rust/index.md"
       - "scripts/masm/**"
       - "package.json"
       - "package-lock.json"
@@ -21,7 +29,15 @@ on:
       - "docs/builder/smart-contracts/masm/**"
       - "versioned_docs/version-0.17/builder/smart-contracts/masm/**"
       - "tests/masm/**"
-      - "examples/masm/transaction-lab/**"
+      - "tests/patterns/**"
+      - "docs/builder/smart-contracts/patterns.md"
+      - "versioned_docs/version-0.17/builder/smart-contracts/patterns.md"
+      - "docs/builder/smart-contracts/index.md"
+      - "docs/builder/smart-contracts/overview.md"
+      - "docs/builder/smart-contracts/rust/index.md"
+      - "versioned_docs/version-0.17/builder/smart-contracts/index.md"
+      - "versioned_docs/version-0.17/builder/smart-contracts/overview.md"
+      - "versioned_docs/version-0.17/builder/smart-contracts/rust/index.md"
       - "scripts/masm/**"
       - "package.json"
       - "package-lock.json"
@@ -62,25 +78,27 @@ jobs:
       - name: Check MASM types, regressions and source parity
         run: |
           npm run check:masm
-      - name: Check transaction guide source parity
+      - name: Check companion guide source parity
         run: |
-          node examples/masm/transaction-lab/check-guides.mjs
+          node tests/masm/transaction-lab/check-guides.mjs
+          python3 tests/patterns/spending-policy/check-docs.py
       - uses: actions/cache@0057852bfaa89a56745cba8c7296529d2fc39830 # v4
         with:
           path: |
             ~/.cargo/registry
             ~/.cargo/git
             .masm-target
-          key: masm-linux-rust-1.98.1-dev-debug0-v1-${{ hashFiles('tests/masm/**/Cargo.lock', 'examples/masm/transaction-lab/Cargo.lock') }}
+          key: masm-linux-rust-1.98.1-dev-debug0-v1-${{ hashFiles('tests/**/Cargo.lock') }}
           restore-keys: masm-linux-rust-1.98.1-dev-debug0-v1-
-      - name: Run MASM guide fixtures and regressions
+      - name: Run contract guide fixtures and regressions
         run: |
           cargo +1.98.1 run --locked --manifest-path tests/masm/first-project/Cargo.toml
           cargo +1.98.1 run --locked --manifest-path tests/masm/account-components/Cargo.toml
           cargo +1.98.1 run --locked --manifest-path tests/masm/note-scripts/Cargo.toml
           cargo +1.98.1 test --locked --manifest-path tests/masm/note-scripts/Cargo.toml
           cargo +1.98.1 test --locked --manifest-path tests/masm/regressions/Cargo.toml
-          cargo +1.98.1 test --locked --manifest-path examples/masm/transaction-lab/Cargo.toml
+          cargo +1.98.1 test --locked --manifest-path tests/masm/transaction-lab/Cargo.toml
+          cargo +1.98.1 test --locked --manifest-path tests/patterns/spending-policy/Cargo.toml
       - name: Build the site and check generated MASM navigation
         env:
           NODE_OPTIONS: "--max-old-space-size=12288"

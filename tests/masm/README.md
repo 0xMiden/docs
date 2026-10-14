@@ -25,6 +25,6 @@ npm ci
 npm run check:masm
 ```
 
-The site's TypeScript compiler emits the checks into the ignored `.cache/masm-checks` directory; Node runs that output directly. No separate checker package or TypeScript runtime is needed. The checker regressions cover source/mirror drift, omitted or duplicate fences, malformed navigation metadata, guide order, and index pagination.
+The site's TypeScript compiler emits the checks into the ignored `.cache/masm-checks` directory; Node runs that output directly. No separate checker package or TypeScript runtime is needed. The checker regressions cover source/mirror drift, omitted or duplicate fences, malformed navigation metadata, guide order, and index pagination. The [transaction fixture](./transaction-lab/README.md) and [spending-policy fixture](../patterns/spending-policy/README.md) supply the remaining contract-guide validation.
 
 After building the docs site, run `npm run check:masm-navigation` to check the generated MASM sidebar order and landing-page pagination in current and v0.17. CI runs this check against the built site as well.
