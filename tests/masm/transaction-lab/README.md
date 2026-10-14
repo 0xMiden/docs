@@ -1,8 +1,11 @@
-# MASM transaction CI validation fixture
+# MASM transaction local validation fixture
 
-Executable CI validation fixture for the MASM transaction scripts, MockChain testing, and debugging guides.
+Executable local validation fixture for the MASM transaction scripts, MockChain testing, and debugging guides.
 Requires Rust 1.98.1. Protocol, standards, transaction, and testing crates are pinned to 0.17.1;
 the lockfile resolves their VM dependencies to 0.35.0.
+
+Run these checks before pushing changes to those guides or this fixture. The full
+local checklist is in [the MASM fixture README](../README.md).
 
 ```bash
 cargo +1.98.1 test --locked -- --nocapture

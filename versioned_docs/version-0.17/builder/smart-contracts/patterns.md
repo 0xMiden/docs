@@ -135,7 +135,7 @@ policy's security boundary.
 
 ### Construct and execute locally
 
-The complete CI validation fixture is `tests/patterns/spending-policy/` in the
+The complete local validation fixture is `tests/patterns/spending-policy/` in the
 [Miden docs repository](https://github.com/0xMiden/docs). Its `tests/policy.rs`
 compiles the component with `CodeBuilder`, initializes these slots, and composes
 it with Falcon singlesig authentication. This is the account-construction
