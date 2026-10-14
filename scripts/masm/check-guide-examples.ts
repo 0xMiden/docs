@@ -23,7 +23,7 @@ export const guideSpecs: readonly GuideSpec[] = [
 ];
 
 function presentedSource(root: string, project: string, filename: string): string {
-  const source = readFileSync(resolve(root, "examples/masm", project, filename), "utf8");
+  const source = readFileSync(resolve(root, "tests/masm", project, filename), "utf8");
   // The note guide presents the runnable host; rejection tests remain in the fixture.
   const testStart = source.indexOf("\n#[cfg(test)]");
   if (project === "note-scripts" && filename === "src/main.rs" && testStart !== -1) {

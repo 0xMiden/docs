@@ -5,7 +5,8 @@ on:
     paths:
       - "docs/builder/smart-contracts/masm/**"
       - "versioned_docs/version-0.17/builder/smart-contracts/masm/**"
-      - "examples/masm/**"
+      - "tests/masm/**"
+      - "examples/masm/transaction-lab/**"
       - "scripts/masm/**"
       - "package.json"
       - "package-lock.json"
@@ -19,7 +20,8 @@ on:
     paths:
       - "docs/builder/smart-contracts/masm/**"
       - "versioned_docs/version-0.17/builder/smart-contracts/masm/**"
-      - "examples/masm/**"
+      - "tests/masm/**"
+      - "examples/masm/transaction-lab/**"
       - "scripts/masm/**"
       - "package.json"
       - "package-lock.json"
@@ -69,15 +71,15 @@ jobs:
             ~/.cargo/registry
             ~/.cargo/git
             .masm-target
-          key: masm-linux-rust-1.98.1-dev-debug0-v1-${{ hashFiles('examples/masm/**/Cargo.lock') }}
+          key: masm-linux-rust-1.98.1-dev-debug0-v1-${{ hashFiles('tests/masm/**/Cargo.lock', 'examples/masm/transaction-lab/Cargo.lock') }}
           restore-keys: masm-linux-rust-1.98.1-dev-debug0-v1-
-      - name: Run the documented examples and regressions
+      - name: Run MASM guide fixtures and regressions
         run: |
-          cargo +1.98.1 run --locked --manifest-path examples/masm/first-project/Cargo.toml
-          cargo +1.98.1 run --locked --manifest-path examples/masm/account-components/Cargo.toml
-          cargo +1.98.1 run --locked --manifest-path examples/masm/note-scripts/Cargo.toml
-          cargo +1.98.1 test --locked --manifest-path examples/masm/note-scripts/Cargo.toml
-          cargo +1.98.1 test --locked --manifest-path examples/masm/regressions/Cargo.toml
+          cargo +1.98.1 run --locked --manifest-path tests/masm/first-project/Cargo.toml
+          cargo +1.98.1 run --locked --manifest-path tests/masm/account-components/Cargo.toml
+          cargo +1.98.1 run --locked --manifest-path tests/masm/note-scripts/Cargo.toml
+          cargo +1.98.1 test --locked --manifest-path tests/masm/note-scripts/Cargo.toml
+          cargo +1.98.1 test --locked --manifest-path tests/masm/regressions/Cargo.toml
           cargo +1.98.1 test --locked --manifest-path examples/masm/transaction-lab/Cargo.toml
       - name: Build the site and check generated MASM navigation
         env:

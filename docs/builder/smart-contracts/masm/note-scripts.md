@@ -12,11 +12,11 @@ The contract code is MASM. The Rust runner compiles it and constructs a transact
 
 ## 1. Run the example
 
-Complete the toolchain setup in [Your first MASM project](./first-project.md), then run the example in the docs repository:
+Complete the toolchain setup in [Your first MASM project](./first-project.md), then run the matching CI validation fixture in the docs repository:
 
 ```bash
 git clone https://github.com/0xMiden/docs.git
-cd docs/examples/masm/note-scripts
+cd docs/tests/masm/note-scripts
 cargo run --locked
 cargo test --locked
 ```

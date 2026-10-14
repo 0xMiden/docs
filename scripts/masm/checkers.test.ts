@@ -30,7 +30,7 @@ function guideFixture(context: TestContext): string {
     const paths = [
       `docs/${pageDirectory}/${project}.md`,
       `versioned_docs/version-0.17/${pageDirectory}/${project}.md`,
-      ...files.map((file) => `examples/masm/${project}/${file}`),
+      ...files.map((file) => `tests/masm/${project}/${file}`),
     ];
     for (const path of paths) {
       const destination = resolve(root, path);
@@ -82,7 +82,7 @@ test("untitled source fences are rejected", (context) => {
 
 test("guide source drift is rejected even when both mirrors agree", (context) => {
   const root = guideFixture(context);
-  write(root, "examples/masm/first-project/src/area.masm", "begin push.99 end\n");
+  write(root, "tests/masm/first-project/src/area.masm", "begin push.99 end\n");
   assert.throws(() => checkGuideExamples(root), /guide differs from executable source/);
 });
 
