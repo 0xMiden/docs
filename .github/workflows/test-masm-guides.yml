@@ -41,9 +41,15 @@ jobs:
           node-version: "20.20.2"
       - name: Install pinned Rust toolchain
         run: rustup toolchain install 1.98.1 --profile minimal
+      - name: Install pinned checker tools
+        run: npm ci --prefix examples/masm
+      - name: Type-check and test the guide checkers
+        run: |
+          npm --prefix examples/masm run typecheck
+          npm --prefix examples/masm run test:checkers
       - name: Check current and v0.17 source parity
         run: |
-          node examples/masm/check-guide-examples.mjs
+          npm --prefix examples/masm run check:guides
           node examples/masm/transaction-lab/check-guides.mjs
       - uses: actions/cache@0057852bfaa89a56745cba8c7296529d2fc39830 # v4
         with:

@@ -10,7 +10,6 @@ cargo +1.98.1 run --locked --manifest-path examples/masm/account-components/Carg
 cargo +1.98.1 run --locked --manifest-path examples/masm/note-scripts/Cargo.toml
 cargo +1.98.1 test --locked --manifest-path examples/masm/note-scripts/Cargo.toml
 cargo +1.98.1 test --locked --manifest-path examples/masm/regressions/Cargo.toml
-node examples/masm/check-guide-examples.mjs
 ```
 
 Expected runner outputs are `area: 42`, `settings value: 7 -> 42`, and `settings value: 7 -> 42; note consumed`. The six note tests cover successful consumption, nonzero consumption arguments, empty/oversized storage, unexpected assets, and missing consumer authentication.
@@ -19,6 +18,15 @@ The additional regression suite checks field boundaries, missing account authent
 
 The note example includes the account example's `settings.masm` source. Keep both directories together. MockChain exercises the transaction kernel with test accounts, signers, and testing proofs; these projects require no live node or account funding.
 
-The Node check compares every titled source block with the executable files and checks that current and v0.17 guide copies are identical.
+The TypeScript checkers require Node.js 20.20.2 or later. From the repository root, install their pinned tools, type-check the scripts, run their regression tests, and compare every titled source block with the executable files and the current/v0.17 mirrors:
 
-After building the docs site, run `node examples/masm/check-navigation.mjs` to check the MASM sidebar order and landing-page pagination in current and v0.17.
+```bash
+npm ci --prefix examples/masm
+npm --prefix examples/masm run typecheck
+npm --prefix examples/masm run test:checkers
+npm --prefix examples/masm run check:guides
+```
+
+The checker tools are separate from the docs site's npm dependencies. `tsx` executes the TypeScript scripts; `tsc` checks them in strict mode before execution. The checker regressions cover source/mirror drift, omitted or duplicate fences, malformed navigation metadata, guide order, and index pagination.
+
+After building the docs site, run `npm --prefix examples/masm run check:navigation` to check the MASM sidebar order and landing-page pagination in current and v0.17.
