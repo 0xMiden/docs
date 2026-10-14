@@ -291,6 +291,7 @@ const sidebars: SidebarsConfig = {
             "builder/tools/bridging/epoch",
           ],
         },
+        "builder/tools/usdcx-funding",
         {
           type: "category",
           label: "Wallet",
