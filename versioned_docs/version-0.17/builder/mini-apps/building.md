@@ -8,6 +8,14 @@ description: "Define a small transaction flow with explicit ownership, validated
 
 Start with one operation whose state you can explain from beginning to end. A wallet-managed public send is a useful first integration because Bread owns the account, signing and submission while the app owns request parameters and result presentation. Use the checked [Bread integration recipe](./bread-wallet-integration.md) before adding custom serialization or a second client.
 
+## Describe the app's value and surface
+
+A game can offer a complete practice round before any public challenge. Financial apps and financial utilities should name the useful task, supported asset/issuer, provider or route, fees and the settlement or claim/recovery steps. Learning, NFTs and other tools belong to the remaining app group. [Issue 1452](https://github.com/0xMiden/wallet/issues/1452) defines the target All, Finance, Arcade and Others views; All is an aggregate, not an app category to submit.
+
+Arcade's proposed record/shot notes, Game Coin, ranking and rewards are game-specific dependencies under review. They are not general mini-app APIs or finance registration requirements. Label fixture rankings/challenges and local submission drafts clearly; do not imply live contracts, real player activity, scoring validity or submitted registrations.
+
+Choose ordinary presentation or optional native fullscreen for the app's needs. Fullscreen changes layout and the return control, not connection, private-data or transaction authority. Register through the [wallet-config review process](./publishing-and-explore.md) and verify the schema/reader migration before advertising a listing.
+
 ## Keep responsibilities visible
 
 | Layer | Responsibilities |

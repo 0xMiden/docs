@@ -22,8 +22,16 @@ The public [frontend template](https://github.com/0xMiden/frontend-template) sup
 | Accepted request then timeout/reload | Original ID/context is restored and reconciled before another submission. |
 | Wallet result returned | App distinguishes result retrieval from chain inclusion and recipient consumption. |
 | Parked app, lock or disconnect | Session/read caches refresh and stale approval is not reused. |
+| Fullscreen absent or refused | Ordinary layout remains usable; extension injection is not native presentation support. |
+| Manual-ready fullscreen | Notify readiness only after a correctly sized first frame; native timeout/refusal stays recoverable. |
+| Rotation, safe areas and Back to Bread | Touch controls remain visible; leaving/reopening follows the actual build's close or park lifecycle. |
+| Fullscreen wallet overlay or closure | Approval remains visible; interrupted requests reconcile without assuming submitted work was cancelled. |
 
 Exercise the actual embedded browser on every platform you claim. An ordinary mobile browser opening the same URL is a different environment; it does not gain provider injection automatically. Include cancel, permission refusal and returning from a parked app alongside the successful path.
+
+For the [native Explore category change](https://github.com/0xMiden/wallet/issues/1452), verify that existing per-network catalog entries remain visible through the approved mapping/migration. Cover All, Finance, Arcade and Others, search, recents, platform gates and empty/loading/error states. Do not put target category names into a document that the current parser rejects.
+
+Games also need deterministic scoring vectors, invalid/duplicate attempts and any reviewed challenge claim/expiry paths. Financial apps need the actual asset/issuer and route, fee handling, chain settlement, recipient-note consumption where relevant and interrupted claim/recovery. A local game score, wallet result or provider health response is insufficient evidence for those outcomes.
 
 ## Diagnose by boundary
 

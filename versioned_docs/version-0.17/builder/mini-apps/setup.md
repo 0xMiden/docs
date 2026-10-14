@@ -8,7 +8,18 @@ description: "Start from the existing templates and align packages, artifacts an
 
 Use a browser frontend and a compatible Miden deployment. Keep the wallet, app SDK, RPC, prover and private-note transport on a compatible release line. A reachable endpoint alone does not prove that an account, artifact or route works on that deployment.
 
-The [frontend template](https://github.com/0xMiden/frontend-template) already supplies React, TypeScript, Vite, the Miden Vite plugin, SDK hooks and a counter demo. Read its current README, package manifest and lockfile together. Install a Node/Yarn version supported by that checkout; do not replace individual SDK pins without reviewing the corresponding migration.
+Prefer the [agentic template](https://github.com/0xMiden/agentic-template) for a workspace with contract and frontend submodules and matching agent guidance. Clone first, preserve its pins and lockfiles, then diagnose the environment:
+
+```bash
+git clone --recurse-submodules https://github.com/0xMiden/agentic-template.git my-mini-app
+cd my-mini-app
+# Read AGENTS.md and docs/agent-first-v017.md before running build stages.
+bash scripts/journey.sh doctor
+```
+
+Read the root and submodule instructions before installation. `setup.sh` can install global prerequisites; inspect its effects and use the authorized environment. For custom contracts, follow the template's contract, MockChain and real local-node gates before frontend contract integration. Starting services and submitting testnet transactions are separate execution stages.
+
+For a frontend-only, wallet-managed operation, the [frontend template](https://github.com/0xMiden/frontend-template) supplies React, TypeScript, Vite, the Miden Vite plugin and a separate mini-app entry. Read its current README, package manifest and lockfile together. Install a Node/Yarn version supported by that checkout; do not replace individual SDK pins without reviewing the corresponding migration.
 
 ```bash
 git clone https://github.com/0xMiden/frontend-template.git my-mini-app
@@ -21,7 +32,7 @@ The development server is the starting point for the frontend. The counter requi
 
 ## Review the wallet-managed starter
 
-[Frontend-template PR33](https://github.com/0xMiden/frontend-template/pull/33) adds a separate `/mini-app.html` entry with reusable code in `src/mini-app/`. Integration is pending: use the PR's reviewed revision, rather than expecting that entry in upstream `main`. Follow the [pinned starter recipe](https://github.com/BrianSeong99/frontend-template/blob/8e6167166cffc097743b835fc87edf3e83db1588/docs/mini-app-starter.md) for setup, package pins and checks.
+[Frontend-template PR33](https://github.com/0xMiden/frontend-template/pull/33) merged and adds a separate `/mini-app.html` entry with reusable code in `src/mini-app/`. Follow the [maintained starter recipe](https://github.com/0xMiden/frontend-template/blob/main/docs/mini-app-starter.md) for setup, package pins and checks. A recursive agentic clone preserves its checked-in frontend revision, which may predate this entry; inspect it before adopting the starter. Do not silently advance all submodules.
 
 This entry asks Bread to build, sign and submit requests; it needs no counter deployment or app-owned client/database. Controlled-provider browser tests exercise the starter and released adapter, while actual Bread extension/native approval and chain settlement remain separate acceptance checks.
 

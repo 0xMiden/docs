@@ -216,6 +216,51 @@ Verify the following on every platform you claim to support:
 
 Use the public adapter conformance suite against a real provider when checking a wallet's supported surface. Mock-provider tests can validate application state handling but do not prove extension, mobile, or desktop provider compatibility.
 
+## Optional native fullscreen
+
+Bread 1.17.3 introduced opt-in fullscreen for the native mobile dApp browser. Put the policy in the entry HTML's initial head, rather than adding it after your application bundle loads:
+
+```html
+<meta name="bread-display" content="fullscreen" />
+<meta name="theme-color" content="#101010" />
+```
+
+Only the exact `fullscreen` value opts in; without it Bread retains ordinary browser presentation. Readiness is automatic at `DOMContentLoaded` unless the initial head also declares:
+
+```html
+<meta name="bread-ready" content="manual" />
+```
+
+With manual readiness, wait for the first correctly sized frame before notifying the host:
+
+```js
+if (window.bread?.version === 1) {
+  await window.bread.presentation.ready();
+}
+```
+
+Handle a native refusal or transport timeout without claiming the page is ready. `ready()` and `close()` return promises resolved by native acknowledgement. The API is available only in the main document of a supported native Bread WebView; extension wallet injection or an ordinary browser does not supply it. Keep a usable responsive layout when it is absent. Older Android WebViews can retain the ordinary toolbar.
+
+Fullscreen follows the device's portrait/landscape rotation; this recipe does not establish an orientation-lock API. Size the renderer from its actual container and reserve room for the persistent, accessible Back to Bread control:
+
+```css
+.game-toolbar {
+  padding-top: var(--bread-control-inset-top, 0px);
+}
+```
+
+Respect physical safe areas and use the host's live inset rather than hard-coded toolbar padding. On the released v1.17.3 implementation, Back to Bread closes the page and returns to the retained browser. Later source changes that control to parking/restoring the document; test the exact target build rather than assuming either lifecycle. Programmatic closure uses the same versioned API:
+
+```js
+if (window.bread?.version === 1) {
+  await window.bread.presentation.close();
+}
+```
+
+Closure can reject an unanswered wallet approval and remove the page's saved session. It does not cancel an already submitted transaction: retain request context and reconcile its outcome before another submission. Wallet confirmations, alerts and locking suspend the page; test resumption, readiness failure, rotation, background/reopen and safe return on physical iOS/Android devices.
+
+Fullscreen is optional for both games and financial apps. Presentation does not grant wallet connection, private-data access, transaction approval or registration. See the [released fullscreen adoption guide](https://github.com/0xMiden/wallet/blob/v1.17.3/docs/dapp-fullscreen.md), [current source guide](https://github.com/0xMiden/wallet/blob/main/docs/dapp-fullscreen.md) and [v1.17.3 release](https://github.com/0xMiden/wallet/releases/tag/v1.17.3) for the implementation boundary.
+
 ## Public implementation references
 
 - [Canonical wallet adapter implementation](https://github.com/0xMiden/web-sdk/tree/main/packages/adapter).
