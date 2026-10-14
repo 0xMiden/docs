@@ -1,0 +1,108 @@
+name: Test MASM guides
+
+on:
+  pull_request:
+    paths:
+      - "docs/builder/smart-contracts/masm/**"
+      - "versioned_docs/version-0.17/builder/smart-contracts/masm/**"
+      - "tests/masm/**"
+      - "tests/patterns/**"
+      - "docs/builder/smart-contracts/patterns.md"
+      - "versioned_docs/version-0.17/builder/smart-contracts/patterns.md"
+      - "docs/builder/smart-contracts/index.md"
+      - "docs/builder/smart-contracts/overview.md"
+      - "docs/builder/smart-contracts/rust/index.md"
+      - "versioned_docs/version-0.17/builder/smart-contracts/index.md"
+      - "versioned_docs/version-0.17/builder/smart-contracts/overview.md"
+      - "versioned_docs/version-0.17/builder/smart-contracts/rust/index.md"
+      - "scripts/masm/**"
+      - "package.json"
+      - "package-lock.json"
+      - "sidebars.ts"
+      - "versioned_sidebars/version-0.17-sidebars.json"
+      - "docusaurus.config.ts"
+      - "scripts/prepare-local-docs.mjs"
+      - ".github/workflows/test-masm-guides.yml"
+  push:
+    branches: [main]
+    paths:
+      - "docs/builder/smart-contracts/masm/**"
+      - "versioned_docs/version-0.17/builder/smart-contracts/masm/**"
+      - "tests/masm/**"
+      - "tests/patterns/**"
+      - "docs/builder/smart-contracts/patterns.md"
+      - "versioned_docs/version-0.17/builder/smart-contracts/patterns.md"
+      - "docs/builder/smart-contracts/index.md"
+      - "docs/builder/smart-contracts/overview.md"
+      - "docs/builder/smart-contracts/rust/index.md"
+      - "versioned_docs/version-0.17/builder/smart-contracts/index.md"
+      - "versioned_docs/version-0.17/builder/smart-contracts/overview.md"
+      - "versioned_docs/version-0.17/builder/smart-contracts/rust/index.md"
+      - "scripts/masm/**"
+      - "package.json"
+      - "package-lock.json"
+      - "sidebars.ts"
+      - "versioned_sidebars/version-0.17-sidebars.json"
+      - "docusaurus.config.ts"
+      - "scripts/prepare-local-docs.mjs"
+      - ".github/workflows/test-masm-guides.yml"
+  workflow_dispatch:
+
+permissions:
+  contents: read
+
+concurrency:
+  group: "masm-guides-${{ github.ref }}"
+  cancel-in-progress: true
+
+jobs:
+  test:
+    runs-on: ubuntu-24.04
+    timeout-minutes: 30
+    env:
+      CARGO_TARGET_DIR: ${{ github.workspace }}/.masm-target
+      CARGO_PROFILE_DEV_DEBUG: "0"
+      CARGO_INCREMENTAL: "0"
+      CARGO_BUILD_JOBS: "2"
+    steps:
+      - uses: actions/checkout@11d5960a326750d5838078e36cf38b85af677262 # v4
+        with:
+          persist-credentials: false
+      - uses: actions/setup-node@49933ea5288caeca8642d1e84afbd3f7d6820020 # v4
+        with:
+          node-version: "20.20.2"
+      - name: Install pinned Rust toolchain
+        run: rustup toolchain install 1.98.1 --profile minimal
+      - name: Install site dependencies
+        run: npm ci --no-audit --no-fund
+      - name: Check MASM types, regressions and source parity
+        run: |
+          npm run check:masm
+      - name: Check companion guide source parity
+        run: |
+          node tests/masm/transaction-lab/check-guides.mjs
+          python3 tests/patterns/spending-policy/check-docs.py
+      - uses: actions/cache@0057852bfaa89a56745cba8c7296529d2fc39830 # v4
+        with:
+          path: |
+            ~/.cargo/registry
+            ~/.cargo/git
+            .masm-target
+          key: masm-linux-rust-1.98.1-dev-debug0-v1-${{ hashFiles('tests/**/Cargo.lock') }}
+          restore-keys: masm-linux-rust-1.98.1-dev-debug0-v1-
+      - name: Run contract guide fixtures and regressions
+        run: |
+          cargo +1.98.1 run --locked --manifest-path tests/masm/first-project/Cargo.toml
+          cargo +1.98.1 run --locked --manifest-path tests/masm/account-components/Cargo.toml
+          cargo +1.98.1 run --locked --manifest-path tests/masm/note-scripts/Cargo.toml
+          cargo +1.98.1 test --locked --manifest-path tests/masm/note-scripts/Cargo.toml
+          cargo +1.98.1 test --locked --manifest-path tests/masm/regressions/Cargo.toml
+          cargo +1.98.1 test --locked --manifest-path tests/masm/transaction-lab/Cargo.toml
+          cargo +1.98.1 test --locked --manifest-path tests/patterns/spending-policy/Cargo.toml
+      - name: Build the site and check generated MASM navigation
+        env:
+          NODE_OPTIONS: "--max-old-space-size=12288"
+        run: |
+          npm run prepare:docs -- --snapshot 0.17
+          npm run build
+          npm run check:masm-navigation

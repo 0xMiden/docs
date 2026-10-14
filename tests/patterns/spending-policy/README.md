@@ -1,6 +1,6 @@
-# Contract spending policy
+# Spending-policy CI validation fixture
 
-A local, executable account-component example for the Patterns guide. A single
+A local, executable CI validation fixture for the Patterns guide. A single
 configured fungible asset has a lifetime allowance stored as a u32. Each guarded
 send decrements it and moves assets to an output note. Falcon singlesig authorizes
 the transaction; receipts do not reset the allowance. MockChain uses an explicitly
@@ -10,8 +10,8 @@ paid separately by the shipped authentication component on a nonzero-fee chain.
 Requires Rust 1.98.1. From the docs repository root:
 
 ```sh
-cargo +1.98.1 test --locked --manifest-path examples/patterns/spending-policy/Cargo.toml
-python3 examples/patterns/spending-policy/check-docs.py
+cargo +1.98.1 test --locked --manifest-path tests/patterns/spending-policy/Cargo.toml
+python3 tests/patterns/spending-policy/check-docs.py
 ```
 
 Pins: protocol, standards, testing and transaction executor 0.17.1; processor/VM

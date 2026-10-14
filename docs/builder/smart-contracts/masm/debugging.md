@@ -8,7 +8,7 @@ sidebar_position: 6
 
 Start with a small, repeatable transaction that uses the same account, note, arguments, and libraries as the failing case. Separate compilation errors from transaction execution errors; a correct assembly program can still violate an account or kernel rule.
 
-This walkthrough uses the **0.17.1** project and Rust **1.98.1** prerequisites from [MASM transaction scripts](./transaction-scripts). From `docs/examples/masm/transaction-lab`, run:
+This walkthrough uses the **0.17.1** project and Rust **1.98.1** prerequisites from [MASM transaction scripts](./transaction-scripts). From `docs/tests/masm/transaction-lab`, run:
 
 ```bash
 cargo +1.98.1 test --locked --test debugging -- --nocapture

@@ -1,6 +1,6 @@
-# MASM transaction lab
+# MASM transaction CI validation fixture
 
-Runnable examples for the MASM transaction scripts, MockChain testing, and debugging guides.
+Executable CI validation fixture for the MASM transaction scripts, MockChain testing, and debugging guides.
 Requires Rust 1.98.1. Protocol, standards, transaction, and testing crates are pinned to 0.17.1;
 the lockfile resolves their VM dependencies to 0.35.0.
 

@@ -135,7 +135,7 @@ policy's security boundary.
 
 ### Construct and execute locally
 
-The complete runnable package is `examples/patterns/spending-policy/` in the
+The complete CI validation fixture is `tests/patterns/spending-policy/` in the
 [Miden docs repository](https://github.com/0xMiden/docs). Its `tests/policy.rs`
 compiles the component with `CodeBuilder`, initializes these slots, and composes
 it with Falcon singlesig authentication. This is the account-construction
@@ -190,7 +190,7 @@ result in MockChain; subsequent transactions read that committed allowance.
 From the docs repository root, run:
 
 ```bash
-cargo +1.98.1 test --locked --manifest-path examples/patterns/spending-policy/Cargo.toml
+cargo +1.98.1 test --locked --manifest-path tests/patterns/spending-policy/Cargo.toml
 ```
 
 The 11 tests exercise these cases:

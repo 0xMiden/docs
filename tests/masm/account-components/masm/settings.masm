@@ -1,0 +1,24 @@
+use miden::protocol::active_account
+use miden::protocol::native_account
+
+const VALUE_SLOT = word("demo::settings::value")
+
+#! Inputs:  [pad(16)]
+#! Outputs: [value, pad(15)]
+@account_procedure
+pub proc get_value
+    push.VALUE_SLOT[0..2] exec.active_account::get_item
+    # => [value, 0, 0, 0, pad(16)]
+    movdn.4 dropw
+    # => [value, pad(15)]
+end
+
+#! Inputs:  [value, pad(15)]
+#! Outputs: [pad(16)]
+@account_procedure
+pub proc set_value
+    push.0.0.0 movup.3
+    # => [value, 0, 0, 0, pad(15)]
+    push.VALUE_SLOT[0..2] exec.native_account::set_item dropw
+    # => [pad(16)]
+end
