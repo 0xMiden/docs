@@ -102,7 +102,7 @@ After Cargo's build output, expect:
 area: 42
 ```
 
-Keep `Cargo.lock` in source control so future runs use the same resolved dependencies. The docs repository keeps this project and its lockfile as a CI validation fixture at `tests/masm/first-project`. You can run `cargo run --locked` there directly.
+Keep `Cargo.lock` in source control so future runs use the same resolved dependencies. The docs repository keeps this project and its lockfile as a local validation fixture at `tests/masm/first-project`. You can run `cargo run --locked` there directly.
 
 This executes MASM locally and checks its output. To submit a Miden transaction, you also need the transaction kernel, an account, and the appropriate client or transaction executor.
 

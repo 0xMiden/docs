@@ -170,7 +170,7 @@ After Cargo's build output, expect:
 settings value: 7 -> 42
 ```
 
-The program checks the two-procedure interface, initial storage, getter return value, and final storage. Keep `Cargo.lock` in source control. The docs repository keeps the project and its lockfile as a CI validation fixture at `tests/masm/account-components`.
+The program checks the two-procedure interface, initial storage, getter return value, and final storage. Keep `Cargo.lock` in source control. The docs repository keeps the project and its lockfile as a local validation fixture at `tests/masm/account-components`.
 
 ## Next steps
 
