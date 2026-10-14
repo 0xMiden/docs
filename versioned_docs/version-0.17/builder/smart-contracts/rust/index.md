@@ -32,7 +32,7 @@ The pages below describe the Rust SDK's current shape: how accounts and componen
     Core types: Felt, Word, AccountId, NoteId, and more.
   </Card>
   <Card title="Patterns" href="../patterns" eyebrow="Recipes">
-    Access control, rate limiting, spending limits, and anti-patterns.
+    Access control, rate limiting, fixed spending allowances, and anti-patterns.
   </Card>
 </CardGrid>
 

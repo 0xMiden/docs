@@ -1,140 +1,134 @@
-import React, { useEffect, useRef, useState } from "react";
-import Link from "@docusaurus/Link";
-import Layout from "@theme/Layout";
-import HeroVisual from "@site/src/components/HeroVisual";
-import styles from "./index.module.css";
+import React, {useEffect, useRef, useState} from 'react';
+import Link from '@docusaurus/Link';
+import Layout from '@theme/Layout';
+import useBaseUrl from '@docusaurus/useBaseUrl';
+import {useDocsPreferredVersion, useVersions} from '@docusaurus/plugin-content-docs/client';
+import styles from './index.module.css';
 
-const INSTALL_COMMAND = "cargo install midenup && midenup init";
-const CLIENTS = [
-  { title: "Web SDK", detail: "Accounts and transactions in TypeScript", label: "TS", to: "/builder/tools/clients/web-client/" },
-  { title: "React SDK", detail: "Hooks and components for your app", label: "React", to: "/builder/tools/clients/react-sdk/" },
-  { title: "Rust client", detail: "Native applications and backend services", label: "Rust", to: "/builder/tools/clients/rust-client/" },
+const milestones = [
+  {title: 'Set up', detail: 'Install the toolchain and check your environment.', path: '/builder/get-started/setup/installation'},
+  {title: 'Write', detail: 'Create a Rust project and define your counter account.', path: '/builder/get-started/your-first-smart-contract/create'},
+  {title: 'Test', detail: 'Validate the contract locally before submitting a transaction.', path: '/builder/get-started/your-first-smart-contract/test'},
+  {title: 'Deploy', detail: 'Deploy your account and inspect the resulting transaction.', path: '/builder/get-started/your-first-smart-contract/deploy'},
 ];
-const RESOURCES = [
-  { title: "Tutorials & recipes", detail: "Working examples for your next feature.", to: "/builder/tutorials/" },
-  { title: "Protocol reference", detail: "Accounts, notes, the VM, and the proof system.", to: "/reference/" },
-  { title: "Network & tools", detail: "Testnet endpoints, faucets, and developer tools.", to: "/builder/tools/network" },
-  { title: "Migration guides", detail: "Bring an existing project to the latest release.", to: "/builder/migration/" },
+const sdks = [
+  ['TypeScript', 'Web SDK', 'Accounts and transactions for your web app.', '/builder/tools/clients/web-client/'],
+  ['React', 'React SDK', 'Hooks and components for your application.', '/builder/tools/clients/react-sdk/'],
+  ['Rust', 'Rust client', 'Native applications and backend services.', '/builder/tools/clients/rust-client/'],
+];
+const resources = [
+  ['Tutorials & recipes', 'Build from a working example.', '/builder/tutorials/'],
+  ['Protocol reference', 'Accounts, notes, transactions and proofs.', '/reference/'],
+  ['Network & tools', 'Endpoints, faucets and developer tools.', '/builder/tools/network'],
+  ['Migration guides', 'Update an existing project.', '/builder/migration/'],
+];
+const command = 'cargo install midenup && midenup init';
+
+const transactionStages = [
+  {title: 'Execute', heading: 'Your application changes an account.', description: 'Execute a transaction locally using the account state and input notes.', path: '/reference/protocol/transaction'},
+  {title: 'Prove', heading: 'A proof attests to the state transition.', description: 'Prove that execution followed the account code and protocol rules.', path: '/reference/protocol/transaction'},
+  {title: 'Verify', heading: 'The network verifies and settles.', description: 'Submit the transaction proof and required public data to the network.', path: '/reference/protocol/transaction'},
 ];
 
-function Arrow({ diagonal = false }: { diagonal?: boolean }) {
-  return (
-    <svg width="18" height="18" viewBox="0 0 24 24" fill="none" aria-hidden="true" className={styles.arrow}>
-      <path d={diagonal ? "M6 18 18 6M6 6h12v12" : "M4 12h15m-6-6 6 6-6 6"} stroke="currentColor" strokeWidth="1.5" strokeLinecap="round" strokeLinejoin="round" />
-    </svg>
-  );
+function TransactionModel({route}: {route: (path: string) => string}) {
+  const [stage, setStage] = useState(0);
+  const assetBase = useBaseUrl('/brand/miden/');
+  const images = ['local-transactions.png', 'transaction-proof.png', 'network-verification.png'];
+  return <section className={styles.model} aria-labelledby="model-heading" data-stage={stage}>
+    <h2 id="model-heading">From your account to the network</h2>
+    <figure className={styles.modelFigure}>
+      <div className={styles.modelCanvas}>
+        {images.map((image, index) => <img key={image} src={assetBase + image} width="1600" height="400" alt="" aria-hidden="true" className={stage === index ? styles.activeIllustration : styles.illustration}/>) }
+      </div>
+      <div className={styles.modelControls} role="group" aria-label="Transaction flow stages">
+        {transactionStages.map((item, index) => <button key={item.title} aria-label={item.title} aria-pressed={stage === index} onClick={() => setStage(index)}>
+          <span className={styles.stageNumber} aria-hidden="true">0{index + 1}</span>
+          <span>{item.title}</span>
+        </button>)}
+      </div>
+      <figcaption className={styles.modelExplanation}>
+        <div className={styles.explanationStack}>
+          {transactionStages.map((item, index) => <div key={item.title} className={styles.explanation} aria-hidden={stage !== index} inert={stage !== index}>
+            <h3>{item.heading}</h3><p>{item.description}</p>
+            <Link to={route(item.path)}>Read about transactions <span aria-hidden="true">↗</span></Link>
+          </div>)}
+        </div>
+        <p className={styles.caption}>Illustrated transaction flow. No live network activity.</p>
+      </figcaption>
+    </figure>
+  </section>;
 }
 
-function InstallCommand() {
-  const [copyState, setCopyState] = useState<"idle" | "copied" | "error">("idle");
-  const resetTimer = useRef<ReturnType<typeof setTimeout> | null>(null);
-
-  useEffect(() => () => {
-    if (resetTimer.current) clearTimeout(resetTimer.current);
-  }, []);
-
-  async function copyCommand() {
-    if (resetTimer.current) clearTimeout(resetTimer.current);
-    try {
-      await navigator.clipboard.writeText(INSTALL_COMMAND);
-      setCopyState("copied");
-    } catch {
-      setCopyState("error");
-    }
-    resetTimer.current = setTimeout(() => setCopyState("idle"), 3500);
+function Workbench() {
+  const availableVersions = useVersions(undefined);
+  const {preferredVersion, savePreferredVersionName} = useDocsPreferredVersion();
+  const stableVersion = availableVersions.find(version => version.isLast)!;
+  const selectedVersion = preferredVersion?.name === 'current' ? preferredVersion : stableVersion;
+  const current = selectedVersion.name === 'current';
+  const [mode, setMode] = useState<'manual' | 'agent'>('manual');
+  const [step, setStep] = useState(0);
+  const [status, setStatus] = useState('');
+  const timer = useRef<ReturnType<typeof setTimeout>>();
+  useEffect(() => () => clearTimeout(timer.current), []);
+  const route = (path: string) => `${selectedVersion.path.replace(/\/$/, '')}${path}`;
+  const agentPrompt = `Use the Miden ${current ? 'current (unstable)' : stableVersion.label} documentation at https://docs.miden.xyz${current ? '/next' : ''}/builder/agentic/. Help me follow the first smart contract tutorial. Check prerequisites and version compatibility, explain each change, and validate locally before deployment. Ask before submitting a network transaction. Do not invent tools or test results.`;
+  async function copy(text: string) {
+    clearTimeout(timer.current);
+    try { await navigator.clipboard.writeText(text); setStatus('Copied to clipboard'); }
+    catch { setStatus('Could not copy. Select the text and copy it manually.'); }
+    timer.current = setTimeout(() => setStatus(''), 4000);
   }
+  function selectMode(nextMode: 'manual' | 'agent') { setMode(nextMode); setStatus(''); }
+  return <main className={styles.page}>
+      <section className={styles.hero} aria-labelledby="hero-title">
+        <div className={styles.intro}>
+          <p className={styles.label}>Miden documentation</p>
+          <h1 id="hero-title">Build your first <br/>Miden application.</h1>
+          <p className={styles.lead}>Start with a programmable account. Write your contract in Rust, prove transactions locally, and connect your application to the network.</p>
+          <div className={styles.actions}>
+            <Link className={styles.primary} to={route('/builder/get-started/')}>Start manually</Link>
+            <button className={styles.secondary} onClick={() => {selectMode('agent'); document.getElementById('agent-tab')?.focus();}}>Use an agent</button>
+          </div>
+        </div>
 
-  return (
-    <div className={styles.install}>
-      <div className={styles.installLabel}>
-        <Link to="/builder/tools/midenup">Install midenup</Link>
-        <span>Requires Rust + Cargo</span>
-      </div>
-      <div className={styles.commandRow}>
-        <span className={styles.prompt} aria-hidden="true">$</span>
-        <code>{INSTALL_COMMAND}</code>
-        <button type="button" onClick={copyCommand} className={styles.copyButton} aria-label="Copy midenup installation command">
-          <svg width="16" height="16" viewBox="0 0 24 24" fill="none" aria-hidden="true">
-            {copyState === "copied" ? <path d="m5 12 4 4L19 6" /> : <><rect x="8" y="8" width="12" height="12" rx="2" /><path d="M16 8V5a1 1 0 0 0-1-1H5a1 1 0 0 0-1 1v10a1 1 0 0 0 1 1h3" /></>}
-          </svg>
-        </button>
-      </div>
-      <span className={styles.copyStatus} role="status">{copyState === "copied" ? "Copied to clipboard" : copyState === "error" ? "Couldn’t copy. Select the command to copy it manually." : ""}</span>
-    </div>
-  );
+        <div className={styles.workbench}>
+          <div className={styles.panelHeader}><strong>Your starting point</strong><label>Docs version<select aria-label="Setup documentation version" value={current ? 'current' : 'stable'} onChange={e => {savePreferredVersionName(e.target.value === 'current' ? 'current' : stableVersion.name); setStatus('');}}><option value="stable">{stableVersion.label} stable</option><option value="current">Current · unstable</option></select></label></div>
+          <div className={styles.tabs} role="tablist" aria-label="Setup method">
+            {(['manual', 'agent'] as const).map(item => <button key={item} id={`${item}-tab`} role="tab" aria-selected={mode === item} aria-controls={`setup-panel-${item}`} tabIndex={mode === item ? 0 : -1} onClick={() => selectMode(item)} onKeyDown={e => {if (['ArrowLeft', 'ArrowRight', 'Home', 'End'].includes(e.key)) {e.preventDefault(); const next = e.key === 'Home' ? 'manual' : e.key === 'End' ? 'agent' : mode === 'manual' ? 'agent' : 'manual'; selectMode(next); document.getElementById(`${next}-tab`)?.focus();}}}>{item === 'manual' ? 'Manual setup' : 'Agent-assisted'}</button>)}
+          </div>
+          <div className={styles.panelBody}>
+            <div className={styles.panelStack}>
+              <div id="setup-panel-manual" role="tabpanel" aria-labelledby="manual-tab" aria-hidden={mode !== 'manual'} inert={mode !== 'manual'} className={styles.panelSlot}>
+                <h2>Install the Miden toolchain</h2>
+                <p>Requires Rust and Cargo. Follow the versioned guide to select a compatible toolchain.</p>
+                <div className={styles.code}><code>{command}</code><button onClick={() => copy(command)} aria-label="Copy installation command">Copy</button></div>
+                <Link className={styles.guide} to={route('/builder/get-started/setup/installation')}>Read the installation guide <span aria-hidden="true">↗</span></Link>
+                <p className={styles.note}>Check the manager with <code>miden --version</code>, then finish toolchain setup in the guide.</p>
+                <div className={styles.nextStep}><Link className={styles.guide} to={route('/builder/get-started/your-first-smart-contract/create')}>Next: create your first contract <span aria-hidden="true">↗</span></Link></div>
+              </div>
+              <div id="setup-panel-agent" role="tabpanel" aria-labelledby="agent-tab" aria-hidden={mode !== 'agent'} inert={mode !== 'agent'} className={styles.panelSlot}>
+                <h2>Bring the docs to your agent</h2>
+                <p>Copy this starting prompt into your coding assistant. Review generated code and run the tutorial’s checks locally.</p>
+                <div className={styles.prompt}>{agentPrompt}</div>
+                <button className={styles.copyPrompt} onClick={() => copy(agentPrompt)}>Copy starting prompt</button>
+                <p className={styles.note}><Link className={styles.guide} to={route('/builder/agentic/')}>Read the agent-assisted guide <span aria-hidden="true">↗</span></Link>. This prompt does not install or run an agent.</p>
+              </div>
+            </div>
+            <div className={styles.status}><span className={styles.statusSizer} aria-hidden="true">Could not copy. Select the text and copy it manually.</span><span className={styles.statusMessage} role="status">{status}</span></div>
+          </div>
+        </div>
+      </section>
+      <TransactionModel route={route}/>
+      <section className={styles.walkthrough} aria-labelledby="contract-title">
+        <div className={styles.sectionHeading}><div><p className={styles.label}>One walkthrough</p><h2 id="contract-title">Your first smart contract</h2></div><Link to={route('/builder/get-started/your-first-smart-contract/')}>Open the full tutorial <span aria-hidden="true">↗</span></Link></div>
+        <div className={styles.milestones} aria-label="Tutorial milestones">{milestones.map((item, i) => <button key={item.title} aria-pressed={step === i} onClick={() => setStep(i)}><span>{i + 1}</span>{item.title}</button>)}</div>
+        <div className={styles.stepDetail} aria-live="polite"><p><strong>{milestones[step].title}.</strong> {milestones[step].detail}</p><Link to={route(milestones[step].path)}>Read the {milestones[step].title.toLowerCase()} guide <span aria-hidden="true">↗</span></Link></div>
+      </section>
+      <section className={styles.sdkSection} aria-labelledby="sdk-title"><h2 id="sdk-title">Connect your application</h2><div className={styles.sdkGrid}>{sdks.map(([language, title, detail, path]) => <Link key={title} className={styles.sdk} to={route(path)}><span className={styles.language}>{language}</span><h3>{title}<span aria-hidden="true">↗</span></h3><p>{detail}</p></Link>)}</div></section>
+      <section className={styles.resources} aria-label="More documentation">{resources.map(([title, detail, path]) => <Link key={title} to={route(path)}><h3>{title}<span aria-hidden="true">↗</span></h3><p>{detail}</p></Link>)}</section>
+    </main>;
 }
 
 export default function Home() {
-  return (
-    <Layout title="Miden Docs" description="Build on Miden with smart contract tutorials, client SDKs, and protocol documentation. Your starting point for private applications.">
-      <main className={styles.page}>
-        <section className={styles.hero} aria-labelledby="hero-title">
-          <div className={styles.heroCopy}>
-            <p className={styles.eyebrow}><span className={styles.eyebrowMark} aria-hidden="true" />Miden documentation</p>
-            <h1 id="hero-title">Build with privacy.<br /><span>Start with Miden.</span></h1>
-            <p className={styles.heroDescription}>Programmable accounts. Private notes. Client-side proofs. Everything you need to build an application on Miden.</p>
-            <div className={styles.heroActions}>
-              <Link className={styles.primaryButton} to="/builder/get-started/">Start building <Arrow /></Link>
-              <Link className={styles.textLink} to="/builder/smart-contracts/">Explore the concepts <Arrow /></Link>
-            </div>
-          </div>
-          <HeroVisual />
-        </section>
-
-        <section className={styles.buildSection} aria-label="Start building on Miden">
-          <div className={styles.firstBuild}>
-            <p className={styles.eyebrow}>Start here</p>
-            <Link to="/builder/get-started/your-first-smart-contract/" className={styles.featureTitle}>
-              <h2>Your first smart contract</h2><Arrow />
-            </Link>
-            <p>Write a counter in Rust, test it locally, then deploy it to the network. One walkthrough, from setup to your first transaction.</p>
-            <ol className={styles.steps} aria-label="Smart contract walkthrough">
-              <li><Link to="/builder/get-started/your-first-smart-contract/create"><span>01</span>Write <Arrow /></Link></li>
-              <li><Link to="/builder/get-started/your-first-smart-contract/test"><span>02</span>Test <Arrow /></Link></li>
-              <li><Link to="/builder/get-started/your-first-smart-contract/deploy"><span>03</span>Deploy <Arrow /></Link></li>
-            </ol>
-            <InstallCommand />
-          </div>
-
-          <div className={styles.clients}>
-            <p className={styles.eyebrow}>Client SDKs</p>
-            <h2>Connect your application</h2>
-            <p>Work with accounts, assets, and notes in your stack.</p>
-            <div className={styles.clientLinks}>
-              {CLIENTS.map(client => (
-                <Link className={styles.clientLink} to={client.to} key={client.title}>
-                  <span className={styles.clientBadge} aria-hidden="true">{client.label}</span>
-                  <span><strong>{client.title}</strong><span className={styles.linkDescription}>{client.detail}</span></span>
-                  <Arrow />
-                </Link>
-              ))}
-            </div>
-          </div>
-        </section>
-
-        <section className={styles.resources} aria-labelledby="resources-title">
-          <div className={styles.sectionHeading}>
-            <h2 id="resources-title">Keep building.</h2>
-            <p>Find an example, look something up, or take the next step.</p>
-          </div>
-          <div className={styles.resourceLinks}>
-            {RESOURCES.map(resource => (
-              <Link className={styles.resourceLink} to={resource.to} key={resource.title}>
-                <span><h3>{resource.title}</h3><span className={styles.linkDescription}>{resource.detail}</span></span>
-                <Arrow />
-              </Link>
-            ))}
-          </div>
-        </section>
-
-        <aside className={styles.community} aria-label="Community support">
-          <div><h2>Building something? We’re here to help.</h2><p>Ask a question, share what you’re working on, or help improve the docs.</p></div>
-          <div className={styles.communityLinks}>
-            <Link className={styles.textLink} href="https://github.com/0xMiden/">Explore GitHub <Arrow diagonal /></Link>
-            <Link className={styles.textLink} href="https://t.me/BuildOnMiden">Join the community <Arrow diagonal /></Link>
-          </div>
-        </aside>
-      </main>
-    </Layout>
-  );
+  return <Layout wrapperClassName={styles.frame} title="Miden Docs" description="Build on Miden with versioned setup guides, smart contract tutorials, SDKs and protocol reference."><Workbench /></Layout>;
 }

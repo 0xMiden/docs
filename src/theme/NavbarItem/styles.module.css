@@ -1,0 +1,5 @@
+.start.start { background: var(--miden-action-orange); color: #fff !important; font-family: Seasonmix, Arial, sans-serif; font-size:16px; font-weight:400; border-radius:10px; padding:12px 16px; }
+.start.start:hover, .start.start:focus-visible { background:#b23d00; color:#fff !important; }
+/* The desktop CTA is hidden when the hamburger appears, but its existing
+   mobile-menu entry must remain usable. */
+:global(.navbar-sidebar) .start { display: inline-flex; }

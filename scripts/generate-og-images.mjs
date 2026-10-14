@@ -12,6 +12,14 @@ const height = 630;
 
 const images = [
   {
+    id: "agentic",
+    eyebrow: "Build",
+    title: "Agentic",
+    description: "Build with matching agent context and verify each development stage.",
+    accent: "#ff5500",
+    panel: "AGENTIC",
+  },
+  {
     id: "miden-docs",
     eyebrow: "Miden Docs",
     title: "Miden Docs",

@@ -16,7 +16,9 @@
     "generate:og": "node scripts/generate-og-images.mjs",
     "write-translations": "docusaurus write-translations",
     "write-heading-ids": "docusaurus write-heading-ids",
-    "typecheck": "tsc"
+    "typecheck": "tsc",
+    "prepare:docs": "node scripts/prepare-local-docs.mjs",
+    "test:prepare-docs": "node --test scripts/prepare-local-docs.test.mjs"
   },
   "dependencies": {
     "@cmfcmf/docusaurus-search-local": "^2.0.0",

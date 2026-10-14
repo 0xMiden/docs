@@ -1,0 +1,20 @@
+[package]
+name = "contract-spending-policy"
+version = "0.1.0"
+edition = "2024"
+rust-version = "1.98.1"
+publish = false
+
+[workspace]
+
+[dev-dependencies]
+anyhow = "=1.0.102"
+miden-protocol = { version = "=0.17.1", features = ["testing"] }
+miden-standards = { version = "=0.17.1", features = ["testing"] }
+miden-testing = "=0.17.1"
+miden-tx = "=0.17.1"
+miden-processor = "=0.35.0"
+tokio = { version = "=1.53.1", features = ["macros", "rt"] }
+
+[profile.dev]
+debug = 0
