@@ -8,8 +8,10 @@ To use the Miden client library in a Rust project, include it as a dependency.
 In your project's `Cargo.toml`, add:
 
 ```toml
-miden-client = { version = "0.11" }
+miden-client = { version = "0.15.5", features = ["tonic"] }
 ```
+
+`ClientBuilder::for_testnet()`, `for_devnet()`, and `for_localhost()` are gated on the `tonic` feature. Default features (`std` only) omit those constructors.
 
 ## Client instantiation
 
