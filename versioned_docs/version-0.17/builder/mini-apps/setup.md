@@ -1,55 +1,110 @@
 ---
 sidebar_position: 2
-title: "Prerequisites and setup"
-description: "Start from the existing templates and align packages, artifacts and wallet/network context."
+title: "Set up your project"
+sidebar_label: "Set up your project"
+description: "Clone the agentic workspace, install compatible dependencies and run the right frontend entry."
 ---
 
-# Prerequisites and setup
+import MiniAppIcon from '@site/src/components/MiniAppIcon';
 
-Use a browser frontend and a compatible Miden deployment. Keep the wallet, app SDK, RPC, prover and private-note transport on a compatible release line. A reachable endpoint alone does not prove that an account, artifact or route works on that deployment.
+import MiniAppCard from '@site/src/components/MiniAppCard';
 
-Prefer the [agentic template](https://github.com/0xMiden/agentic-template) for a workspace with contract and frontend submodules and matching agent guidance. Clone first, preserve its pins and lockfiles, then diagnose the environment:
+# Set up your project
+
+Start with [agentic-template](https://github.com/0xMiden/agentic-template) for a workspace containing Rust contracts, a React frontend and agent instructions. Keep its submodule pins and lockfiles so the tools and examples agree.
+
+## Prepare your tools
+
+You need Git, Bash, curl, Node.js/npm and Yarn Classic. The pinned agentic frontend uses Node 20.19.0+ within the 20.x line; the current standalone wallet-managed starter documents Node 24. Follow the requirements of the checkout you choose. Custom contracts also need the matching Rust/midenup toolchain; the real local-node stage uses Docker with Compose.
+
+Use the [Agentic setup guide](../agentic/setup.md) for the full prerequisite list and installer behavior.
+
+## Create the workspace
+
+<Steps>
+
+<div>
+
+### Clone with submodules
 
 ```bash
 git clone --recurse-submodules https://github.com/0xMiden/agentic-template.git my-mini-app
 cd my-mini-app
-# Read AGENTS.md and docs/agent-first-v017.md before running build stages.
+```
+
+For the remaining root commands, stay in `my-mini-app`. The clone records specific `project-template` and `frontend-template` revisions.
+
+</div>
+<div>
+
+### Read the project instructions
+
+Read the root `AGENTS.md` or `CLAUDE.md`, `docs/agent-first-v017.md` and the frontend's README. Ask your agent to name the instructions and package versions it will use.
+
+```bash
+git submodule status --recursive
+```
+
+Inspect `setup.sh` before running it. It can install missing Rust, midenup and Yarn, install dependencies, sync SDK context and pre-build contracts. Node and Python must be prepared separately.
+
+</div>
+<div>
+
+### Install and check the workspace
+
+```bash
+bash setup.sh
+# After setup.sh reports completion:
 bash scripts/journey.sh doctor
 ```
 
-Read the root and submodule instructions before installation. `setup.sh` can install global prerequisites; inspect its effects and use the authorized environment. For custom contracts, follow the template's contract, MockChain and real local-node gates before frontend contract integration. Starting services and submitting testnet transactions are separate execution stages.
+Continue with [Check your setup](../agentic/templates.md) to verify installed package guidance and source pins. Setup does not start a wallet session or submit a transaction.
 
-For a frontend-only, wallet-managed operation, the [frontend template](https://github.com/0xMiden/frontend-template) supplies React, TypeScript, Vite, the Miden Vite plugin and a separate mini-app entry. Read its current README, package manifest and lockfile together. Install a Node/Yarn version supported by that checkout; do not replace individual SDK pins without reviewing the corresponding migration.
+</div>
+<div>
+
+### Run the frontend
 
 ```bash
-git clone https://github.com/0xMiden/frontend-template.git my-mini-app
-cd my-mini-app
-yarn install
-yarn dev
+(cd frontend-template && yarn dev)
 ```
 
-The development server is the starting point for the frontend. The counter requires a compatible deployed counter address: set `VITE_MIDEN_COUNTER_ADDRESS` as the template documents, then restart Vite. Its default configuration is Testnet. A missing or old address is not repaired by connecting Bread, because this demo's increment uses the app-owned client.
+Open the local URL printed by Vite. The default counter is an **app-owned client** example. Connecting its wallet button does not make counter transactions wallet-managed. Choose the entry below before implementing your app's request flow.
 
-## Review the wallet-managed starter
+</div>
+</Steps>
 
-[Frontend-template PR33](https://github.com/0xMiden/frontend-template/pull/33) merged and adds a separate `/mini-app.html` entry with reusable code in `src/mini-app/`. Follow the [maintained starter recipe](https://github.com/0xMiden/frontend-template/blob/main/docs/mini-app-starter.md) for setup, package pins and checks. A recursive agentic clone preserves its checked-in frontend revision, which may predate this entry; inspect it before adopting the starter. Do not silently advance all submodules.
+## Use the wallet-managed entry
 
-This entry asks Bread to build, sign and submit requests; it needs no counter deployment or app-owned client/database. Controlled-provider browser tests exercise the starter and released adapter, while actual Bread extension/native approval and chain settlement remain separate acceptance checks.
+The [frontend mini-app starter](https://github.com/0xMiden/frontend-template/blob/main/docs/mini-app-starter.md) provides `/mini-app.html` and reusable `src/mini-app/` code. It uses Bread for requests and keeps a journal for interrupted sends. It needs no counter address, contract deployment or app-owned client database.
 
-## Keep contract artifacts compatible
+The agentic workspace currently pins an earlier frontend revision. Check whether that revision contains `mini-app.html`; adopt the starter deliberately with compatible dependencies, rather than advancing every submodule. For a frontend-only project, use the standalone path:
 
-For a custom account or note, use the [project template](https://github.com/0xMiden/project-template) and its matching toolchain. The frontend counter expects its compiled account and note packages under `public/packages/`. Rebuild and copy the artifacts described by the template after changing contracts or upgrading the protocol; old account IDs, script roots, request bytes and package formats do not carry over automatically.
+```bash
+git clone https://github.com/0xMiden/frontend-template.git my-wallet-app
+cd my-wallet-app
+# With Node 24 and Yarn Classic, as the starter documents:
+corepack yarn install --frozen-lockfile
+corepack yarn dev
+```
 
-Use the [Rust contract/compiler migration guidance](../migration/10-rust-sdk-compiler.md) for the released compiler and SDK compatibility. Keeping contract sources in the contract project makes their build/release boundary visible instead of hiding it in the frontend.
+Open `http://localhost:5173/mini-app.html`. Without an injected provider, expect connection guidance. To test a wallet session, open the same build in a supported Bread environment.
 
-## Choose wallet-managed or app-owned setup
+<Callout variant="tip" title="Localhost belongs to the device opening it">
+For a physical phone, serve the development build on a reachable HTTPS origin with the required headers. Opening your laptop's localhost address on the phone will not reach that laptop, and an ordinary mobile browser does not gain Bread's provider.
+</Callout>
 
-For a wallet-managed send, follow [Bread integration](./bread-wallet-integration.md). Initialize adapters on the client, explicitly choose the supported network and request only needed permission categories. The checked recipe uses adapter 0.17.0 with SDK/React SDK 0.17.3; that check is separate from the template checkout's own package pins.
+## When you need custom contracts
 
-For an app-owned client, keep private state, notes, synchronization and submission in that client workflow. For a wallet as signer, use the existing [external signer guide](../tools/clients/react-sdk/signers.md); a signature does not reconstruct arbitrary private account state.
+Follow the [Agentic build journey](../agentic/first-app.md): compile contracts, test their state transitions, validate on a disposable local node, then connect the frontend. Rebuild compatible artifacts before copying them into `public/packages/`. Use the [migration guide](../migration/index.md) when changing release lines.
 
-## Use a deliberate development environment
+Use disposable development state. Preserve keys and private state before any existing-wallet upgrade; deleting a client store is not a general recovery procedure.
 
-A disposable development profile can avoid reusing incompatible client stores, but never treat deleting storage as a harmless upgrade instruction for an existing wallet. The 0.16-to-0.17 migration can remove the default browser keystore along with its database; account/note exports from 0.16 do not import into 0.17. Read [Client Changes](../migration/07-client-changes.md) and preserve supported keys/private state before upgrading.
-
-Keep Testnet/Devnet examples separate from consumer Mainnet admission. A developer endpoint override, installed wallet, catalog listing or successful connection grants no Mainnet invitation or route access. Use the correct account, faucet and supported funding flow on the intended deployment.
+<CardGrid cols={2}>
+  <MiniAppCard title="Choose the execution model" page="building" eyebrow="Next · Application design" icon={<MiniAppIcon name="apps" />}>
+    Decide what the app owns and what Bread should execute.
+  </MiniAppCard>
+  <MiniAppCard title="Connect to Bread" page="bread-wallet-integration" eyebrow="Next · Wallet-managed apps" icon={<MiniAppIcon name="wallet" />}>
+    Configure the provider and request one supported operation.
+  </MiniAppCard>
+</CardGrid>

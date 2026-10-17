@@ -1,18 +1,23 @@
 ---
-title: "Connect a mini-app to Bread"
-description: "Connect a web app to Bread, request wallet-managed transactions, and handle permissions, account changes, and completion."
 sidebar_position: 4
+title: "Connect to Bread"
+sidebar_label: "Connect to Bread"
+description: "Configure the wallet provider, connect an account and handle requests, recovery and native presentation."
 ---
 
-# Connect a mini-app to Bread
+import MiniAppIcon from '@site/src/components/MiniAppIcon';
 
-Bread exposes a wallet provider to supported web pages. The Miden wallet adapter connects your app to that provider and gives you typed connection, transaction, and private-data requests. Your app can use the same adapter inside Bread's embedded app browser when the provider is injected there.
+import MiniAppCard from '@site/src/components/MiniAppCard';
 
-The adapter holds no private keys, client database, or chain state. Requests go to the wallet, which can ask the user to unlock, approve, or decline. A mini-app remains a web application; provider injection does not establish a separate mini-app SDK or an app-listing API.
+# Connect to Bread
+
+Use the Miden wallet adapter to connect your frontend to Bread's injected provider. The adapter holds no private keys or chain database. Bread handles supported requests and asks the user to unlock, approve or decline.
+
+For a working starting point, use the [wallet-managed mini-app entry](https://github.com/0xMiden/frontend-template/blob/main/docs/mini-app-starter.md). It includes provider detection, explicit connection and a persisted send journal. The recipe below explains the integration boundaries.
 
 ## Install compatible packages
 
-For a React app, use the aggregate adapter package and its peers:
+This React example uses adapter `0.17.0` with SDK/React SDK `0.17.3`:
 
 ```bash
 npm install @miden-sdk/miden-wallet-adapter@0.17.0 \
@@ -20,15 +25,13 @@ npm install @miden-sdk/miden-wallet-adapter@0.17.0 \
   react@19.1.1 react-dom@19.1.1
 ```
 
-The adapter line is 0.17.0; the reviewed current Bread source pins Web SDK and React SDK 0.17.3. These are the package versions used for this example check. A deployed wallet may run a different release; verify compatibility before exchanging serialized custom requests. See [Migration](../migration/index.md).
-
-For non-React integrations, the base and Miden packages provide types and `MidenWalletAdapter`. The React package also imports the React SDK at module initialization, so install that peer even when your app only uses `useWallet`.
+Keep the installed peers compatible. The frontend starter has its own checked-in package pins; preserve those when using that checkout. A wallet can run another release, so verify serialized-request compatibility before using custom operations. See [Migration](../migration/index.md).
 
 ## Configure the provider
 
-Create adapters once in a browser-only module. An adapter constructed without a DOM enters `Unsupported`; constructing a new adapter on every render can disconnect the previous instance.
+Construct the adapter once in a browser-only module. Creating it during server rendering reports `Unsupported`; recreating it on every render can disconnect the previous instance.
 
-```tsx title="WalletRoot.tsx — client-only module"
+```tsx title="WalletRoot.tsx"
 import type { ReactNode } from "react";
 import {
   AllowedPrivateData,
@@ -60,36 +63,45 @@ export function WalletRoot({ children }: { children: ReactNode }) {
 }
 ```
 
-This is a Testnet integration example. The pinned adapter exposes Testnet, Devnet and Localnet; do not invent a Mainnet enum or assume a Testnet connection grants Mainnet admission. The consumer admission policy and the temporary developer Testnet path are defined in [wallet issue 876](https://github.com/0xMiden/wallet/issues/876); a Pioneer listing still requires separate platform, route and owner readiness checks.
+This example selects Testnet and requests no private-data categories. Set the policy on `WalletProvider`; its props are forwarded during connection. The pinned adapter exposes Testnet, Devnet and Localnet. Mainnet admission is a separate deployment policy, not an enum or permission to invent.
 
-Set the network and private-data policy on `WalletProvider`. The React provider forwards its own props during connection; setting different values only on a button or modal does not change that policy. This example requests no private-data categories. Enable only categories your app actually needs.
+## Connect an account
 
-| Setting | Meaning |
-| --- | --- |
-| `AllowedPrivateData.Assets` | Request permission to read assets through the wallet. |
-| `AllowedPrivateData.Notes` | Request permission to read notes through the wallet. |
-| `AllowedPrivateData.Storage` | A declared category; check the deployed provider's method support before relying on a storage-read API. |
-| `PrivateDataPermission.UponRequest` | The wallet asks for private-data access as requests occur. |
-| `PrivateDataPermission.Auto` | Allows access within granted categories without a confirmation for every read. It is not unlimited access to all wallet data. |
+<Steps>
 
-Connection does not grant access to private keys. Private-note bodies and balances returned to the page become data your application can observe; request only what you need.
+<div>
 
-## Detection and connection
+### Wait for provider detection
 
-The adapter detects the injected provider and reports readiness:
+`WalletReadyState.Installed` means the injected provider is detected. `NotDetected` needs connection/install guidance, and `Unsupported` means no browser DOM was available at construction. The reviewed Bread adapter does not report the generic `Loadable` state.
 
-| `WalletReadyState` | Application behavior |
-| --- | --- |
-| `Unsupported` | No browser DOM was available when this adapter was constructed. Initialize in the client. |
-| `NotDetected` | No injected provider detected yet. Show connection or installation guidance. |
-| `Installed` | Provider detected. A user connection request can proceed. |
-| `Loadable` | Supported by the generic adapter abstraction; the reviewed Bread adapter does not report this state. |
+</div>
+<div>
 
-`WalletMultiButton` supplies wallet selection and connection UI. If you build your own controls, selection must happen before connection. Connection or unlocking may prompt; handle refusal without treating it as a successful session.
+### Let the user select and connect
 
-Use `useWallet()` to read `connected`, `address`, `connecting`, and the selected `wallet`. Treat that state as reactive. Clear account-specific balances, prepared transactions, and private-data caches when the connected address changes or the wallet disconnects. A reconnection can refresh a session after a page has been parked; do not treat a previously connected address as permanent authorization.
+`WalletMultiButton` provides wallet selection and connection controls. If you build your own, select the wallet before requesting connection. Handle refusal without displaying a successful session.
 
-## Ask the wallet to send and observe the result
+</div>
+<div>
+
+### Keep account state reactive
+
+Use `useWallet()` for `connected`, `address`, `connecting` and the selected `wallet`. After account change or disconnect, clear account-specific read caches and prepared work. Preserve accepted requests with their original sender/network for reconciliation.
+
+</div>
+</Steps>
+
+## Request an operation and recover its result
+
+For a public send, `requestSend` returns a **request ID**. `waitForTransaction` uses that ID to obtain the wallet result, whose **`txHash` is separate**. Track chain inclusion and recipient-note consumption when the app needs settlement.
+
+<Callout variant="info" title="Persist before dispatch, reconcile before retry">
+A timeout or lost response can occur after submission. Save the original account, network, request parameters and accepted ID. Restore that journal after reload and check the existing operation before another send. The maintained starter implements this recovery; the component below only keeps state while mounted.
+</Callout>
+
+<details>
+<summary>React example: send and check an accepted request</summary>
 
 ```tsx title="SendWithWallet.tsx"
 import { useState } from "react";
@@ -161,21 +173,29 @@ export function SendWithWallet({
 }
 ```
 
-Supply validated, matching-network account and faucet IDs. Adapter `amount` fields are `number` values in token base units; do not pass a decimal display amount, an unsafe integer, or the SDK's `bigint` value without an exact range check. The issuing faucet's decimals determine display conversion.
+Supply validated, matching-network account/faucet IDs. Amounts are positive safe-integer `number` values in token base units. The issuing faucet's decimals determine display conversion. A recipient must discover and consume the output note before its vault receives the asset.
 
-The returned request ID identifies wallet-accepted work. `waitForTransaction` obtains the wallet's transaction output or failure; its `txHash` is a separate result field. Confirm chain inclusion and resulting note state when your application needs settlement, rather than treating request acceptance as finality. A send creates an output note; the recipient must discover and consume it before the resulting funds are in its vault.
+The example conservatively blocks another send after any uncertain error. Production code needs persistent journaling and outcome-aware recovery, including errors where no request ID was returned. Never delete an unresolved operation merely to enable retry.
 
-A timeout or lost connection does not prove that an operation was never submitted. The example blocks another send after an accepted or uncertain request and lets you check the same accepted ID. Its state is only kept while this component remains mounted: before production use, persist the request ID with its sender, network and request parameters, and restore that journal on reload. If no ID was returned, inspect wallet activity through the supported flow before authorizing another request; do not automatically retry. Clear or replace a journal entry only after reconciling its outcome. Bread's spending policy, fee balance, or Guardian requirements can also reject or delay execution.
+</details>
 
-## Choose who executes
+## Private reads and optional capabilities
 
-| Integration | Use it when |
+| Capability | Application policy |
 | --- | --- |
-| `requestSend` / `requestConsume` | The wallet should build, sign, and submit a standard operation. |
-| `requestTransaction` with a custom envelope | Your application builds a `TransactionRequest` and asks the wallet to execute it. |
-| `MidenFiSignerProvider` with `MidenProvider` | Your application owns the SDK client workflow while the connected wallet supplies signing. |
+| `AllowedPrivateData.Assets` | Request asset-read access only when the task needs it. |
+| `AllowedPrivateData.Notes` | Explain why note data is needed and how it is handled. |
+| `AllowedPrivateData.Storage` | A declared category; check deployed method support before relying on storage reads. |
+| `PrivateDataPermission.UponRequest` | The wallet asks as private reads occur. |
+| `PrivateDataPermission.Auto` | Reuses granted categories without a prompt for every read; it does not grant all private data. |
 
-For custom operations, `requestTransaction` expects a `Transaction` envelope rather than a bare `CustomTransaction` payload:
+`requestAssets`, `requestPrivateNotes` and `requestConsumableNotes` read from the wallet's local store under its policy. They do not synchronize an app-owned client. Returned balances or note bodies become data the page can observe; reading is separate from consent to publish.
+
+Probe optional methods on the deployed provider. The reviewed Bread provider does not implement the declared `createAccount` method. Wallet connection also supplies no Quote API or mini-app registration endpoint.
+
+## Custom execution and signing
+
+Use a `Transaction` envelope when asking Bread to execute a compatible custom `TransactionRequest`:
 
 ```typescript
 import { Transaction } from "@miden-sdk/miden-wallet-adapter";
@@ -190,48 +210,39 @@ export function customEnvelope(
 }
 ```
 
-The constructor serializes the request; the wallet deserializes it with its own SDK. Use compatible released encodings on both sides. Do not reuse stored request bytes across an incompatible upgrade.
+The constructor serializes the request and the wallet deserializes it with its own SDK. Keep their encodings compatible and rebuild after an incompatible upgrade. Do not send a bare payload or reuse old serialized bytes.
 
-For the wallet-as-signer provider setup, see [External signers](../tools/clients/react-sdk/signers.md). Signing an account ID does not reconstruct that account's private state. Your application's client still needs the state and notes required by its chosen workflow.
-
-## Private reads and capability checks
-
-`requestAssets`, `requestPrivateNotes`, and `requestConsumableNotes` read from the wallet's local store within its permission policy. They do not replace synchronization of an application-owned client. Permission refusal and disconnected-state errors remain normal outcomes.
-
-Use the methods exposed by the deployed provider, and probe optional capabilities before calling them. A TypeScript interface alone is not implementation evidence: the reviewed Bread provider does not implement the declared `createAccount` method. Do not build onboarding around that method or assume an undocumented Quote API exists.
-
-When constructing signatures directly, honor the supported `signBytes` kinds (`word` or `signingInputs`) and their exact encodings. Avoid opaque signatures when a wallet-managed transaction request can express the operation and display its effects.
-
-## Embedded browser checks
-
-Open the same web application inside Bread's app browser and wait for adapter readiness before requesting connection. An ordinary mobile browser without injection is a separate environment; opening a URL there does not make it connected to Bread.
-
-Verify the following on every platform you claim to support:
-
-- Provider detection with and without injection, and the connection-refusal path.
-- Correct network and granted private-data categories.
-- Request approval, request rejection, result retrieval, and reconciliation after interruption.
-- Account changes, locking, disconnection, and returning to a parked app.
-- A recipient note becoming consumable separately from the sender's request result.
-
-Use the public adapter conformance suite against a real provider when checking a wallet's supported surface. Mock-provider tests can validate application state handling but do not prove extension, mobile, or desktop provider compatibility.
+For a wallet that supplies signatures to an app-managed client, follow [External signers](../tools/clients/react-sdk/signers.md). The app still needs the state and notes required by its workflow. Direct `signBytes` use must follow the supported `word` or `signingInputs` encoding; a signature does not reconstruct private account state.
 
 ## Optional native fullscreen
 
-Bread 1.17.3 introduced opt-in fullscreen for the native mobile dApp browser. Put the policy in the entry HTML's initial head, rather than adding it after your application bundle loads:
+Bread 1.17.3 introduced fullscreen for supported native mobile WebViews. It changes presentation and keeps Back to Bread visible. Extension injection and ordinary browsers do not provide the native presentation API, so retain a usable responsive layout.
+
+<Steps>
+
+<div>
+
+### Declare presentation in the initial HTML head
 
 ```html
 <meta name="bread-display" content="fullscreen" />
 <meta name="theme-color" content="#101010" />
 ```
 
-Only the exact `fullscreen` value opts in; without it Bread retains ordinary browser presentation. Readiness is automatic at `DOMContentLoaded` unless the initial head also declares:
+Only the exact `fullscreen` value opts in. Adding metadata after the bundle loads is too late. Without it, Bread retains ordinary presentation.
+
+</div>
+<div>
+
+### Signal readiness when the first frame is ready
+
+Readiness is automatic at `DOMContentLoaded`. For manual readiness, also declare this in the initial head:
 
 ```html
 <meta name="bread-ready" content="manual" />
 ```
 
-With manual readiness, wait for the first correctly sized frame before notifying the host:
+After rendering a correctly sized first frame:
 
 ```js
 if (window.bread?.version === 1) {
@@ -239,9 +250,12 @@ if (window.bread?.version === 1) {
 }
 ```
 
-Handle a native refusal or transport timeout without claiming the page is ready. `ready()` and `close()` return promises resolved by native acknowledgement. The API is available only in the main document of a supported native Bread WebView; extension wallet injection or an ordinary browser does not supply it. Keep a usable responsive layout when it is absent. Older Android WebViews can retain the ordinary toolbar.
+Handle native refusal/transport timeout as a recoverable error. `ready()` resolves on native acknowledgement.
 
-Fullscreen follows the device's portrait/landscape rotation; this recipe does not establish an orientation-lock API. Size the renderer from its actual container and reserve room for the persistent, accessible Back to Bread control:
+</div>
+<div>
+
+### Leave room for the return control
 
 ```css
 .game-toolbar {
@@ -249,7 +263,13 @@ Fullscreen follows the device's portrait/landscape rotation; this recipe does no
 }
 ```
 
-Respect physical safe areas and use the host's live inset rather than hard-coded toolbar padding. On the released v1.17.3 implementation, Back to Bread closes the page and returns to the retained browser. Later source changes that control to parking/restoring the document; test the exact target build rather than assuming either lifecycle. Programmatic closure uses the same versioned API:
+Respect physical safe areas, container size and device rotation. Do not assume an orientation-lock API. Test wallet overlays, background return and both orientations on the actual build.
+
+</div>
+</Steps>
+
+<details>
+<summary>Closing, parking and interrupted approvals</summary>
 
 ```js
 if (window.bread?.version === 1) {
@@ -257,12 +277,28 @@ if (window.bread?.version === 1) {
 }
 ```
 
-Closure can reject an unanswered wallet approval and remove the page's saved session. It does not cancel an already submitted transaction: retain request context and reconcile its outcome before another submission. Wallet confirmations, alerts and locking suspend the page; test resumption, readiness failure, rotation, background/reopen and safe return on physical iOS/Android devices.
+`close()` also returns a native-acknowledged promise. In released v1.17.3, Back to Bread closes the page and returns to the retained browser. Later source parks/restores the document. Verify the target build's lifecycle; older Android WebViews can keep the ordinary toolbar.
 
-Fullscreen is optional for both games and financial apps. Presentation does not grant wallet connection, private-data access, transaction approval or registration. See the [released fullscreen adoption guide](https://github.com/0xMiden/wallet/blob/v1.17.3/docs/dapp-fullscreen.md), [current source guide](https://github.com/0xMiden/wallet/blob/main/docs/dapp-fullscreen.md) and [v1.17.3 release](https://github.com/0xMiden/wallet/releases/tag/v1.17.3) for the implementation boundary.
+Closure can reject an unanswered approval and remove the saved page session. It does not cancel a submitted transaction. Wallet confirmations and locking suspend the page; reconcile accepted work on return.
 
-## Public implementation references
+[Released adoption guide](https://github.com/0xMiden/wallet/blob/v1.17.3/docs/dapp-fullscreen.md) · [Current source guide](https://github.com/0xMiden/wallet/blob/main/docs/dapp-fullscreen.md)
 
-- [Canonical wallet adapter implementation](https://github.com/0xMiden/web-sdk/tree/main/packages/adapter).
-- [Adapter conformance checks](https://github.com/0xMiden/web-sdk/blob/main/packages/adapter/miden/conformance.ts).
-- [Bread embedded-provider implementation](https://github.com/0xMiden/wallet/blob/main/src/lib/dapp-browser/injection-script.ts).
+</details>
+
+<CardGrid cols={2}>
+  <MiniAppCard title="Test in Bread" page="testing-and-troubleshooting" eyebrow="Next · Real provider and device" icon={<MiniAppIcon name="test" />}>
+    Check permissions, interruption, result handling and native presentation.
+  </MiniAppCard>
+  <MiniAppCard title="Register in Explore" page="publishing-and-explore" eyebrow="Next · Catalog review" icon={<MiniAppIcon name="publish" />}>
+    Add a tested app without changing wallet approval boundaries.
+  </MiniAppCard>
+</CardGrid>
+
+<details>
+<summary>Implementation references</summary>
+
+- [Canonical wallet adapter](https://github.com/0xMiden/web-sdk/tree/main/packages/adapter)
+- [Adapter conformance checks](https://github.com/0xMiden/web-sdk/blob/main/packages/adapter/miden/conformance.ts)
+- [Bread embedded provider](https://github.com/0xMiden/wallet/blob/main/src/lib/dapp-browser/injection-script.ts)
+
+</details>

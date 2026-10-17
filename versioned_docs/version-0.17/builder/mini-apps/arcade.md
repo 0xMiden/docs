@@ -1,39 +1,87 @@
 ---
 sidebar_position: 5
-title: "Arcade games"
-description: "Build a playable Bread game, keep its scores separate from shared ranking, and register it in Arcade."
+title: "Build an Arcade game"
+sidebar_label: "Arcade games"
+description: "Create a playable game for Bread, handle mobile presentation and register it in Arcade."
 ---
 
-# Arcade games
+import MiniAppIcon from '@site/src/components/MiniAppIcon';
 
-Use `category: "arcade"` for a game. Bread's native Arcade view supplies discovery, featured games and details; opening a game uses the catalog item's validated `url` through the existing dApp-browser path. Your hosted application owns gameplay, controls, session state and scores. It does not need a separate Arcade website or a new launcher SDK.
+import MiniAppCard from '@site/src/components/MiniAppCard';
 
-Start with the [shared setup](./setup.md) and [Bread integration](./bread-wallet-integration.md). The catalog and native UI are implemented in [wallet-config PR10](https://github.com/0xMiden/wallet-config/pull/10) and [wallet PR1512](https://github.com/0xMiden/wallet/pull/1512); follow their release gates before claiming availability.
+# Build an Arcade game
 
-## Make the first round clear
+Give someone a game worth trying and a clear result worth sharing. Bread's native Arcade view handles discovery and game details; your hosted app owns the round, controls, session state and scores.
 
-Choose one complete mobile-friendly round with an understandable goal, result and restart. A practice mode can give a newcomer something enjoyable before asking for a connection. If the game requires an account, NFT, asset or payment, disclose that requirement before entry; adding a practice mode does not remove an existing pilot's requirements.
+<Badge tone="brand">category: arcade</Badge>
 
-Separate local scores, personal bests and server-validated results in the UI. State where each result persists and whether it becomes public. Use deliberate sharing with a preview of the disclosed data. A branded challenge link, install fallback or return route needs an implemented, tested owner and destination; catalog registration does not supply it.
+## Build a complete first round
 
-## Keep scores, GC and challenges separate
+<Steps>
 
-| Feature | Integration boundary |
+<div>
+
+### Explain the game before asking for access
+
+Show the objective, controls and any account, NFT or payment requirement. A practice round can help newcomers try the game before connecting, where the product supports it. Keep an existing pilot's requirements explicit.
+
+</div>
+<div>
+
+### Make play work on a phone
+
+Support touch input, pause/resume and a restart. Size the renderer to its actual container. Use [native fullscreen](./bread-wallet-integration.md#optional-native-fullscreen) when useful, while preserving ordinary browser layout, safe areas and Back to Bread.
+
+</div>
+<div>
+
+### Show a result the player can understand
+
+Distinguish a local score, personal best and verified game result. Explain where each persists and what becomes public. If a wallet action is needed, show its effect and let Bread handle approval.
+
+</div>
+<div>
+
+### Offer a deliberate next step
+
+Let the player replay, return to Bread or share an implemented result link with a disclosure preview. Test the destination and install/open fallback before advertising a branded challenge link.
+
+</div>
+</Steps>
+
+## Keep the integration small
+
+| Feature | Who implements it |
 | --- | --- |
-| Gameplay and game rankings | Owned by the game, with its own rules, verification and recovery. Raw scores across different games are not comparable. |
-| Shared native ranking | Intended to use GC balance snapshots players voluntarily submit. Live balance reading and submission are unavailable in the current UI; real Submit stays disabled. |
-| Record/shot challenges | Optional, separately reviewed game contracts. Declare network, assets, note versions, scoring inputs, claim/expiry rules and public disclosures. |
-| Badges and rewards | Require defined completion/eligibility rules and their own implementation. A listing or valid replay does not establish eligibility or honest human play. |
+| Round, controls and session state | Your game |
+| Scores, personal bests and game ranking | Your game, with rules appropriate to the claim |
+| Explore discovery and Open action | Bread, using your validated catalog URL |
+| Optional record/shot challenges | Your reviewed game contracts and claim/expiry handling |
+| Shared native Game Coin (GC) ranking | A separate wallet/service integration described below |
 
-The GC issuer/network/decimals, narrowly scoped private-balance reader, ownership/authenticity verification, freshness/replay rules and leaderboard service are unresolved. A signature over a declared number alone does not prove a private balance. Do not invent a submission endpoint or make a private-data grant imply publication consent. Identity, rank/tie rules, retries, retention and unpublish behavior also need a service contract before activation.
+Catalog registration does not require a new Arcade SDK, common challenge contract or reward system. Native My activity classifies recorded transactions by current-network game origins; it is not a complete play history or proof of a score.
 
-Native My activity classifies existing transactions by recorded origins of current-network catalog games. It is not a complete gameplay history or score proof; untracked rounds, missing origins and delisted games can be absent. Label fictional/local preview data explicitly and keep it out of production behavior.
+<Callout variant="info" title="Shared GC ranking is a separate integration">
+The current native direction uses GC balance snapshots that players voluntarily submit. Games keep their own scores. Live GC reading/submission is unavailable and real Submit stays disabled. Asset/network/decimals, balance authenticity and ownership, freshness, service/API and consent/retention rules must be defined before activation. A signature over a declared number does not prove a private balance.
+</Callout>
 
-## Test and register
+## Test the game
 
-- Test touch input, pause/resume, result/restart, background return and both orientations on each claimed platform. For fullscreen, follow the [initial-head metadata and lifecycle checks](./bread-wallet-integration.md#optional-native-fullscreen).
-- Where scoring is deterministic, keep known input/result vectors and reject malformed, duplicate or out-of-order submissions. For a reviewed challenge contract, test every claim, expiry, refund and recall path; a verified replay alone does not prove human input.
-- Exercise missing provider, connection/private-read refusal, wallet overlays, account/network changes and interrupted requests. Opening the game never authorizes a transaction.
-- Register the reviewed HTTPS deployment in wallet-config's `explore/<network>.json`, use `arcade`, add its section references and bump the document version. Follow [registration](./publishing-and-explore.md) and save app-specific evidence separately from the catalog harness.
+- Complete a round, view the result, restart and return after backgrounding on every claimed platform.
+- Check touch targets, both orientations, safe areas, wallet overlays and fullscreen refusal/return.
+- For deterministic scoring, test known input/result vectors and malformed, duplicate or out-of-order attempts.
+- For reviewed challenges, test every claim, expiry, refund and recall path. A valid replay does not prove honest human input or prize eligibility.
+- Label fictional rankings and local previews clearly. Keep them unavailable in production.
 
-The first useful milestone is a playable, recoverable game that a newcomer can understand. Live GC, challenges and rewards can be separate milestones without being presented as available.
+## Register in Arcade
+
+Set `category` to `arcade`, provide the reviewed live HTTPS launch URL, add the icon and section placement, then bump and validate the catalog version. Bread launches the exact configured URL through its existing dApp-browser path; opening the game does not connect an account or approve a transaction.
+
+<CardGrid cols={2}>
+  <MiniAppCard title="Test in Bread" page="testing-and-troubleshooting" eyebrow="Platform and recovery" icon={<MiniAppIcon name="test" />}>
+    Verify gameplay alongside the wallet and presentation lifecycle.
+  </MiniAppCard>
+  <MiniAppCard title="Register your game" page="publishing-and-explore" eyebrow="wallet-config review" icon={<MiniAppIcon name="publish" />}>
+    Prepare a reviewable catalog change and confirm activation.
+  </MiniAppCard>
+</CardGrid>

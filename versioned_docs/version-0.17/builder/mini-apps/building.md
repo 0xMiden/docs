@@ -1,48 +1,67 @@
 ---
 sidebar_position: 3
 title: "Build a mini-app"
-description: "Define a small transaction flow with explicit ownership, validated units and resumable outcomes."
+sidebar_label: "Build a mini-app"
+description: "Choose who executes transactions and design a complete, recoverable app flow."
 ---
+
+import MiniAppCard from '@site/src/components/MiniAppCard';
 
 # Build a mini-app
 
-Start with one operation whose state you can explain from beginning to end. A wallet-managed public send is a useful first integration because Bread owns the account, signing and submission while the app owns request parameters and result presentation. Use the checked [Bread integration recipe](./bread-wallet-integration.md) before adding custom serialization or a second client.
+Start with one task a person can finish and understand. A game might offer one complete round; a financial app might preview and complete a transfer; a learning tool might teach one concept. Add wallet access at the point it serves that task.
 
-## Describe the app's value and surface
+## Choose the execution boundary
 
-A game can offer a complete practice round before any public challenge. Financial apps and financial utilities should name the useful task, supported asset/issuer, provider or route, fees and the settlement or claim/recovery steps. Learning, NFTs and non-financial utilities use Others. Choose `arcade`, `finance` or `others` directly in the new catalog contract; All is an aggregate, not an app category to submit. Follow the [Arcade](./arcade.md), [Finance](./finance.md) or [Others](./others.md) guide for the app's behavior.
+| Model | Your app owns | Bread owns | Use it for |
+| --- | --- | --- | --- |
+| **Wallet-managed** | UI, validated parameters and a request journal | Account, signing and supported submission | Standard sends and note consumption from the user's wallet |
+| **Wallet as signer** | SDK client, state synchronization and transaction construction | Supported signing | Workflows needing an app-managed client |
+| **App-owned client** | Account context, client state and execution | Only capabilities separately requested | Deliberate app-owned demos and custom workflows |
 
-Games own their scores and game-specific rankings. The native Arcade's intended shared ranking uses GC balance snapshots that players explicitly choose to submit; the asset, private-balance verification and submission service remain unresolved. Record/shot notes and rewards require their own reviewed contracts and are not prerequisites for catalog registration. Label fictional rankings/challenges and local submission drafts clearly; do not imply live contracts, real player activity, scoring validity or submitted registrations.
+For a wallet-managed app, start with [Connect to Bread](./bread-wallet-integration.md). For an app-managed client with wallet signing, use [External signers](../tools/clients/react-sdk/signers.md). The template's counter is an app-owned example even when its wallet control is connected.
 
-Choose ordinary presentation or optional native fullscreen for the app's needs. Fullscreen changes layout and the return control, not connection, private-data or transaction authority. Register through the [wallet-config review process](./publishing-and-explore.md) and verify publication and the matching reader release before advertising a listing.
-
-## Keep responsibilities visible
-
-| Layer | Responsibilities |
-| --- | --- |
-| Application | Hosted UI, input validation, request context, permission intent and persisted request journal. |
-| Wallet adapter | Typed connection and supported requests to the injected provider; no private keys or chain database. |
-| Bread | Unlock/confirmation, supported account authorization, wallet policy, transaction execution and wallet results. |
-| Network/provider | Inclusion, note availability, recipient consumption and any separately supported cross-chain/market route. |
-
-A mini-app's declared token summary cannot replace the effects of the actual transaction request. Validate the network and issuing faucet, use its decimals for display conversion and keep adapter amounts as positive safe-integer base units. A display symbol alone does not identify an asset or prove its backing.
+<Callout variant="tip" title="Start with a supported operation">
+Use standard sends or note consumption when they cover the task. Add a custom account or note only when the application needs a different contract, then build and test it with the matching toolchain.
+</Callout>
 
 ## Model the request lifecycle
 
-Represent at least connection, wallet approval, request acceptance, wallet result, chain confirmation and recipient-note state where relevant. Preserve the accepted request ID separately from the later transaction result's `txHash`. For a send, the recipient must discover and consume the output note before its value is spendable in that account's vault.
+A click on Send does not immediately make funds spendable. Keep the following states visible and attach them to the original account and network:
 
-Record the sender, network, request parameters and identifiers before allowing retries after a timeout or reload. If submission is uncertain, reconcile the existing operation first. Changing accounts or networks must not retarget pending work; keep its original context even when clearing account-specific read caches.
+| State | What the app should do |
+| --- | --- |
+| Before dispatch | Validate the account, network, asset, amount and destination; save the intended operation. |
+| Wallet approval | Show that the user can approve or decline. A previous connection is not approval. |
+| Request accepted | Save the returned request ID before waiting for its result. |
+| Wallet result | Preserve the separate `txHash`; check chain inclusion if completion requires it. |
+| Interrupted or uncertain | Restore the saved context and reconcile existing work before another submission. |
+| Recipient receiving | For a send, distinguish note discovery/consumption from the sender's result. |
 
-A wallet refusal, missing capability, valuation failure and an accepted-but-unresolved request require different messages. Let the wallet own its approval and spending-policy flows; a prior connection or signature is not approval for a new transaction.
+Account or network changes must not retarget pending work. Clear account-specific read caches, but retain the request's original context until its outcome is known. The [wallet-managed starter](https://github.com/0xMiden/frontend-template/blob/main/docs/mini-app-starter.md) demonstrates persist-before-dispatch recovery.
 
-## Add custom contracts only when needed
+## Validate assets and request data
 
-Use [standard notes](../smart-contracts/standards/standard-notes.md) for existing transfers and swaps before inventing another note interface. Custom accounts and notes need the matching SDK/compiler, authenticated state and fee behavior. Rebuild serialized artifacts for the intended release and check the [migration guide](../migration/index.md).
+Identify a token by its network and issuing faucet, with the correct decimals for display. A symbol alone does not identify the asset or establish backing. The adapter's amount fields use positive safe-integer `number` values in base units; validate range and convert display amounts exactly.
 
-The existing frontend counter is an app-owned-client example. Its public `NoAuth` counter does not establish a general permission model for another application, and its demo funding code is not a production funding contract. Keep client creation and private state out of a wallet-managed send app unless your chosen execution boundary requires them.
+Keep request parameters consistent with the transaction's actual effects. Use compatible SDK encodings for custom requests and rebuild serialized artifacts after incompatible upgrades. The [Bread integration guide](./bread-wallet-integration.md#custom-execution-and-signing) covers the custom envelope.
 
-## Extend through supported surfaces
+## Request only the capabilities you use
 
-For custom wallet execution, the guide shows a `Transaction` envelope that serializes a compatible `TransactionRequest`; do not send a bare payload or reuse incompatible request bytes. For app-owned SDK workflows with wallet signing, use [external signers](../tools/clients/react-sdk/signers.md) and account for your client's required state/notes.
+Detect the provider before connecting. Request private-data categories only for a named task and handle refusal as a normal outcome. Probe optional methods on the deployed provider: a declared TypeScript method is not proof that Bread implements it.
 
-Probe the deployed provider's optional methods. A declared `createAccount` interface is not evidence that Bread implements it. There is no mini-app-specific listing or Quote API established by the wallet connection surface. Choose public documented contracts for each additional service and test their complete flow before exposing it.
+Your frontend must not receive private keys. Private notes and balances returned to the page become data that the app can observe, so define storage and disclosure behavior before requesting them.
+
+## Continue with your app's behavior
+
+<CardGrid cols={3}>
+  <MiniAppCard title="Arcade games" page="arcade" eyebrow="Gameplay and results">
+    Design a round, score it and handle any reviewed challenge flow.
+  </MiniAppCard>
+  <MiniAppCard title="Finance apps" page="finance" eyebrow="Assets and settlement">
+    Explain fees, approval, receiving and recovery.
+  </MiniAppCard>
+  <MiniAppCard title="Other apps" page="others" eyebrow="Learning and utilities">
+    Define a useful outcome with minimal account access.
+  </MiniAppCard>
+</CardGrid>

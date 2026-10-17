@@ -1,60 +1,83 @@
 ---
 sidebar_position: 9
-title: "Register and list in Explore"
-description: "Register Arcade, Finance and other mini-apps through a validated wallet-config catalog PR, then verify activation."
+title: "Register in Explore"
+sidebar_label: "Register in Explore"
+description: "Submit a reviewed wallet-config catalog change and verify the app's visibility and launch."
 ---
 
-# Register and list in Explore
+# Register in Explore
 
-New Bread mini-app registrations target reviewed changes in [wallet-config](https://github.com/0xMiden/wallet-config). Games, financial apps and financial utilities, learning, NFTs and other tools share this process. Register the candidate and its evidence, host the app on its intended HTTPS origin, obtain review, and verify that the intended wallet/network actually loads and launches it. Hosting, registration, pilot approval and an observed listing are separate outcomes. The wallet adapter establishes no registration API.
+Register a tested, hosted mini-app through a reviewed PR in [wallet-config](https://github.com/0xMiden/wallet-config). The catalog supplies app identity, display text, launch URL and placement. Your app keeps responsibility for its behavior and support.
 
-**Rollout status, 17 October 2026:** [wallet-config PR10](https://github.com/0xMiden/wallet-config/pull/10) implements the catalogs, icons, schema, validator and registration process; [wallet PR1512](https://github.com/0xMiden/wallet/pull/1512) implements the matching reader and native Arcade UI. Both are unmerged. These instructions describe that implemented contract, not a claim of released availability. Merge the config before shipping the reader, then verify its bundled snapshots against publication and complete platform acceptance. Bread 1.17.3's [reader](https://github.com/0xMiden/wallet/blob/v1.17.3/src/lib/explore-config/source.ts) continues to use [wallet-explore](https://github.com/0xMiden/wallet-explore).
+<Callout variant="info" title="Check the reader release before activation">
+The direct-category contract is implemented in [wallet-config #10](https://github.com/0xMiden/wallet-config/pull/10) and the matching reader in [wallet #1512](https://github.com/0xMiden/wallet/pull/1512). As of 17 October 2026, both are unmerged. Publish config before shipping the reader. Older supported wallets continue using wallet-explore; adding files to wallet-config alone does not move those clients.
+</Callout>
 
-## Register the candidate
+## Prepare the app record
 
-1. Add or update the app's entry in the team's [Miniapps record](https://app.notion.com/p/3f199411cf9081a38769e248b0f1d347). Keep a stable proposed ID, name, useful description, publisher/owner, source, support route and intended production/review URLs. Clearly label demos and unavailable integrations.
-2. Declare the network, account types, exact Bread builds/platforms, required wallet/private-data capabilities, public disclosures and backend dependencies. Record ordinary/fullscreen presentation and the app release used for testing.
-3. Attach core-flow, refusal and recovery evidence. Games declare scoring and any reviewed challenge protocol. Financial apps declare the asset/issuer, fees, provider/route, settlement/receiving and recovery contract; a wallet connection or provider health check is not route acceptance.
-4. Prepare a wallet-config registration PR against `main`: edit the appropriate `explore/<network>.json`, add any `explore/icons/` PNG, update section references and increase the catalog version. Include metadata, tests and unresolved gates; leave root bridge/swap/onboarding documents alone.
-5. Obtain the required product and engineering/security reviews and any app-specific platform/privacy review. Record who approved which deployment, origin, capabilities and network. Review does not grant a user permission or guarantee public placement.
-6. After merge and the relevant reader release, verify catalog refresh, visibility, launch URL and the same permission/recovery flow on the intended build/network. Save the registration PR and final evidence in the candidate record.
+Add or update one entry in the team's [Miniapps record](https://app.notion.com/p/3f199411cf9081a38769e248b0f1d347). Keep its title, production URL, source repository, description and owner current. Leave an unavailable production URL blank, and put the remaining facts in the entry body:
 
-## Explore groups and catalog compatibility
+- Stable proposed app ID, publisher/support route and deployment commit.
+- Network, account types, tested Bread builds/platforms and dependency/contract versions.
+- Required wallet/private-data capabilities, backend origins and public disclosures.
+- [Core journey and recovery evidence](./testing-and-troubleshooting.md), with app-specific game, financial-route or utility checks.
+- Known limitations, operational owner and removal/recovery plan.
 
-[Wallet issue 1452](https://github.com/0xMiden/wallet/issues/1452) confirms **All, Finance, Arcade, Others**, in that order. All is the aggregate view. Finance contains financial apps and financial utilities; Arcade contains games and a custom native Explore view; Others contains remaining utilities, NFTs and learning. Individual games launch through Bread's existing dApp browser. The earlier standalone Arcade-site proposal is superseded.
+## Add the catalog entry
 
-New catalogs use exactly `finance`, `arcade` and `others`. The publication validator rejects `all`, legacy names and unsupported categories. All is aggregate-only. Only the matching wallet's persisted-cache parser converts old `tools`/`defi`, `games` and `nft`/`learn` values; new fetched catalogs and bundled snapshots use the direct categories. Financial helpers use Finance; other utilities use Others. Older supported wallets retain the legacy wallet-explore schema until they upgrade.
+<Steps>
 
-A catalog registers app discovery and launch metadata. Native Home → Arcade, Rankings, Game Coins and My activity are wallet routes, not extra catalog URL fields. The catalog does not supply live GC balance verification, leaderboard submission, challenge links or reward contracts. Follow the [Arcade](./arcade.md), [Finance](./finance.md) or [Others](./others.md) acceptance guide for the app's actual behavior.
+<div>
 
-## Prepare the hosted app
+### Edit the network's Explore document
 
-Use a production HTTPS URL on the intended domain. Confirm that the deployed app matches the reviewed source and package versions, starts without a local developer server and works on each Bread platform you claim. Test provider detection, explicit permission, supported transactions and interruption recovery before requesting a listing. For optional native fullscreen, include the [presentation checks](./bread-wallet-integration.md#optional-native-fullscreen); ordinary browser/extension presentation remains supported separately.
+Use `explore/<network>.json`, with `network`, `version`, `items` and `sections`. Icons live under `explore/icons/`. Root network documents configure bridges/swaps/onboarding separately; an `apps` field there does not register a mini-app.
 
-A catalog URL is an app launch target, not authority to select another user's account or read private state. Keep the network visible in the app and reject stale or mismatched request context. If the app uses a provider route, verify its actual activation and recovery behavior separately.
+The initial migration provides devnet and testnet catalogs. Confirm supported publication before claiming Mainnet visibility.
 
-## Prepare registration metadata and the catalog entry
+</div>
+<div>
 
-Use a separate `explore/<network>.json` document with `network`, positive safe-integer `version`, `items` and `sections`. Icons resolve relative to `explore/`. The root `<network>.json` files configure bridges, swaps and onboarding independently; adding an `apps` field there does not register anything. The initial migration supplies devnet and testnet catalogs, not a mainnet catalog. Confirm supported network publication before claiming Mainnet visibility.
+### Choose the category and placement
 
-Use the [implemented catalog guide](https://github.com/BrianSeong99/wallet-config/blob/ba067b30a1137cc6b191255d5f092f1749614f18/docs/explore-catalog.md) and [registration guide](https://github.com/BrianSeong99/wallet-config/blob/ba067b30a1137cc6b191255d5f092f1749614f18/docs/mini-app-registration.md) for exact repository rules. Recheck the accepted revision at submission time.
+Use exactly `finance`, `arcade` or `others`. All is aggregate-only. Financial helpers use Finance; games use Arcade; learning, NFTs and non-financial tools use Others. Update the relevant section's `itemIds` in display order.
 
-The wallet's Explore catalog contract includes:
+</div>
+<div>
 
-| Metadata | Requirement |
+### Add the reviewed URL, text and icon
+
+Use the actual live HTTPS deployment, literal localized name/tagline and an optional repository-owned PNG. Keep demos and unavailable apps in candidate records until their reviewed destination exists. Do not activate dummy URLs.
+
+</div>
+<div>
+
+### Increase the document version
+
+A changed body requires a higher positive safe-integer version. A revert or removal also needs a new higher version. Preserve other apps and section references; do not reset the wallet's accepted version floor.
+
+</div>
+</Steps>
+
+## Catalog fields
+
+| Field | Requirement |
 | --- | --- |
-| App ID | Unique lowercase letters, digits and hyphens. Keep it stable when updating the same app. |
-| Name and tagline | Literal localized text; English is required. The reviewed reader limits names to 40 and taglines to 120 characters per locale. |
-| Launch URL | `url`: HTTPS, with no username/password, IP address, localhost or punycode host. Query and fragment are preserved exactly. |
-| Category/group | `category`: exactly `finance`, `arcade` or `others`. Never publish `all` or a legacy category name. |
-| Icon | Optional `icon`: `icons/<name>.png`, with lowercase letters, digits and hyphens in the name. A regular, non-symlink square PNG, at most 256×256 and 32 KiB. Without one the wallet can draw an initial. |
-| Brand color | Optional `brandColor`: `#RRGGBB`. |
-| Exchange classification | Required boolean `isExchange`. Set accurately; platform feature gating can hide such entries. |
-| Section placement | `sections[]` has a unique `id`, `kind` (`featured` or `list`), localized `title` and ordered `itemIds` referencing existing apps without duplicates. `recents` and `search-results` are reserved. |
+| `items[].id` | Unique lowercase letters, digits and hyphens; keep it stable for updates. |
+| `name`, `tagline` | Objects of literal localized strings. `en` required; name at most 40 and tagline at most 120 Unicode characters per locale. |
+| `url` | HTTPS, with no credentials, IP literal, localhost or punycode host. Query and fragment are retained exactly. |
+| `category` | Exactly `finance`, `arcade` or `others`; never `all` or legacy names. |
+| `icon` | Optional `icons/<name>.png`, lowercase letters/digits/hyphens; regular non-symlink square PNG at most 256×256 and 32 KiB. |
+| `brandColor` | Optional `#RRGGBB`. |
+| `isExchange` | Required boolean; existing platform/feature gates still apply. |
+| `sections[]` | Unique `id`, `kind` of `featured` or `list`, localized `title`, and existing `itemIds` without duplicates. `recents` and `search-results` are reserved. |
 
-The entire catalog must fit in 32 KiB. Localized text is literal strings keyed by supported locale, with `en` required. The [matching wallet parser](https://github.com/0xMiden/wallet/blob/b09b93074a72c75d82d039a7ae52a821ce7e63c7/src/lib/explore-config/schema.ts) and validator define the runtime/publication boundaries.
+The whole catalog must fit in 32 KiB. Follow the [implemented catalog guide](https://github.com/BrianSeong99/wallet-config/blob/ba067b30a1137cc6b191255d5f092f1749614f18/docs/explore-catalog.md) and the accepted repository validator at submission time.
 
-For example, this existing Testnet item in the config migration is a financial utility, not a new registration to add again:
+<details>
+<summary>Example: an existing Finance item</summary>
+
+This existing Testnet faucet illustrates the item shape. It is an excerpt, not a complete catalog or another registration to add:
 
 ```json
 {
@@ -69,36 +92,47 @@ For example, this existing Testnet item in the config migration is a financial u
 }
 ```
 
-This is an item excerpt, not a complete catalog. Preserve other entries and section references when editing the full document. Keep unavailable apps in their candidate records; never publish empty, dummy or placeholder launch URLs.
+Preserve the containing document's other items and section references when editing.
 
-## Submit a reviewable configuration PR
+</details>
 
-1. Confirm the accepted catalog contract and matching reader-release plan, then update the intended network's entry, localization, icon and section placement using the direct category.
-2. Increase the document version according to the repository's rules. Restoring older values is still a new version; wallets retain a floor against older accepted documents.
-3. Run the repository's current validation/test workflow from its README. Check the catalog, icon and document limits as well as any shared configuration checks. The Explore checks below need Node 22 and no additional package dependencies.
-4. Describe the app, deployed URL, source repository, intended network/platforms and completed test evidence in the pull request. Keep secrets and private account state out of that evidence.
-5. Obtain maintainer review. A PR, passing validation or a catalog merge alone does not prove that every wallet candidate has loaded the change.
+## Validate and request review
+
+From the wallet-config checkout, with `origin/main` fetched, run Node 22:
 
 ```bash
-# From the wallet-config checkout, with origin/main fetched:
 node --test scripts/validate-explore.test.mjs
 BASE_REF=origin/main node scripts/validate-explore.mjs
-# Or validate one catalog:
+# To check one catalog:
 BASE_REF=origin/main node scripts/validate-explore.mjs explore/testnet.json
 ```
 
-The required `validate` CI job also checks root configuration. The Explore validator does not visit the app URL, connect a wallet or prove the application works. Attach the [integration evidence](./testing-and-troubleshooting.md) separately.
+Open a PR against `main`. Link the app record and describe the app, live origin, source/deployment, network/platforms, completed tests and unresolved gates. Obtain the required maintainer and app-specific product/engineering/security/platform reviews.
 
-After publication and the matching reader release, catalogs are checked hourly and on foreground return when older than 15 minutes, with bounded failure retries. Verify the exact entry and launch URL on the intended wallet/network. Confirm that the app opens, the expected provider is detected and the original permission/transaction checks still apply. A wallet may initially show a bundled or previously accepted catalog; invalid, unavailable or lower-version responses retain validated cached/bundled data.
+The required `validate` CI job also retains root configuration checks. Catalog validation does not visit launch URLs, connect a wallet or verify app safety, game scoring or financial settlement. Attach that evidence separately.
 
-## Preserve upgrades and removals
+## Verify publication
 
-Recheck wallet-explore for intervening metadata/version changes before the source migration. Keep new catalog versions ahead of previously accepted legacy versions, preserve one immutable body per network/version within each source, and verify bundled snapshots against the published config. Keep wallet-explore available for older supported readers and mirror reviewed changes using their legacy schema while needed; do not delete or redirect it as part of the migration.
+After the reviewed config merge and matching reader release:
 
-An edit, revert or removal is a new higher version. A changed same-version body is rejected; resetting a version floor is not a rollback procedure. Remove an app and its section references together. Deleting the file or returning 404 does not clear the last accepted catalog. To intentionally clear a catalog, publish higher-version `items: []` and `sections: []`.
+1. Confirm published catalogs and bundled snapshots agree, and check the intended build/network.
+2. Wait for catalog refresh, then verify category placement, search/recents and the exact launch URL.
+3. Repeat provider detection, permission/refusal and recovery on each claimed build/platform, including physical devices where claimed.
+4. Save the registration PR and acceptance evidence in the app record. Distinguish candidate, reviewed/pilot and observed listing status.
 
-## What listing means
+The matching reader checks catalogs hourly and on foreground return when older than 15 minutes, with bounded failure retries. Invalid, unavailable or lower-version data retains validated cached/bundled data. A merge alone does not prove the wallet loaded the change.
 
-Listing makes the app discoverable in Explore. It does not grant a trust badge, permission, keys, Mainnet admission, provider liquidity or route support. The wallet continues to ask its normal connection and transaction questions.
+<details>
+<summary>Migration, updates and removals</summary>
 
-For updates, redirects, removals or rollback, use another reviewed configuration change with the required higher version and verify the resulting catalog. Removing a listing does not cancel an already submitted transaction, delete an onchain account or change the recovery responsibilities of the app and provider.
+New fetched catalogs and bundled snapshots use direct categories. Only persisted legacy cached data is converted on upgrade. Keep wallet-explore available in its legacy schema for older supported wallets; recheck intervening metadata/version changes before migration and keep the new source ahead of previously accepted versions.
+
+Maintain one immutable body per network/version within each source. Changed same-version bodies and lower versions are rejected. Remove an item and its section references together in a higher version. A 404 or deleted file does not clear the last accepted catalog; an intentionally empty catalog needs higher-version `items: []` and `sections: []`.
+
+Use reviewed changes for material origin, network, permission, contract or monetization updates. Delisting does not cancel a submitted transaction or remove the app's recovery responsibilities.
+
+</details>
+
+<Callout variant="tip" title="A listing is discovery, not wallet authority">
+Listing grants no keys, private-data access, transaction approval, trust badge, Mainnet admission or route liquidity. Native ranking/GC routes are wallet features; the catalog does not supply a leaderboard, challenge or reward API.
+</Callout>

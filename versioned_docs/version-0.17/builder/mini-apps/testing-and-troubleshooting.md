@@ -1,51 +1,114 @@
 ---
 sidebar_position: 8
-title: "Testing and troubleshooting"
-description: "Test provider readiness, permission refusal, result recovery and each supported platform."
+title: "Test in Bread"
+sidebar_label: "Test in Bread"
+description: "Verify the app, wallet, catalog and native presentation as separate parts of one journey."
 ---
 
-# Testing and troubleshooting
+import MiniAppIcon from '@site/src/components/MiniAppIcon';
 
-Test the app's state handling separately from an actual injected Bread provider. TypeScript proves that a recipe matches its installed declarations; mock-provider tests prove application behavior. Neither proves that extension, mobile or desktop builds implement the same method or that a transaction reached its recipient.
+import MiniAppCard from '@site/src/components/MiniAppCard';
 
-The public [frontend template](https://github.com/0xMiden/frontend-template) supplies type, unit, lint and production-build checks. Run its current commands for the checkout you use. The [wallet adapter conformance suite](https://github.com/0xMiden/web-sdk/blob/main/packages/adapter/miden/conformance.ts) is a starting point for checking a real provider's supported surface.
+# Test in Bread
 
-## Minimum integration matrix
+Test the useful task from opening the app to its final result, including refusal and interruption. Record what passed on the actual wallet build and device. Type checks and controlled-provider tests are useful, but they do not establish live Bread or chain acceptance.
 
-| Scenario | Expected observation |
+## Run the app's local checks
+
+Use the commands and Node version documented by your checkout. For the current standalone [wallet-managed starter](https://github.com/0xMiden/frontend-template/blob/main/docs/mini-app-starter.md):
+
+```bash
+corepack yarn test
+corepack yarn typecheck
+corepack yarn lint
+corepack yarn build
+corepack yarn playwright install chromium
+corepack yarn test:browser
+```
+
+These browser checks use the released adapter with a controlled injected provider. They cover app state and recovery, not actual Bread unlock/approval or live settlement.
+
+## Verify the wallet journey
+
+<Steps>
+
+<div>
+
+### Open without a provider
+
+Confirm truthful connection/install guidance and a usable public preview where supported. An ordinary mobile browser does not gain wallet injection by opening the URL.
+
+</div>
+<div>
+
+### Connect, decline and change accounts
+
+Test provider detection, unlock, connection refusal and private-read refusal. Change account/network, lock the wallet and disconnect. Cached reads and prepared actions must not silently carry over.
+
+</div>
+<div>
+
+### Complete and interrupt an operation
+
+Exercise approval, rejection, repeated taps, accepted request IDs, timeouts and reloads. Restore the original request context and reconcile before retry. Verify wallet result, chain inclusion and recipient receiving separately where relevant.
+
+</div>
+<div>
+
+### Return from the app
+
+Test background/reopen, wallet overlays and Back to Bread. For optional fullscreen, check readiness failure, safe areas, both orientations and the actual build's close or park lifecycle.
+
+</div>
+</Steps>
+
+## Add checks for your app
+
+| App | Required behavior |
 | --- | --- |
-| No injected provider | Truthful installation/open-in-wallet guidance; no successful connection state. |
-| Client-only initialization | Adapter detects the browser provider after mounting rather than staying unsupported from server construction. |
-| User refuses connection or private read | App stays usable and does not treat refusal as granted permission. |
-| Unsupported method | Capability-specific explanation before attempting another action. |
-| Wrong account/network/faucet | Request is stopped or rejected; pending work keeps its original context. |
-| Accepted request then timeout/reload | Original ID/context is restored and reconciled before another submission. |
-| Wallet result returned | App distinguishes result retrieval from chain inclusion and recipient consumption. |
-| Parked app, lock or disconnect | Session/read caches refresh and stale approval is not reused. |
-| Fullscreen absent or refused | Ordinary layout remains usable; extension injection is not native presentation support. |
-| Manual-ready fullscreen | Notify readiness only after a correctly sized first frame; native timeout/refusal stays recoverable. |
-| Rotation, safe areas and Back to Bread | Touch controls remain visible; leaving/reopening follows the actual build's close or park lifecycle. |
-| Fullscreen wallet overlay or closure | Approval remains visible; interrupted requests reconcile without assuming submitted work was cancelled. |
+| [Arcade](./arcade.md) | Complete/restart a round, touch controls, truthful score persistence and reviewed challenge claim/expiry paths if used. |
+| [Finance](./finance.md) | Correct asset/issuer/route, fees, actual settlement/receiving and claim or recovery. |
+| [Others](./others.md) | Learning or utility outcome, source freshness, minimal private reads and any NFT ownership/contract action. |
 
-Exercise the actual embedded browser on every platform you claim. An ordinary mobile browser opening the same URL is a different environment; it does not gain provider injection automatically. Include cancel, permission refusal and returning from a parked app alongside the successful path.
+Use disposable development accounts and supported test funding for authorized execution. If a route, faucet or capability is unavailable, record that path as not tested instead of substituting an endpoint health response.
 
-For the new Explore contract, verify `finance`, `arcade` and `others` isolation and the All aggregate, network selection, search, recents, platform gates and empty/loading/error states. Legacy names must fail publication validation; only persisted legacy cached data gets conversion in the matching wallet. Cover higher-version refresh, wrong-network and rollback rejection, changed same-version bodies, failed fetches and cached/bundled fallback. Test Home → Arcade after a retained search and confirm that Open uses the exact configured URL, including its query and fragment.
+## Check catalog discovery
 
-The companion wallet has a [reproducible catalog harness](https://github.com/0xMiden/wallet/blob/b09b93074a72c75d82d039a7ae52a821ce7e63c7/docs/explore-config-verification.md). From a matching wallet checkout, run `yarn test:explore-config --config-repo /path/to/wallet-config`. It serves actual local catalogs over HTTP and exercises the built UI in a disposable Chromium profile. Account readiness is mocked: the harness does not verify onboarding, Guardian authentication, live GC balances, submissions, chain settlement or native-device acceptance. Keep its E2E/mock build separate from release artifacts. Confirm that fictional previews cannot be enabled in production and real submission remains unavailable until integrated.
+Verify the intended network's `finance`, `arcade` and `others` views plus All. Follow the exact launch URL, including query and fragment. Cover search, recents, feature gates and empty/loading/error states. Home → Arcade must clear a retained search when entering explicitly.
 
-Games also need deterministic scoring vectors, invalid/duplicate attempts and any reviewed challenge claim/expiry paths. Financial apps need the actual asset/issuer and route, fee handling, chain settlement, recipient-note consumption where relevant and interrupted claim/recovery. A local game score, wallet result or provider health response is insufficient evidence for those outcomes.
+For catalog-maintainer changes, also check higher-version replacement, wrong-network/rollback rejection, changed same-version bodies and failed-fetch fallback. New publication rejects legacy categories; the matching wallet converts only persisted legacy cached data.
 
-## Diagnose by boundary
+<details>
+<summary>Run the catalog browser harness</summary>
 
-- **Unsupported immediately:** ensure the adapter is constructed once in a browser-only module. Recreating it during render can disconnect a previous instance.
-- **Provider not detected:** confirm the page is running in a supported injected environment and wait for readiness. Do not label this as a chain failure.
-- **SDK/client initialization stalled:** inspect the execution boundary and provider order. A wallet-signer ancestor can deliberately gate an app-owned client's initialization until connection; the template's local counter uses a different arrangement.
-- **Serialization or artifact errors:** match SDK/protocol versions and rebuild packages; do not patch encoded bytes or discard old private state blindly.
-- **Wallet result unresolved:** retain the original request and inspect supported wallet/chain evidence before another spend. A local error can occur after submission.
-- **Recipient balance unchanged:** check discovery, note consumption, matching network and synchronization separately from the sender result.
+From the matching wallet checkout, with the config checkout alongside it:
 
-## Record useful evidence
+```bash
+yarn test:explore-config --config-repo /path/to/wallet-config
+```
 
-For a test run, record the app commit, package versions, wallet candidate/platform, network, public account/faucet identity and non-secret request/transaction/note identifiers. Keep recovery phrases, private keys, invitation codes and unnecessary private data out of logs and support exports.
+The [reproducible harness guide](https://github.com/0xMiden/wallet/blob/b09b93074a72c75d82d039a7ae52a821ce7e63c7/docs/explore-config-verification.md) describes real local catalog HTTP, parsing, storage, built UI and configured URL launch in disposable Chromium. Account readiness is mocked. It does not test onboarding, Guardian authentication, live GC balances/submission, chain operations or native-device acceptance. Its E2E/mock build is separate from release artifacts.
 
-Use disposable development accounts and supported test funding. Stop when a route, faucet or provider is not configured for that deployment. Successful mocks or endpoint health cannot replace actual request/result and recovery checks; a catalog entry is also not a platform conformance result.
+Check that fictional previews cannot be enabled in production and real GC submission remains disabled until integrated.
+
+</details>
+
+## Diagnose the failing boundary
+
+| Symptom | Check next |
+| --- | --- |
+| Adapter is immediately unsupported | Construct it once in a browser-only module. |
+| Provider is not detected | Verify the injected environment and wait for readiness. |
+| Client initialization stalls | Inspect provider ordering and who owns the SDK client. |
+| Artifacts or requests fail to decode | Match release/encoding and rebuild; do not patch serialized bytes. |
+| A result is unresolved | Preserve the ID/context and inspect wallet/chain evidence before another submission. |
+| Recipient balance has not changed | Check note discovery, consumption, network and synchronization. |
+| Listing is missing | Check network, accepted catalog version, category, section references and the deployed reader. |
+
+## Save review evidence
+
+Record the app commit/deployment, package versions, wallet build/platform, network, scenario, expected result, observed result and relevant non-secret request/transaction/note IDs. Mark each scenario passed, failed or not run. Keep recovery phrases, keys, invitation codes and unnecessary private data out of logs and exports.
+
+<MiniAppCard title="Register the tested deployment" page="publishing-and-explore" eyebrow="Next · Metadata and review" icon={<MiniAppIcon name="publish" />}>
+  Attach this evidence to the candidate record and wallet-config registration PR.
+</MiniAppCard>

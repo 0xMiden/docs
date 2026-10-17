@@ -357,14 +357,35 @@ const sidebars: SidebarsConfig = {
       label: "Mini-apps",
       link: { type: "doc", id: "builder/mini-apps/index" },
       items: [
-        "builder/mini-apps/setup",
-        "builder/mini-apps/building",
-        "builder/mini-apps/bread-wallet-integration",
-        "builder/mini-apps/arcade",
-        "builder/mini-apps/finance",
-        "builder/mini-apps/others",
-        "builder/mini-apps/testing-and-troubleshooting",
-        "builder/mini-apps/publishing-and-explore",
+        {
+          type: "category",
+          label: "Start building",
+          collapsed: false,
+          items: [
+            "builder/mini-apps/setup",
+            "builder/mini-apps/building",
+            "builder/mini-apps/bread-wallet-integration",
+          ],
+        },
+        {
+          type: "category",
+          label: "App guides",
+          collapsed: false,
+          items: [
+            "builder/mini-apps/arcade",
+            "builder/mini-apps/finance",
+            "builder/mini-apps/others",
+          ],
+        },
+        {
+          type: "category",
+          label: "Test and ship",
+          collapsed: false,
+          items: [
+            "builder/mini-apps/testing-and-troubleshooting",
+            "builder/mini-apps/publishing-and-explore",
+          ],
+        },
       ],
     },
 

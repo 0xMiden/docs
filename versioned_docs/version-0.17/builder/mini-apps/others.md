@@ -1,32 +1,77 @@
 ---
 sidebar_position: 7
-title: "Learning, NFTs and other utilities"
-description: "Build a focused learning, NFT or non-financial utility experience and register it in Others."
+title: "Build learning and utility apps"
+sidebar_label: "Others: learning and utilities"
+description: "Create learning, NFT and non-financial utilities with a clear outcome and minimal wallet access."
 ---
 
-# Learning, NFTs and other utilities
+import MiniAppIcon from '@site/src/components/MiniAppIcon';
 
-Use `category: "others"` for learning content, NFTs and non-financial utilities. Financial helpers belong in [Finance](./finance.md), and games belong in [Arcade](./arcade.md). Choose the app's actual purpose; All is an aggregate view, never a category to publish.
+import MiniAppCard from '@site/src/components/MiniAppCard';
 
-Use the [same project setup](./setup.md), [provider integration](./bread-wallet-integration.md), [testing](./testing-and-troubleshooting.md) and [registration workflow](./publishing-and-explore.md). Others does not have a separate SDK or submission API.
+# Build learning and utility apps
 
-## Give a newcomer a complete task
+Teach one concept, answer a useful question or help someone use an NFT. Others is the category for learning, NFTs and non-financial utilities. Financial helpers belong in [Finance](./finance.md); games belong in [Arcade](./arcade.md).
 
-A short learning exercise or useful public-data tool can show its value before asking for wallet access. Explain any required account, network or asset early. Let a visitor finish the useful task without unrelated connection, private-data or payment requests.
+<Badge tone="brand">category: others</Badge>
 
-| App behavior | Evidence to provide |
-| --- | --- |
-| Learning | A clear learning outcome, understandable completion and refusal/restart paths. Completing a tutorial does not prove a wallet is backed up or secured. |
-| Public-data utility | Data source, network, freshness and understandable unavailable/stale states. Public data access does not imply wallet connection. |
-| Private-data utility | Minimum supported read capability, permission refusal, account-switch clearing and storage/deletion behavior. A prior connection does not grant every private category. |
-| NFT action | Collection/issuer and network, ownership assumptions, supported mint/transfer/consume operation, fees, finality and recovery. A catalog category does not supply an NFT contract or name service. |
+## Define a useful result
 
-Any operation that signs or transacts follows the [shared request lifecycle](./building.md#model-the-request-lifecycle), including reconciliation after interruption. Do not ask for recovery words or private keys to complete a lesson, verify ownership or debug an app.
+| Experience | A complete first task | Evidence to provide |
+| --- | --- | --- |
+| Learning | Finish a short exercise and understand its result | Clear learning outcome, restart and refusal paths |
+| Public-data tool | Answer a question for the selected network | Source, freshness and unavailable/stale states |
+| Private-data utility | Complete a task with a limited authorized read | Capability, permission refusal, account-switch clearing and retention behavior |
+| NFT app | View or complete a supported collection action | Issuer/collection, network, ownership assumptions, fees and recovery |
 
-Share only deliberately selected results, with a disclosure preview. Private balances, notes, account identifiers and wallet activity need their own access/publication decisions. A locally completed lesson or exported card is not automatically an issued badge, referral credit or public post.
+A lesson or public-data preview can show value without a wallet connection. Explain any account, network or asset requirement early. Do not turn unrelated access or payment requests into prerequisites for a useful task.
+
+## Add wallet access where it belongs
+
+<Steps>
+
+<div>
+
+### Begin with public information
+
+Render the useful task or preview first where possible. A public-data source does not require wallet connection just because the app is opened from Bread.
+
+</div>
+<div>
+
+### Request a specific capability
+
+Use [Bread's provider](./bread-wallet-integration.md) for supported reads or operations. Explain the requested private-data category, handle refusal and clear account-specific caches after an account switch.
+
+</div>
+<div>
+
+### Complete and recover the task
+
+For a transaction, follow the [shared request lifecycle](./building.md#model-the-request-lifecycle). For a read, identify stale/unavailable data. Keep a restart or return path understandable.
+
+</div>
+</Steps>
+
+<Callout variant="info" title="Completion must mean what the app claims">
+A completed lesson does not prove that a wallet is backed up or secured. A catalog category does not supply an NFT contract or name service. A local result or exported share card is not automatically an issued badge, referral credit or public post.
+</Callout>
+
+## Respect private data when sharing
+
+Offer a deliberate preview of the selected result. Reading a balance or note does not authorize publishing it. Define storage, retention and deletion for data the app observes, and keep private keys and recovery words out of lessons, ownership checks and support logs.
 
 ## Test and register
 
-Test the core task, missing provider, declined access, unsupported methods, account/network changes, stale data and interrupted work on each advertised build. Use [fullscreen](./bread-wallet-integration.md#optional-native-fullscreen) only where it helps the task, and retain a responsive layout without the native API.
+Test the core task, missing provider, declined access, unsupported methods, account/network changes, stale data and interrupted work on each advertised build. Keep a responsive ordinary layout even when using optional [native fullscreen](./bread-wallet-integration.md#optional-native-fullscreen).
 
-Register the reviewed deployment in wallet-config's `explore/<network>.json` using `others`, add its section placement and bump the document version. Follow the shared validator and review process. Catalog validation does not verify the lesson, data source, ownership claim or contract; keep that evidence in the candidate record and registration PR.
+Register the reviewed live deployment using `others`, add its section references/icon and increase the catalog version. Keep learning, data-source, ownership or contract evidence in the candidate record; catalog validation only checks the catalog contract.
+
+<CardGrid cols={2}>
+  <MiniAppCard title="Test your app" page="testing-and-troubleshooting" eyebrow="Capabilities and recovery" icon={<MiniAppIcon name="test" />}>
+    Exercise the useful task and every required wallet boundary.
+  </MiniAppCard>
+  <MiniAppCard title="Register in Explore" page="publishing-and-explore" eyebrow="wallet-config review" icon={<MiniAppIcon name="publish" />}>
+    Prepare metadata, evidence and the reviewed catalog change.
+  </MiniAppCard>
+</CardGrid>

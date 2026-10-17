@@ -1,40 +1,87 @@
 ---
 sidebar_position: 6
-title: "Finance apps and utilities"
-description: "Build a useful financial flow with explicit assets, approvals, settlement and recovery, then register it in Finance."
+title: "Build a Finance app"
+sidebar_label: "Finance apps"
+description: "Guide a financial task from preview and approval to settlement and recovery."
 ---
 
-# Finance apps and utilities
+import MiniAppIcon from '@site/src/components/MiniAppIcon';
 
-Use `category: "finance"` for a financial app or financial utility, including a faucet or financial helper. The category describes discovery; it grants no funds, Mainnet admission, route activation or transaction authority. Declare `isExchange` accurately because existing wallet/platform exchange gates still apply.
+import MiniAppCard from '@site/src/components/MiniAppCard';
 
-Start with the [shared setup](./setup.md), [execution boundary](./building.md) and [Bread integration](./bread-wallet-integration.md). Choose one useful task and state what completing it means. A preview or explanation can help newcomers understand the task before granting access; an actual financial action still requires its normal wallet review.
+# Build a Finance app
 
-## Define the financial operation
+Help someone complete a useful financial task with a clear preview and an understandable result. Finance includes financial applications and helpers such as faucets. Its catalog placement does not activate a route or grant funds.
 
-| Requirement | What to record |
+<Badge tone="brand">category: finance</Badge>
+
+## Start with one useful action
+
+A small first build can prepare a transfer: choose the asset and recipient, review the amount and fees, connect Bread, then follow the result. Let someone understand the task before asking for account access.
+
+Use [wallet-managed requests](./bread-wallet-integration.md) when supported operations cover the task. If the app needs a provider or custom contract, establish that contract's supported network, execution and recovery behavior before exposing the action.
+
+## Design the financial flow
+
+<Steps>
+
+<div>
+
+### Identify the asset and route
+
+Record the network, issuing faucet/account and decimals. Identify any provider/API, contract version and operational owner. A symbol, quote or healthy endpoint alone does not establish an executable route.
+
+</div>
+<div>
+
+### Show what the user will authorize
+
+Present sender, destination, asset, amount, fees and expected effects. Request only the private-data categories the task needs. Keep wallet connection separate from the action's approval.
+
+</div>
+<div>
+
+### Follow the result through settlement
+
+Distinguish request acceptance, wallet result, chain inclusion and receiving state. For a send, the recipient must discover and consume the output note before its vault receives the asset.
+
+</div>
+<div>
+
+### Make interruption recoverable
+
+Save the original account, network, parameters and request ID. After a timeout, reload or account change, reconcile that operation before another submission. Expose any route-specific expiry, claim, reclaim or refund action.
+
+</div>
+</Steps>
+
+<Callout variant="tip" title="Preview amounts, send base units">
+Use the asset's decimals for display conversion. Adapter amounts must be positive safe integers in token base units. Validate the exact amount and issuer before dispatch; Bread still applies its own fee, balance and account policies.
+</Callout>
+
+## Verify the actual outcome
+
+| Check | What to observe |
 | --- | --- |
-| Network and asset | Supported deployment, issuing faucet/account identity and decimals. A display symbol does not establish asset identity or backing. |
-| Route and dependencies | Exact provider/API and supported route, contract versions and operational owner. A healthy endpoint or quote alone does not establish an executable route. |
-| User review | Sender/account, destination, asset, amount, fees and expected effects before requesting authorization. |
-| Completion | Wallet acceptance, transaction result, chain inclusion and receiving/settlement state as separate stages. |
-| Recovery | Request journal, timeout/reload reconciliation, expiry and applicable claim/reclaim/refund paths. |
-| Data access | Minimum private-data categories, why they are needed, storage/retention and any separate public disclosure. |
+| Context | Wrong network, asset or sender stops the request; pending work keeps its original context. |
+| Approval | Decline leaves a truthful state; a second tap does not create another operation. |
+| Fees and funding | Insufficient balance or unavailable routes have actionable messages. |
+| Completion | The UI distinguishes a wallet result from final settlement and spendable receiving balance. |
+| Recovery | Reload, timeout and disabled new activity preserve the documented recovery path for existing work. |
 
-Prefer supported wallet-managed operations when they cover the task. Use compatible custom request envelopes or an app-owned client only when the workflow needs them. Validate exact base units and integer bounds; keep the original account, network and request parameters attached to accepted or uncertain work.
-
-For a send, a sender result is not a spendable recipient balance. The recipient must discover and consume the output note. For other routes, document the actual completion and recovery contract; do not label quote acceptance, request acceptance or provider health as settlement.
-
-## Test the complete result
-
-Verify correct and incorrect network/asset context, fee/funding failures, declined approvals, repeated taps, account changes, timeouts and reloads. Reconcile existing work before another submission. If a route disables new activity, confirm its documented recovery path for existing activity separately.
-
-Use supported disposable development accounts for authorized execution tests and record the exact wallet build, app deployment and network. Mock-provider checks and the catalog browser harness do not establish real asset balances, provider execution or settlement. Keep unavailable routes clearly unavailable.
-
-Financial apps can use [optional native fullscreen](./bread-wallet-integration.md#optional-native-fullscreen), with readable transaction context, accessible Back to Bread and a usable ordinary-browser layout. Avoid unnecessary transactions or balance/volume-based incentives as an onboarding step.
+Use supported disposable development accounts for authorized execution tests. Mock-provider tests and the catalog harness do not verify real balances, provider execution or settlement. Record the exact app deployment, Bread build, network and non-secret result identifiers.
 
 ## Register in Finance
 
-Follow [wallet-config registration](./publishing-and-explore.md): update the intended `explore/<network>.json`, use `finance`, supply literal localized text, the reviewed HTTPS URL and accurate exchange classification, then bump and validate the catalog version. Link app-specific route, settlement and recovery evidence in the registration PR.
+Set `category` to `finance` and `isExchange` accurately; wallet/platform exchange gates still apply. Include route, settlement and recovery evidence in the registration PR. Fullscreen is optional; financial context and wallet approvals must remain readable.
 
-Merge and a matching reader release make the catalog eligible to appear; verify the actual listing and launch on each claimed build/network. Listing does not approve a financial route or enroll the app in Arcade GC, ranking or reward systems.
+A listing provides discovery. It grants no Mainnet admission, liquidity, payment authority or participation in Arcade GC/rewards. Avoid unrelated transactions or balance/volume incentives as onboarding steps.
+
+<CardGrid cols={2}>
+  <MiniAppCard title="Connect and reconcile" page="bread-wallet-integration" eyebrow="Wallet-managed requests" icon={<MiniAppIcon name="wallet" />}>
+    Configure the provider and preserve uncertain request context.
+  </MiniAppCard>
+  <MiniAppCard title="Register your app" page="publishing-and-explore" eyebrow="wallet-config review" icon={<MiniAppIcon name="publish" />}>
+    Add the reviewed origin and evidence to the Finance catalog.
+  </MiniAppCard>
+</CardGrid>
