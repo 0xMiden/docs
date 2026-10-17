@@ -1,0 +1,18 @@
+[package]
+name = "masm-note-scripts"
+version = "0.1.0"
+edition = "2024"
+rust-version = "1.98.1"
+publish = false
+
+[workspace]
+
+[dependencies]
+anyhow = "1"
+miden-protocol = { version = "=0.17.1", features = ["std"] }
+miden-standards = { version = "=0.17.1", features = ["std"] }
+miden-testing = { version = "=0.17.1", features = ["std"] }
+tokio = { version = "1", features = ["macros", "rt-multi-thread"] }
+
+[dev-dependencies]
+miden-tx = { version = "=0.17.1", features = ["std"] }

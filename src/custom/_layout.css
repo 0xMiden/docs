@@ -6,7 +6,7 @@
 .theme-layout-navbar {
   --navbar-control-size: 2.25rem;
   height: var(--ifm-navbar-height);
-  border-bottom: 1px solid var(--ifm-border-color) !important;
+  border-bottom: 1px solid var(--ifm-border-color);
   background: var(--color-bg);
   box-shadow: none;
 }
@@ -25,14 +25,14 @@
 .navbar__logo {
   display: inline-flex;
   align-items: center;
-  height: 22px;
-  width: 73px;
+  height: 26px;
+  width: 84px;
   margin: 0;
 }
 
 .navbar__logo img {
-  height: 22px !important;
-  width: 73px !important;
+  height: 26px;
+  width: 84px;
   object-fit: contain;
   border-radius: 0;
 }
@@ -333,7 +333,7 @@
 .theme-layout-footer,
 .footer {
   --ifm-footer-background-color: var(--color-surface);
-  background: var(--color-surface) !important;
+  background: var(--color-surface);
   color: var(--color-text);
   border-top: 1px solid var(--color-border);
   padding: 3.5rem 0 1.5rem;

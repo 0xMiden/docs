@@ -1,0 +1,2 @@
+.logo { display:block; color:var(--miden-text); }
+.logo [fill='#484848'], .logo [fill='#484'] { fill:currentColor; }

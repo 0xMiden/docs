@@ -1,63 +1,56 @@
 ---
-title: "Agentic tools"
-description: "Use ecosystem skills and command prompts without confusing them with executable services."
+title: "Add agent skills"
+sidebar_label: "Agent skills"
+description: "Discover, preview, install, and check Rust, MASM, and protocol skills for your coding agent."
 ---
 
-# Agentic tools
+# Add agent skills
 
-[Agent tools](https://github.com/0xMiden/agent-tools) contains release-scoped Rust, MASM and protocol knowledge skills and Markdown command prompts. Read a skill's `SKILL.md` to understand its scope and prerequisites. Read command prompt files before using an editor's slash-command integration.
+This optional step adds knowledge beyond the template and installed SDK guidance. Complete the main [setup](setup.md) and [context checks](templates.md) first.
 
-## Discover and select context
+[Agent tools](https://github.com/0xMiden/agent-tools) provides Rust, MASM, and protocol knowledge skills plus Markdown workflow prompts. Use it in an existing project or alongside a template. Browser API skills remain owned by the installed npm SDK packages.
 
-Clone the repository into a separate location and inspect `skills/`, `commands/` and the README's compatibility table. Choose the skills for your task rather than replacing an existing editor skill directory. Keep project-specific instructions and installed SDK guidance intact.
+## Discover the bundle
 
-When your agent cannot discover a skill automatically, provide its file path and ask it to read it. If you manually install selected files, use the discovery directory documented by your editor, inspect collisions first, and verify the copied content and loaded context afterward.
-
-## Prompts and execution
-
-A review or dependency-audit prompt describes work for the agent to perform. It does not itself run a scanner, grant permissions, start infrastructure or prove that the checks ran. Report actual commands, exit codes and output. Scope signing, submission and state changes separately from reading source or compiling code.
-
-There is no Miden MCP runtime in this bundle. Frontend API guidance belongs to the installed Web SDK packages described in [Setup](setup.md), not a duplicate agent-tools frontend bundle.
-
-## Installer availability
-
-[Agent-tools PR #19](https://github.com/0xMiden/agent-tools/pull/19) implements the project-local helper and consumer checks. **Integration gate:** run the following commands from an agent-tools checkout containing that integrated change, using Python 3.10+. Until then, read the existing prompt files directly or use your editor's documented discovery mechanism.
+Use Python 3.11+ and keep the checkout matched to your project's release:
 
 ```bash
+git clone https://github.com/0xMiden/agent-tools.git
+cd agent-tools
 python3 scripts/agent_tools.py list
 python3 scripts/agent_tools.py check
-# Preview only; choose an existing project and review destination/collision checks.
+```
+
+`list` reports prompt names, descriptions, paths, hashes, and the release baseline. `check` validates bundle metadata. Read the relevant `SKILL.md` before asking the agent to use it.
+
+## Preview and install
+
+Choose an existing project directory. Preview the file plan first, then apply it and check the installed content:
+
+```bash
 python3 scripts/agent_tools.py install --project /path/to/project --agent codex
-# Writes selected prompt copies and the marked AGENTS.md index.
 python3 scripts/agent_tools.py install --project /path/to/project --agent codex --apply
 python3 scripts/agent_tools.py check --project /path/to/project --agent codex
 ```
 
-Preview creates no destination files. `--apply` preserves unrelated context and SDK skills, and refuses collisions, symlink destinations and malformed markers. Keep the same agent/selection when checking; use repeated `--skill` arguments to narrow installation. The CLI's README describes Claude/Cursor discovery paths and Claude-only command registration. These are local file operations, not package installation or runtime checks.
+Preview writes no files. `--apply` copies the selected prompts and maintains a marked index in `AGENTS.md`; it preserves instructions outside that block. Use repeated `--skill` arguments to select fewer skills and repeat the same agent/selection when checking.
 
-## Check consumer versions and context
+| Agent | Project skills | Command prompts |
+| --- | --- | --- |
+| Codex | `.agents/skills/` | Read `commands/*.md` as prompts |
+| Claude Code | `.claude/skills/` | Add `--commands` to install `.claude/commands/` |
+| Cursor | `.cursor/skills/` | Read `commands/*.md` as prompts |
 
-After PR #19 integration, declare the stable docs release explicitly. From the agent-tools checkout:
+Claude can import `AGENTS.md` from its existing `CLAUDE.md`; the installer does not edit that file. Discovery and slash-command behavior depend on the agent. Ask it which files it loaded, or supply a selected file directly.
 
-```bash
-python3 scripts/agent_tools.py check-consumer \
-  --project /path/to/agentic-template/project-template --profile rust \
-  --docs-version 0.17 --docs-channel stable
-python3 scripts/agent_tools.py check-consumer \
-  --project /path/to/agentic-template/frontend-template --profile web --agent codex \
-  --docs-version 0.17 --docs-channel stable
-```
+## Check the consumer too
 
-The Rust profile reads `Cargo.lock` and `miden-toolchain.toml`; it does not run a compiler or validate package/store format. The Web profile checks exact declarations, npm v2/v3 or Yarn v1 resolved locks, installed guide/skill hashes, copied skill bytes, root package-guide pointers and the `prepare` declaration. Its tested reference pins are core SDK `0.17.1` and React/Vite/initializer `0.17.0`. Other pins or lock formats require separate validation; do not automatically bump them. Claude additionally needs a frontend `CLAUDE.md` import of `@AGENTS.md`.
+An installed prompt matching the bundle does not establish that the app uses matching SDK packages. [Check your setup](templates.md) checks the actual locks, installed package guides, copied skills, and root pointers. Keep npm-bundled Web/React guidance as the browser API source instead of copying a second frontend bundle from agent-tools.
 
-`current`/Next is unstable and fails this stable release-context check. JSON retains `docs_live_verified: false`, `compiler_execution_verified: false` for Rust and `hook_execution_verified: false` for Web. A passing read-only check does not prove those actions occurred.
+These tools perform local file reads and selected copies. They do not install packages, launch a node, access credentials, sign, or submit transactions. Workflow prompts describe tasks for the agent; they are not an MCP server or executable scanner.
 
-At the reviewed PR #24 head, the actual Rust consumer passes; its frontend still fails because its root `AGENTS.md` lacks installed-package guide pointers. This is an open template context-acceptance gap, separate from the passing published reference-consumer acceptance. Inspect the installed initializer before using it to repair that gap; after reviewing the intended edits, run it from the frontend directory:
+## Resolve installation conflicts
 
-```bash
-node node_modules/@miden-sdk/create/dist/cli.js
-```
+The installer refuses conflicting files, symlink destinations, and malformed context markers. Preserve local edits, compare the conflicting selected files, and preview again. There is no force-overwrite option.
 
-That command writes root pointers/imports, the prepare declaration and synced skills. Review its diff and rerun the Web consumer check. It is a mutation, not a read-only verification command. Preserve existing project and agent-tools context rather than replacing entire instruction or skill directories.
-
-For recovery, remove only files you installed and can identify; preserve unrelated skills and project context. Use [Diagnose and recover](recover.md) for build and runtime failures.
+Caught write failures roll back newly copied files; an interrupted process can leave partial copies. Check the displayed paths and rerun the same selection with one writer at a time. Preserve unrelated skills, SDK context, keys, and stores. Continue to [Troubleshooting](recover.md) for build or runtime failures.

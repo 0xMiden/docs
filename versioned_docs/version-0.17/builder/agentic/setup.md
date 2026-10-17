@@ -1,69 +1,68 @@
 ---
-title: "Start here: release and agent context"
-description: "Inspect versions, project instructions and installed SDK context before asking an agent to build."
+title: "Set up agentic-template"
+sidebar_label: "Set up agentic-template"
+description: "Prepare prerequisites, recursively clone the official agentic-template workspace, and install its pinned toolchain and dependencies."
 ---
 
-# Start here: release and agent context
+# Set up agentic-template
 
-## Record your starting point
+Use the official full-stack workspace for this journey. Complete these steps before running release checks or asking your agent to use installed SDK guidance.
 
-Use an isolated checkout and keep its lockfiles and submodule pins. Before installing or editing, ask the agent to read the root `AGENTS.md` or `CLAUDE.md`, the selected template README, and the instructions in each subproject it will touch.
+## Prerequisites
 
-Record the repository commit, submodule commits, `miden-toolchain.toml`, `rust-toolchain.toml`, Cargo lockfile and frontend package lockfile. For an existing recursive template checkout:
-
-```bash
-git rev-parse HEAD
-git submodule status --recursive
-```
-
-From the `agentic-template/` root, run each version check in its subproject. The Rust and Miden toolchain overrides live in `project-template/`:
-
-```bash
-(cd project-template && rustc --version)
-(cd project-template && cargo --version)
-(cd project-template && midenup --version)
-(cd frontend-template && node --version)
-(cd frontend-template && yarn --version)
-```
-
-Read [Installation](../get-started/setup/installation.md) for the toolchain setup and [Migration](../migration/index.md) when moving an older project to v0.17.
-
-## Match the compatibility tuple
-
-The reviewed agentic-template baseline uses project pin `e941949b1cb244f1557ace1c58dca0dc7a898da8` and frontend pin `71fb5bb0a205224d04a7d0264fad2cecc8d4478d`.
-
-| Layer | Template baseline |
+| Tool | What to prepare |
 | --- | --- |
-| Miden channel / compiler / guest Rust SDK | `0.17.0` / `0.11.0` / `0.15.0` |
-| Protocol / Rust client and store / VM | `0.17.1` / `0.17.2` / `0.35.0` |
-| Disposable local validator node components | `0.17.0`, digest-pinned in template PR #24 |
-| Browser core / React, adapters and tooling | `0.17.1` / `0.17.0` |
-| Contract Rust toolchain | `nightly-2026-09-01` |
+| Git, Bash, curl | Needed to clone the workspace and run its installer |
+| Node.js and npm | Install manually before setup. Use Node.js 20.19.0+ within the 20.x line for this pinned frontend |
+| Rust/rustup | The contracts pin `nightly-2026-09-01`, including `rust-src` and `wasm32-wasip2`; setup can install missing Rust and contract builds use the checked-in override |
+| midenup and `miden` | Use a manifest-compatible midenup. Setup can install missing midenup, create the `miden` entry point, and install the checked-in channel `0.17.0` |
+| Yarn Classic 1 | Setup can install it through npm if missing; Yarn 2+ is rejected |
+| Python 3.11+ | Install separately for the optional agent-tools context checker and the Python local-node runner |
+| Docker with Compose | Needed later for the disposable local-node check; it is not started by setup |
 
-The root local-node validator is implemented in [template PR #24](https://github.com/0xMiden/agentic-template/pull/24), reviewed at `a43051aa7a9530f5d1ce08c003edb40f2f7936f7`. It remains an open code PR; use its commands only after integration into your checkout. [Agent-tools PR #19](https://github.com/0xMiden/agent-tools/pull/19), reviewed at `bc8d207980aaedd42a66d7ac2cf07d911415ef25`, preserves the same Rust baseline and adds consumer-context checks. Neither code PR is a merged-availability claim.
+See [Miden toolchain installation](../get-started/setup/installation.md) for toolchain setup. Keep the checked-in Rust override, Miden manifest, and lockfiles.
 
-These versions intentionally differ. The v0.17 docs snapshot contains Rust client and node sources at `0.17.3`; that does not upgrade a template pinned to `0.17.2`. Check the resolved dependencies before borrowing an example. Rebuild contract packages for format 7 when migrating; do not reuse v0.16 stores or serialized artifacts as v0.17 inputs.
+The installer and `doctor` only require Node 18+, but the locked frontend includes `jsdom` 28.1.0, whose Node 20 range starts at 20.19.0. A passing prerequisite check does not establish package-engine compatibility. If you use a different Node major, check every locked package's supported range before installing.
 
-## Choose your agent entry
+## Clone the workspace
 
-| Agent | Context to inspect | Verification fallback |
-| --- | --- | --- |
-| Claude Code | Root `CLAUDE.md`, project `.claude/skills/`, configured commands and hooks | Read hook output; run build/test commands explicitly if a hook was skipped |
-| Codex | Root `AGENTS.md` and the referenced project/package guidance | Run the commands explicitly; Claude hooks and slash commands are not portable |
-| Other editor agents | The editor's project instructions and supported skill discovery paths | Supply the relevant files directly and run commands explicitly |
+From the directory where you keep projects:
 
-An instruction file existing on disk does not prove your agent loaded it. Ask it to name the files it read and summarize the pinned versions. Agent UI discovery and automatic hook execution need separate verification in your chosen environment.
+```bash
+git clone --recurse-submodules https://github.com/0xMiden/agentic-template
+cd agentic-template
+```
 
-## Reuse installed browser context
+Keep this shell at the workspace root for the rest of the journey. The clone initializes `project-template` and `frontend-template` at their checked-in commits.
 
-Web SDK guidance ships with the installed npm packages. Inspect their `AGENTS.md` and `skills/` directories under `node_modules/@miden-sdk/miden-sdk`, `@miden-sdk/react` and `@miden-sdk/vite-plugin`. Check any project pointers or synced skills after installation. If the installed package provides a skill-sync command, follow its own instructions and verify the resulting files.
+For an existing clone that is missing its submodules, run this from its root before setup:
 
-A successful install or `prepare` exit is insufficient: the published initializer can tolerate a failed sync. Verify installed guide pointers, copied skill bytes and the hook declaration with the integration-gated [consumer checks](tools.md). These checks target stable v0.17; declaring `current`/Next fails that release-context check even when a Next page discusses v0.17. Select stable v0.17 for the consumer check rather than treating Next as stable.
+```bash
+git submodule update --init --recursive
+```
 
-Keep that version-matched context as the source for browser APIs. Do not copy a second frontend skill bundle from agent-tools. SDK installation details remain in [Web SDK setup](../tools/clients/web-client/setup.md) and [React setup](../tools/clients/react-sdk/setup.md).
+This initializes the recorded commits. Do not advance submodules to another branch during onboarding.
 
-A useful opening request:
+## Review and run setup
 
-> Read the project instructions and installed package guidance. Report the release tuple, available commands and working directories. Explain which actions install dependencies, write state or submit transactions. Identify missing prerequisites before making changes.
+Inspect the installer before letting it change an existing development environment:
 
-Continue to [Choose a starter](templates.md).
+```bash
+sed -n '1,240p' setup.sh
+```
+
+Then run it from the workspace root:
+
+```bash
+bash setup.sh
+```
+
+Setup can install missing Rust, midenup, and Yarn; it downloads the pinned Miden channel, runs the locked frontend dependency install, explicitly syncs SDK skills, and pre-builds both contracts. It needs network access and writes toolchains, dependencies, context files, and build outputs. It does not install Node or Python for you. Yarn 2+ or an incompatible existing midenup requires a separate fix before retrying.
+
+Wait for `setup.sh: complete`. Only then continue to [Check your setup](templates.md), where `doctor`, installed-tool checks, and package-context checks belong. A successful install or skill sync alone does not establish that your agent discovered the guides or that app tests passed.
+
+## Other starting points (optional)
+
+The default journey uses agentic-template. If you only need one part of the stack, [project-template](https://github.com/0xMiden/project-template) provides the Rust contract project, and [frontend-template](https://github.com/0xMiden/frontend-template) provides the browser app. Follow their own setup instructions; the root journey helpers in this guide belong to agentic-template.
+
+For an existing app, [add selected agent skills](tools.md) without replacing its source or project instructions.

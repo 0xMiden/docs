@@ -1,0 +1,11 @@
+use demo::settings
+
+@transaction_script
+pub proc main
+    padw padw padw
+    push.0.0.0.42
+    call.settings::set_value
+    call.settings::get_value
+    push.42 assert_eq.err="settings getter returned the wrong value"
+    dropw dropw dropw drop drop drop
+end
