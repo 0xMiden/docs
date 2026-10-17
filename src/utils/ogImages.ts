@@ -9,6 +9,11 @@ type OgImageRule = {
 
 const OG_IMAGE_RULES: OgImageRule[] = [
   {
+    pathPrefix: "/builder/mini-apps",
+    image: "mini-apps.png",
+    description: "Build, integrate, test and publish mini-apps for Bread.",
+  },
+  {
     pathPrefix: "/builder/agentic",
     image: "agentic.png",
     description: "Build with matching agent context and verify each development stage.",

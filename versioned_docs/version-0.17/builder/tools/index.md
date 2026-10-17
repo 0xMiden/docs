@@ -41,3 +41,7 @@ Developer tools for building on and interacting with the Miden network. Use the 
     Compare bridge timing and tradeoffs, then integrate Agglayer or Epoch into a Miden application.
   </Card>
 </CardGrid>
+
+## Mini-apps
+
+Use [Mini-apps](../mini-apps/index.md) for the complete setup, building, Bread integration, testing and publishing workflow.
