@@ -383,6 +383,9 @@
         "builder/mini-apps/setup",
         "builder/mini-apps/building",
         "builder/mini-apps/bread-wallet-integration",
+        "builder/mini-apps/arcade",
+        "builder/mini-apps/finance",
+        "builder/mini-apps/others",
         "builder/mini-apps/testing-and-troubleshooting",
         "builder/mini-apps/publishing-and-explore"
       ]

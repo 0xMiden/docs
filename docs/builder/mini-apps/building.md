@@ -10,11 +10,11 @@ Start with one operation whose state you can explain from beginning to end. A wa
 
 ## Describe the app's value and surface
 
-A game can offer a complete practice round before any public challenge. Financial apps and financial utilities should name the useful task, supported asset/issuer, provider or route, fees and the settlement or claim/recovery steps. Learning, NFTs and other tools belong to the remaining app group. [Issue 1452](https://github.com/0xMiden/wallet/issues/1452) defines the target All, Finance, Arcade and Others views; All is an aggregate, not an app category to submit.
+A game can offer a complete practice round before any public challenge. Financial apps and financial utilities should name the useful task, supported asset/issuer, provider or route, fees and the settlement or claim/recovery steps. Learning, NFTs and non-financial utilities use Others. Choose `arcade`, `finance` or `others` directly in the new catalog contract; All is an aggregate, not an app category to submit. Follow the [Arcade](./arcade.md), [Finance](./finance.md) or [Others](./others.md) guide for the app's behavior.
 
-Arcade's proposed record/shot notes, Game Coin, ranking and rewards are game-specific dependencies under review. They are not general mini-app APIs or finance registration requirements. Label fixture rankings/challenges and local submission drafts clearly; do not imply live contracts, real player activity, scoring validity or submitted registrations.
+Games own their scores and game-specific rankings. The native Arcade's intended shared ranking uses GC balance snapshots that players explicitly choose to submit; the asset, private-balance verification and submission service remain unresolved. Record/shot notes and rewards require their own reviewed contracts and are not prerequisites for catalog registration. Label fictional rankings/challenges and local submission drafts clearly; do not imply live contracts, real player activity, scoring validity or submitted registrations.
 
-Choose ordinary presentation or optional native fullscreen for the app's needs. Fullscreen changes layout and the return control, not connection, private-data or transaction authority. Register through the [wallet-config review process](./publishing-and-explore.md) and verify the schema/reader migration before advertising a listing.
+Choose ordinary presentation or optional native fullscreen for the app's needs. Fullscreen changes layout and the return control, not connection, private-data or transaction authority. Register through the [wallet-config review process](./publishing-and-explore.md) and verify publication and the matching reader release before advertising a listing.
 
 ## Keep responsibilities visible
 

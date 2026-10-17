@@ -1,5 +1,5 @@
 ---
-sidebar_position: 5
+sidebar_position: 8
 title: "Testing and troubleshooting"
 description: "Test provider readiness, permission refusal, result recovery and each supported platform."
 ---
@@ -29,7 +29,9 @@ The public [frontend template](https://github.com/0xMiden/frontend-template) sup
 
 Exercise the actual embedded browser on every platform you claim. An ordinary mobile browser opening the same URL is a different environment; it does not gain provider injection automatically. Include cancel, permission refusal and returning from a parked app alongside the successful path.
 
-For the [native Explore category change](https://github.com/0xMiden/wallet/issues/1452), verify that existing per-network catalog entries remain visible through the approved mapping/migration. Cover All, Finance, Arcade and Others, search, recents, platform gates and empty/loading/error states. Do not put target category names into a document that the current parser rejects.
+For the new Explore contract, verify `finance`, `arcade` and `others` isolation and the All aggregate, network selection, search, recents, platform gates and empty/loading/error states. Legacy names must fail publication validation; only persisted legacy cached data gets conversion in the matching wallet. Cover higher-version refresh, wrong-network and rollback rejection, changed same-version bodies, failed fetches and cached/bundled fallback. Test Home → Arcade after a retained search and confirm that Open uses the exact configured URL, including its query and fragment.
+
+The companion wallet has a [reproducible catalog harness](https://github.com/0xMiden/wallet/blob/b09b93074a72c75d82d039a7ae52a821ce7e63c7/docs/explore-config-verification.md). From a matching wallet checkout, run `yarn test:explore-config --config-repo /path/to/wallet-config`. It serves actual local catalogs over HTTP and exercises the built UI in a disposable Chromium profile. Account readiness is mocked: the harness does not verify onboarding, Guardian authentication, live GC balances, submissions, chain settlement or native-device acceptance. Keep its E2E/mock build separate from release artifacts. Confirm that fictional previews cannot be enabled in production and real submission remains unavailable until integrated.
 
 Games also need deterministic scoring vectors, invalid/duplicate attempts and any reviewed challenge claim/expiry paths. Financial apps need the actual asset/issuer and route, fee handling, chain settlement, recipient-note consumption where relevant and interrupted claim/recovery. A local game score, wallet result or provider health response is insufficient evidence for those outcomes.
 
